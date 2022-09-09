@@ -1,0 +1,28 @@
+
+$material-dark: ( 
+  'text': (
+    'primary': #C8C3BC
+  ),
+  'icons': (
+    'active': #C8C3BC
+  ),
+  'background': #232D35,
+  'app-bar': #171E26,
+  'cards': #232D35,
+  'picker': (
+    'body': #232D35,
+  ),
+);
+
+$material-light: ( 
+  'text': (
+    'primary': #393939
+  ),
+  'icons': (
+    'active': #393939
+  )
+);
+
+.v-btn:not(.v-btn--outlined).primary, .v-btn:not(.v-btn--outlined).secondary, .v-btn:not(.v-btn--outlined).accent, .v-btn:not(.v-btn--outlined).success, .v-btn:not(.v-btn--outlined).error, .v-btn:not(.v-btn--outlined).warning, .v-btn:not(.v-btn--outlined).info{
+  color: #FFF;
+}

@@ -1,0 +1,73 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "strict": true,
+    "jsx": "preserve",
+    "allowJs": true,
+    "moduleResolution": "node",
+    "experimentalDecorators": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmitOnError": false,
+    "useDefineForClassFields": true,
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "typeRoots": [
+      "./node_modules/@types", 
+      "./node_modules/vuetify/types", 
+      "./node_modules/axios", 
+      "./src/types", 
+      "./src/plugins"
+    ],
+    "types": ["cypress", "node", "vuetify"],
+    "baseUrl": "./",
+    "outDir": "./dist",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@components/*" : ["./src/components/*"],
+      "@plugins/*" : ["./src/components/plugins/*"],
+      "@jsplugins/*" : ["./src/plugins/*"],
+      "@cards/*" : ["./src/components/cards/*"],
+      "@modals/*" : ["./src/components/modals/*"],
+      "@general/*" : ["./src/components/general/*"],
+      "@dialogs/*" : ["./src/components/dialogs/*"],
+      "@proxy/*" : ["./src/components/proxy-components/*"],
+      "@inserts/*" : ["./src/components/inserts/*"],
+      "@assets/*" : ["./src/assets/*"],
+      "@json/*" : ["./src/json/*"],
+      "@js/*" : ["./src/js/*"],
+      "@views/*" : ["./src/views/*"],
+      "@chartjs/*" : ["./src/components/charts/*"],
+      "@vuetify/*" :["./node_modules/vuetify/*"],
+      "@mixins/*" :["./src/mixins/*"],
+      "@filters":["./src/js/filters.ts"],
+      "@ctypes/*":["./src/types/*"],
+      "@dnd/*": ["./src/components/inserts/dnd/*"]
+    },
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable",
+      "scripthost"
+    ]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "tests/**/*.ts",
+    "tests/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "./dist"
+  ],
+  
+  "vueCompilerOptions": {
+    "target": 2
+    // "target": 2, // For Vue version <= 2.6.14
+  }
+}

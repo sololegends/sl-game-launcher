@@ -1,0 +1,24 @@
+#!/bin/bash 
+
+LOG_FILE=pre-commit.log
+
+# increment build date 
+./run version date
+git add src/main.ts
+
+# Run the test
+echo "Executing ESLint test and check prior to commit."
+echo "Please wait..."
+./node_modules/.bin/eslint "src/**/**.{js,vue}" > $LOG_FILE 2>&1
+
+# Get the result code
+RESULT=$?
+
+GREP_R=$(cat $LOG_FILE | grep "problem" -)
+if [ "$GREP_R" == "" ]; then 
+	exit 0
+else
+	echo "ESLint tests failed!"
+	echo "Run 'yarn lint' to view the failures"
+	exit 1
+fi

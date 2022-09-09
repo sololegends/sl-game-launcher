@@ -1,0 +1,30 @@
+{
+  "/accounts":{
+    "name": "Accounts",
+    "icon": "users",
+    "title": "Add/Remove/Update Account access to the Budgeting APP",
+    "enabled": true,
+    "role": "ADMIN"
+  },
+  "/audit/auth":{
+    "name": "Audit / Auth Log",
+    "icon": "user-shield",
+    "title": "Review authentication events like, Login, Lockouts, Deletions, etc",
+    "enabled": true,
+    "role": "ADMIN"
+  },
+  "/dnd/character":{
+    "name": "Character Sheet",
+    "icon": "address-card",
+    "title": "View a character sheet",
+    "enabled": false,
+    "role": "USER"
+  },
+  "/admin/explorer":{
+    "name": "Admin / API Explorer",
+    "icon": "plug",
+    "title": "The backend API",
+    "enabled": true,
+    "role": "OWNER"
+  }
+}

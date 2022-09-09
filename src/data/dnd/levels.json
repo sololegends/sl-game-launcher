@@ -1,0 +1,128 @@
+[
+	{
+		"experience": 0,
+		"next_lvl": 0,
+		"level": 0,
+		"proficiency": 0
+	},
+	{
+		"experience": 0,
+		"next_lvl": 300,
+		"level": 1,
+		"proficiency": 2
+	},
+	{
+		"experience": 300,
+		"next_lvl": 900,
+		"level": 2,
+		"proficiency": 2
+	},
+	{
+		"experience": 900,
+		"next_lvl": 2700,
+		"level": 3,
+		"proficiency": 2
+	},
+	{
+		"experience": 2700,
+		"next_lvl": 6500,
+		"level": 4,
+		"proficiency": 2
+	},
+	{
+		"experience": 6500,
+		"next_lvl": 14000,
+		"level": 5,
+		"proficiency": 3
+	},
+	{
+		"experience": 14000,
+		"next_lvl": 23000,
+		"level": 6,
+		"proficiency": 3
+	},
+	{
+		"experience": 23000,
+		"next_lvl": 34000,
+		"level": 7,
+		"proficiency": 3
+	},
+	{
+		"experience": 34000,
+		"next_lvl": 48000,
+		"level": 8,
+		"proficiency": 3
+	},
+	{
+		"experience": 48000,
+		"next_lvl": 64000,
+		"level": 9,
+		"proficiency": 4
+	},
+	{
+		"experience": 64000,
+		"next_lvl": 85000,
+		"level": 10,
+		"proficiency": 4
+	},
+	{
+		"experience": 85000,
+		"next_lvl": 100000,
+		"level": 11,
+		"proficiency": 4
+	},
+	{
+		"experience": 100000,
+		"next_lvl": 120000,
+		"level": 12,
+		"proficiency": 4
+	},
+	{
+		"experience": 120000,
+		"next_lvl": 140000,
+		"level": 13,
+		"proficiency": 5
+	},
+	{
+		"experience": 140000,
+		"next_lvl": 165000,
+		"level": 14,
+		"proficiency": 5
+	},
+	{
+		"experience": 165000,
+		"next_lvl": 195000,
+		"level": 15,
+		"proficiency": 5
+	},
+	{
+		"experience": 195000,
+		"next_lvl": 225000,
+		"level": 16,
+		"proficiency": 5
+	},
+	{
+		"experience": 225000,
+		"next_lvl": 265000,
+		"level": 17,
+		"proficiency": 6
+	},
+	{
+		"experience": 265000,
+		"next_lvl": 305000,
+		"level": 18,
+		"proficiency": 6
+	},
+	{
+		"experience": 305000,
+		"next_lvl": 355000,
+		"level": 19,
+		"proficiency": 6
+	},
+	{
+		"experience": 355000,
+		"next_lvl": 355001,
+		"level": 20,
+		"proficiency": 6
+	}
+]

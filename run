@@ -1,0 +1,95 @@
+#!/bin/bash 
+
+function ver_replace {
+  VAL=$1
+  DATE=$(date '+%Y-%m-%d %T')
+  sed -E "s/^(window.APP_VERSION[[:blank:]]*=[[:blank:]]*).*/\1\"$VAL\";/" "src/main.ts" -i
+  sed -E "s/^(window.BUILD_DATE[[:blank:]]*=[[:blank:]]*).*/\1\"$DATE\";/" "src/main.ts" -i
+  sed -E "s/^(  \"version\"[[:blank:]]*:[[:blank:]]*).*/\1\"$VAL\",/" "package.json" -i
+}
+function ver_replace_date {
+  DATE=$(date '+%Y-%m-%d %T')
+  sed -E "s/^(window.BUILD_DATE[[:blank:]]*=[[:blank:]]*).*/\1\"$DATE\";/" "src/main.ts" -i
+}
+
+# Copy the pre-commit hook into the git folder 
+cp pre-commit.git-hook .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+
+ARCH='linux/arm64,linux/amd64'
+if [ "$1" == "install" ]; then 
+  echo "Installing NodeJS..."
+  curl -fsSL https://deb.nodesource.com/setup_14.x | bash -
+  apt install -y nodejs
+
+  echo "Installing yarn..."
+  curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
+  echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
+  apt update && apt install yarn
+
+elif [ "$1" == "version-git" ]; then 
+  git pull
+  ver=$2
+  ./run version $ver
+  git commit -am "Version incrementing to $ver"
+  if [ "$3" == "push" ]; then
+    git push
+  fi
+elif [ "$1" == "version" ]; then 
+  ver=$2
+  if [ "$ver" == "date" ]; then
+    ver_replace_date
+    exit
+  elif [ "$ver" == "" ]; then
+    echo -n "Enter new version: "
+    read ver
+  fi
+  ver_replace $ver
+  exit
+
+elif [ "$1" == "build" ]; then
+  DIST=$(ls -l dist/ | grep index)
+  if [ "$DIST" == "" ]; then
+    yarn
+    yarn global add @vue/cli
+  fi
+  # Build the dist
+  yarn run build
+  chmod -R 755 dist
+
+elif [ "$1" == "docker" ]; then
+  DIST=$(ls -l dist/ | grep index)
+  if [ "$DIST" == "" ]; then
+    yarn
+    yarn global add @vue/cli
+  fi
+  # Build the dist
+  yarn run build
+  chmod -R 755 dist
+  docker build --name localhost/dnd-web:testing .
+elif [ "$1" == "clean" ]; then
+  rm -rf .git node_modules src .gitignore .gitlab-ci.yml babel.config.js CHANGELOG.md README.md DEPENDENCIES.md package.json vue.config.js run
+elif [ "$1" == "dev-docker" ]; then 
+  DIST=$(ls -l dist/ | grep index)
+  if [ "$DIST" == "" ]; then
+    yarn
+    yarn global add @vue/cli
+  fi
+  VERSION=$(git config --get "user.name" | tr '[:upper:]' '[:lower:]' | tr '[ ]' '-')-$(git branch --no-color --show-current)
+  # Build the dist
+  yarn run build --mode development
+  chmod -R 755 dist
+  docker context create multi-arch
+  docker buildx create --name multiarch --driver docker-container --use multi-arch 
+  docker buildx build --push --platform $ARCH --pull \
+    -t docker.sololegends.com:443/sololegends/dnd-gui:dev-$VERSION .
+
+elif [ "$1" == "init-cypress" ]; then
+  if [ ! -f ./cypress.env.json ]; then
+    echo "{" > cypress.env.json
+    echo "  \"APP_WEB_ROOT\": \"http://127.0.0.1:8082\"," >> cypress.env.json
+    echo "  \"APP_WEB_USER\": \"app_test\"," >> cypress.env.json
+    echo "  \"APP_WEB_PASS\": \"nmJKio()09OIkjMN\"" >> cypress.env.json
+    echo "}" >> cypress.env.json
+  fi
+fi

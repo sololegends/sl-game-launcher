@@ -1,0 +1,13 @@
+# Global defined variables
+variables:
+  SAST_DISABLE_DIND: "true"
+
+# Execution stages
+stages:
+ - build
+ - test
+ - secure
+
+# Template includes
+# include:
+#   - template: Jobs/Code-Quality.gitlab-ci.yml

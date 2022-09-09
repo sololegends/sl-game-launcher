@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "target": "es5",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "baseUrl": "src/",
+    "allowJs": true,
+    "paths":{
+      "@components" : ["./src/components/*"],
+      "@plugins" : ["./src/components/plugins/*"],
+      "@cards" : ["./src/components/cards/*"],
+      "@modals" : ["./src/components/modals/*"],
+      "@general" : ["./src/components/general/*"],
+      "@dialogs" : ["./src/components/dialogs/*"],
+      "@proxy" : ["./src/components/proxy-components/*"],
+      "@inserts" : ["./src/components/inserts/*"],
+      "@dnd" : ["./src/components/inserts/dnd/*"],
+      "@assets" : ["./src/assets/*"],
+      "@json" : ["./src/json/*"],
+      "@js" : ["./src/js/*"],
+      "@views" : ["./src/views/*"],
+      "@chartjs": ["./src/components/charts/*"],
+      "@vuetify":["./node_modules/vuetify/*"],
+      "@mixins":["./src/mixins/*"],
+      "@filters":["./src/js/filters.ts"]
+    },
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable",
+      "scripthost"
+    ]
+  },
+  "typeAcquisition": {
+    "exclude": [ "dotenv" ]
+  }
+}

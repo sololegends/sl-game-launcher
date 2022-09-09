@@ -1,0 +1,18 @@
+
+v1.x.x Todo:
+  ☐ DLC list respecting installed version
+  ☐ Reinstall or switching versions installs the appropriate DLC
+
+v2.x.x Todo: 
+  ☐ GamePad navigation Support
+  ☐ Linux support
+    ☐ Wine installation
+    ☐ Adding as non-steam game
+    ☐ Launching using steam + proton
+
+v3.x.x Todo: 
+  ☐ Cloud sav syncing 
+  ☐ Better support for non-GOG games 
+  ☐ Custom info files for data when using the zip packaging
+  ☐ Support for regestry entries during install
+  ☐ Support for installing dependencies / required libraries

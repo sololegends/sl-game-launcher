@@ -1,0 +1,124 @@
+{
+    "env": {
+        "browser": true,
+        "es2021": true,
+        "cypress/globals": true
+    },
+    "extends": [
+        "eslint:recommended",
+        "plugin:vue/essential",
+        "@vue/typescript/recommended",
+        "plugin:vue/essential"
+    ],
+    "parserOptions": {
+        "ecmaVersion": 12,
+        "sourceType": "module"
+    },
+    "plugins": [
+        "vue", "cypress"
+    ],
+    "rules": {
+        "indent": [
+            "error",
+            2
+        ],
+        "quotes": [
+            "error",
+            "double"
+        ],
+        "semi": [
+            "error",
+            "always"
+        ],
+        "no-unreachable-loop":"error",
+        "block-scoped-var":"error",
+        "curly":"error",
+        "default-case":"error",
+        "default-case-last":"error",
+        "dot-location": ["error", "property"],
+        "dot-notation":"error",
+        "eqeqeq": ["warn", "smart"],
+        "no-alert":"error",
+        "no-empty-function":"error",
+        "no-eval":"error",
+        "no-floating-decimal":"error",
+        "no-multi-str":"error",
+        "no-use-before-define":"error",
+        "array-bracket-spacing":[
+            "error",
+            "always",
+            {
+                "singleValue": false,
+                "objectsInArrays": false,
+                "arraysInArrays": false
+            }
+        ],
+        "array-element-newline":["error","consistent",{"multiline":true}],
+        "block-spacing":["error","always"],
+        "brace-style":["error","1tbs", { "allowSingleLine": true }],
+        "capitalized-comments":"warn",
+        "comma-dangle":"error",
+        "comma-spacing":"error",
+        "comma-style":"error",
+        "consistent-this":"error",
+        "func-call-spacing":"error",
+        "key-spacing":["error",{
+            "beforeColon":false,
+            "afterColon":true,
+            "mode":"strict"
+        }],
+        "max-depth":["error", {"max": 6}],
+        "max-len":[ "warn",{"code":140}],
+        "no-inline-comments":"error",
+        "no-lonely-if":"error",
+        "no-trailing-spaces":"warn",
+        "no-whitespace-before-property":"error",
+        "no-duplicate-imports":"error",
+        "no-var":"error",
+        "prefer-const":"warn",
+        "sort-imports":["error",{
+            "ignoreCase":true
+        }],
+        "space-unary-ops":"error",
+        "spaced-comment":"error",
+        "space-infix-ops":"error",
+        "space-before-function-paren":["error", "never"],
+        "space-before-blocks":["error","never"],
+        // VUE CONFIG
+        "@typescript-eslint/no-this-alias": [ "error", {
+              "allowDestructuring": false, // Disallow `const { props, state } = this`; true by default
+              "allowedNames": [ "that" ] // Allow `const self = this`; `[]` by default
+        }],
+        "vue/valid-v-slot": ["error", {
+            "allowModifiers": true
+        }],
+        "vue/max-attributes-per-line": ["error", {
+            "singleline": {
+                "max": 5
+            },      
+            "multiline": {
+                "max": 3
+            }
+        }],
+        "vue/first-attribute-linebreak": ["error", {
+            "singleline": "ignore",
+            "multiline": "below"
+        }],
+        "vue/html-closing-bracket-newline": ["error", {
+            "singleline": "never",
+            "multiline": "always"
+        }],
+        "vue/html-closing-bracket-spacing": ["error", {
+            "startTag": "never",
+            "endTag": "never",
+            "selfClosingTag": "always"
+        }],
+        "vue/html-indent": ["error", 2, {
+            "attribute": 1,
+            "baseIndent": 1,
+            "closeBracket": 0,
+            "alignAttributesVertically": true,
+            "ignores": []
+        }]
+    }
+}

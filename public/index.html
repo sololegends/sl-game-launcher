@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name=description content="DND Character management made easy!">
+    <link rel="manifest" href="<%= BASE_URL %>manifest.json">
+    <link rel="icon" href="<%= BASE_URL %>logo.png">
+    <title>GOG Viewer</title>
+  </head>
+  <body>
+    <noscript>
+      <style>
+        body{
+          color: #fff;
+          background-color: #171E26;
+          margin: 0;
+          font-family: "Roboto", sans-serif;
+          line-height: 1;
+          font-size: 0.875rem;
+        }
+        .top-bar{
+          width:100%;
+          height:48px;
+          position: fixed;
+          top:15px;
+          background-color: #1F5487;
+        }
+        img{
+          height: 32px;
+          min-width: 32px;
+          width: 32px;
+        }
+        img.large{
+          height: 64px;
+          min-width: 64px;
+          width: 64px;
+        }
+        .centered-container{
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+          height: 85vh;
+        }
+        .card{
+          justify-content: center;
+          text-align: center;
+          padding: 20px 40px;
+          display: block;
+          max-width: 100%;
+          transition-property: box-shadow, opacity;
+          overflow-wrap: break-word;
+          position: relative;
+          white-space: normal;
+          background-color: #232D35;
+          border-color: #232D35;
+          color: #C8C3BC;
+          border-radius: 4px;
+          box-shadow: 0px 3px 5px -1px rgb(0 0 0 / 20%), 0px 5px 8px 0px rgb(0 0 0 / 14%), 0px 1px 14px 0px rgb(0 0 0 / 12%);
+        }
+      </style>
+      <div class="top-bar">
+        <div style="margin:8px 16px;height:32px;display: flex;">
+          <img src="./logos/sl.png" alt="C">
+          <span style="margin-left:10px;font-size:24px;font-weight:500;line-height:32px;">SL | DND</span>
+        </div>
+      </div>
+      <div class="centered-container">
+        <div class="card" style="width:260px">
+          <div style="width:100%;text-align:center;height:64px;"><img class="large" src="./logos/sl.png" alt="C"></div>
+          <br/>
+          <b><h3 style="color:#B33">Javascript appears to be disabled on your browser</h3></b>
+          <br/>
+          <span>Javascript is <b>required</b> for the SL DND Web GUI to function.</span>
+          <br/>
+          <br/>
+          <span>Please enable javascript for this site to continue</span>
+        </div>
+      </div>
+    </noscript>
+    <div id="app"></div>
+    <!-- built files will be auto injected -->
+  </body>
+</html>
