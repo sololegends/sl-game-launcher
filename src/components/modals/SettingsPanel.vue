@@ -120,7 +120,7 @@
 </template>
 
 <script lang="ts">
-import { dialog, ipcRenderer as ipc, OpenDialogReturnValue } from "electron";
+import { ipcRenderer as ipc, OpenDialogReturnValue } from "electron";
 import { defineComponent } from "@vue/composition-api";
 import filter from "@filters";
 import { GOG } from "@/types/gog/game_info";
@@ -215,15 +215,12 @@ export default defineComponent({
     },
     getFolder(){
       const that = this;
-      const path = dialog.showOpenDialog({
-        properties: ["openDirectory"]
-      }) as Promise<OpenDialogReturnValue>;
-      path.then((results) => {
+      ipc.invoke("browse-folder").then((results: OpenDialogReturnValue) => {
         if(results && results?.filePaths.length > 0){
           that.setGogFolder(results?.filePaths[0]);
         }
-
       });
+
     },
     setGogFolder(path: string){
       this.gog_path = path;

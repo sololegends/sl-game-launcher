@@ -50,6 +50,9 @@
     <div class="version-note" v-if="game.current_version">
       {{game.current_version}}
     </div>
+
+    <div class="repacked-note" v-if="is_repacked">
+    </div>
     <v-contextmenu v-model="context_menu" :items="items" />
   </v-card>
 </template>
@@ -86,6 +89,12 @@ export default defineComponent({
     };
   },
   computed: {
+    is_repacked(): boolean | undefined{
+      if(this.game.remote?.download && this.game.remote?.download.length > 0){
+        return this.game.remote?.download[0].includes(".zip");
+      }
+      return false;
+    },
     downloadSize(): number | undefined{
       return this.game.remote?.dl_size;
     },
@@ -394,5 +403,15 @@ export default defineComponent({
 		border-top-right-radius: 5px;
 		border-bottom-left-radius: 5px;
     background-color: rgba(0, 0, 0, 0.5);
+  }
+  .repacked-note{
+		border-top-left-radius: 50%;
+		border-bottom-right-radius: 5px;
+    background-color: rgba(0, 0, 0, 0.5);
+    right: 0px;
+    bottom: 0px;
+    position: absolute;
+    width:7px;
+    height:7px;
   }
 </style>

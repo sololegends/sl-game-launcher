@@ -1,6 +1,6 @@
 
 import * as child from "child_process";
-import { app, BrowserWindow, IpcMain } from "electron";
+import { app, BrowserWindow, dialog, IpcMain } from "electron";
 import fs from "fs";
 import { Notify } from "@/types/notification/notify";
 import z_cache from "./cache";
@@ -33,7 +33,7 @@ const globals = {
   app_dir: app.getPath("appData") + "\\sololegends\\gog-viewer\\",
   ensureDir: (dir: string) => {
     if(!fs.existsSync(dir)){
-      fs.mkdirSync(dir);
+      fs.mkdirSync(dir, {recursive: true});
     }
   },
   getFolderSize: (folder: string): number => {
@@ -67,5 +67,11 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
 
   ipcMain.on("open-folder", (e, path: string) => {
     child.exec("explorer.exe " + path.replaceAll("[&|;:$()]+", ""));
+  });
+
+  ipcMain.handle("browse-folder", async() => {
+    return await dialog.showOpenDialog({
+      properties: ["openDirectory"]
+    });
   });
 }

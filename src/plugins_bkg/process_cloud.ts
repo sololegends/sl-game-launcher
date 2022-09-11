@@ -109,7 +109,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
     }
     const gog_path = getConfig("gog_path");
     const tmp_download = gog_path + "\\.temp\\";
-    const ins_dir = gog_path + "\\" + game.name;
+    const ins_dir = game.root_dir;
     const zip_file = tmp_download + game.remote?.slug + ".zip";
     const remote_file = game.remote.folder + "/" + game.remote?.slug + ".zip";
 

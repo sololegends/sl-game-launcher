@@ -3,6 +3,7 @@ node_modules
 /dist
 yarn.lock
 package-lock.json
+pre-commit.log
 
 # local env files
 .env.local

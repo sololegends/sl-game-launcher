@@ -153,10 +153,10 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
 
   async function uninstallGame(game: GOG.GameInfo, cb = nothing){
     game.remote = await ensureRemote(game);
-    if(game.remote === undefined || !game.remote.is_zip){
-      uninstallGameExe(game, "game: " + game.name, cb);
-    }else if(game.remote.is_zip){
+    if(game.remote.is_zip || (game.remote.download.length > 0 && game.remote.download[0].endsWith(".zip"))){
       uninstallGameZip(game, cb);
+    }else if(game.remote === undefined || !game.remote.is_zip){
+      uninstallGameExe(game, "game: " + game.name, cb);
     }
     removeFromVersionCache(flattenName(game.name));
   }
