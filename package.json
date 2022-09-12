@@ -8,7 +8,7 @@
     "serve": "vue-cli-service serve --mode=development",
     "serve-prod": "vue-cli-service serve --mode=production",
     "build": "vue-cli-service build --modern",
-    "lint": "vue-cli-service lint",
+    "lint": "./node_modules/.bin/eslint src/**/**.{js,vue}",
     "analyze": "vue-cli-service build --report",
     "make:component": "vue-cli-service make:component",
     "make:directive": "vue-cli-service make:directive",

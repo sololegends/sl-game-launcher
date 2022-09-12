@@ -23,6 +23,11 @@ import { App } from "@/types/app";
 import { defineComponent } from "@vue/composition-api";
 import filter from "@js/filters";
 import {ipcRenderer as ipc} from "electron";
+import Vue from "vue/types/umd";
+
+export interface DIBanner extends Vue{
+  cancel: () => void
+}
 
 export default defineComponent({
   props: {
@@ -40,7 +45,24 @@ export default defineComponent({
   },
   mounted(){
     // GENERIC CONTROLS
-    ipc.on("progress-banner-init", (e, options: App.ProgressBannerOpts | string) => {
+    ipc.on("progress-banner-init", this.bannerInit);
+    ipc.on("progress-banner-progress", this.bannerProgress);
+    ipc.on("progress-banner-error", this.bannerError);
+    ipc.on("progress-banner-hide", this.bannerHide);
+  },
+  beforeDestroy(){
+    ipc.off("progress-banner-init", this.bannerInit);
+    ipc.off("progress-banner-progress", this.bannerProgress);
+    ipc.off("progress-banner-error", this.bannerError);
+    ipc.off("progress-banner-hide", this.bannerHide);
+  },
+  computed: {
+    speed(): string{
+      return this.dl_speed === undefined ? "" : filter.formatSize(this.dl_speed, "Bps");
+    }
+  },
+  methods: {
+    bannerInit(e: unknown, options: App.ProgressBannerOpts | string){
       this.in_error = false;
       if(typeof options === "string"){
         options = {
@@ -52,29 +74,21 @@ export default defineComponent({
       this.options = options;
       this.show = true;
       this.progress_percent = 0;
-    });
-
-    ipc.on("progress-banner-progress", (e, progress: App.ProgressBannerProgress) => {
+    },
+    bannerProgress(e: unknown, progress: App.ProgressBannerProgress){
       this.in_error = false;
       this.calcProgress(progress);
       this.dl_speed = progress.speed;
-    });
-    ipc.on("progress-banner-error", (e, error: string) => {
+    },
+    bannerError(e: unknown, error: string){
       this.options.title = error;
       this.options.color = "red";
       this.in_error = true;
-    });
-    ipc.on("progress-banner-hide", () => {
+    },
+    bannerHide(){
       this.in_error = false;
       this.show = false;
-    });
-  },
-  computed: {
-    speed(): string{
-      return this.dl_speed === undefined ? "" : filter.formatSize(this.dl_speed, "Bps");
-    }
-  },
-  methods: {
+    },
     calcProgress(prog : App.ProgressBannerProgress){
       this.progress_percent = Math.floor((prog.progress / prog.total) * 100);
     },

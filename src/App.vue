@@ -41,7 +41,6 @@
 
       <v-main class="main-view">
         <GameBanner :game="running_game"  v-if="running_game !== undefined" />
-        <DownloadInstallBanner />
         <div v-if="disconnected">
           <div class="centered-container">
             <v-card style="">
@@ -76,7 +75,6 @@
 import { BrowserWindow, ipcRenderer as ipc } from "electron";
 import { defineComponent } from "@vue/composition-api";
 import DetailsModal from "@modals/DetailsModal.vue";
-import DownloadInstallBanner from "@inserts/gog/DownloadInstallBanner.vue";
 import GameBanner from "@inserts/gog/GameBanner.vue";
 import GeneralConfirm from "@modals/GeneralConfirm.vue";
 import { GeneralPopup } from "confirmation_modal";
@@ -95,7 +93,6 @@ export default defineComponent({
     NotificationsPanel,
     SideNotify,
     GameBanner,
-    DownloadInstallBanner,
     GeneralConfirm,
     GeneralPrompt,
     SettingsPanel

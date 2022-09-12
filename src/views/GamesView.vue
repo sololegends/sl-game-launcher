@@ -1,14 +1,17 @@
 <template>
   <div>
+    <DownloadInstallBanner ref="dl_banner" />
     <div style="margin:0px 20px">
-      <v-text-field v-model="filter" clearable placeholder="Search..." />
+      <v-text-field v-model="filter" clearable placeholder="Search..." @input="resetSelectedGame" />
     </div>
     <ScrollablePanel :max_height="maxScrollable" @scroll="onScroll">
-      <div class="games-container">
+      <div class="games-container" id="game_flex">
         <GogGame
-          class="flex"
           v-for="val, i in gamesFiltered" :key="i" :game="val"
-          :highlight="val.name === active"
+          :class="'flex' + (active_grid_ele === i? ' active' : '')"
+          :ref="'game' + i"
+          :running="val.name === active"
+          :data-game="i"
           @remote="setNewRemote(val, $event)"
         />
       </div>
@@ -19,22 +22,29 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from "@vue/composition-api";
+import DownloadInstallBanner, { DIBanner } from "@components/inserts/gog/DownloadInstallBanner.vue";
+import GogGame, { GogGameEle } from "../components/inserts/gog/GogGame.vue";
 import DLCSelectionModal from "@modals/DLCSelectionModal.vue";
+import gamepad from "@mixins/gamepad";
 import { GOG } from "@/types/gog/game_info";
-import GogGame from "../components/inserts/gog/GogGame.vue";
 import {ipcRenderer as ipc} from "electron";
+import mixin from "@mixins/index";
 import ScrollablePanel from "@/components/general/ScrollablePanel.vue";
 import VersionSelectionModal from "@modals/VersionSelectionModal.vue";
 
-export default defineComponent({
+
+export default mixin(gamepad).extend({
   name: "GamesView",
   components: {
     DLCSelectionModal,
     GogGame,
     ScrollablePanel,
-    VersionSelectionModal
+    VersionSelectionModal,
+    DownloadInstallBanner
   },
+  mixins: [
+    gamepad
+  ],
   props: {
 
   },
@@ -45,7 +55,9 @@ export default defineComponent({
       active: undefined as undefined | string,
       timer: -1,
       filter: null as null | string,
-      banner_on: false
+      banner_on: false,
+      active_grid_ele: 0,
+      active_game: -1
     };
   },
   computed: {
@@ -152,8 +164,57 @@ export default defineComponent({
         text: title || game.name
       });
     });
+
+    // ! TEST CODE
+    window.addEventListener("keydown", this.keyHandler);
+
+    this.registerControllerHandlers();
+  },
+  beforeDestroy(){
+    window.removeEventListener("keydown", this.keyHandler);
   },
   methods: {
+    registerControllerHandlers(): void{
+      this.$g_on([ "d_up", "ls_up" ], () => {
+        this.navigateGrid("#game_flex", "ArrowUp", "active");
+      });
+      this.$g_on([ "d_down", "ls_down" ], () => {
+        this.navigateGrid("#game_flex", "ArrowDown", "active");
+      });
+      this.$g_on([ "d_right", "ls_right" ], () => {
+        this.navigateGrid("#game_flex", "ArrowRight", "active");
+      });
+      this.$g_on([ "d_left", "ls_left" ], () => {
+        this.navigateGrid("#game_flex", "ArrowLeft", "active");
+      });
+      this.$g_on("a", () => {
+        this.triggerGameAction();
+      });
+      this.$g_on("b", () => {
+        const banner = this.$refs.dl_banner as DIBanner;
+        if(banner){
+          banner.cancel();
+        }
+      });
+    },
+    resetSelectedGame(){
+      this.active_game = -1;
+      this.navigateGrid("#game_flex", "RESET", "active");
+    },
+    keyHandler(e: KeyboardEvent){
+      switch(e.key){
+      case "ArrowUp": case "ArrowDown": case "ArrowLeft": case "ArrowRight":
+        e.preventDefault();
+        this.navigateGrid("#game_flex", e.key, "active");
+        break;
+      case "Enter":
+        e.preventDefault();
+        this.triggerGameAction();
+        break;
+      default:
+        break;
+      }
+    },
     setNewRemote(game: GOG.GameInfo, remote: GOG.RemoteGameData){
       this.$set(game, "remote", remote);
     },
@@ -167,6 +228,92 @@ export default defineComponent({
           this.remote_games = remote_games;
         });
       });
+    },
+    triggerGameAction(){
+      if(this.active_game === -1){
+        return;
+      }
+      // Get active game
+      let game = this.$refs["game" + this.active_game] as GogGameEle | GogGameEle[];
+      if(Array.isArray(game)){
+        game = game[0];
+      }
+      if(game){
+        console.log(game);
+        if(game.isRemote){
+          game.downloadAndInstall();
+          return;
+        }
+        if(!game.isRunning){
+          game.launchGame();
+        }
+      }
+    },
+    navigateGrid: function(flexbox_grid: string, direction: string, active_class: string){
+      const grid = document.querySelector(flexbox_grid);
+      if(grid === null){
+        console.log("Failed to find element with selector: [" + flexbox_grid + "]");
+        return;
+      }
+      const active = grid.querySelector(`.${active_class}`) as HTMLElement;
+      if(active === null){
+        console.log("Failed to find active element in grid: [" + flexbox_grid + "]");
+        return;
+      }
+      const activeIndex = Array.from(grid.children).indexOf(active);
+
+      const grid_children = Array.from(grid.children) as HTMLElement[];
+      const grid_num = grid_children.length;
+      const base_offset = grid_children[0].offsetTop;
+      const break_index = grid_children.findIndex(item => item.offsetTop > base_offset);
+      const num_per_rpw = (break_index === -1 ? grid_num : break_index);
+
+      const updateActiveItem = (active: HTMLElement, next: HTMLElement | null, active_class: string) => {
+        active.classList.remove(active_class);
+        if(next){
+          next.classList.add(active_class);
+          const br = next.getBoundingClientRect();
+          if(br.y >= window.innerHeight - br.height || br.y < br.height){
+            next.scrollIntoView({behavior: "smooth", block: "nearest"});
+          }
+          this.active_game = parseInt(next.getAttribute("data-game") || "-1");
+        }
+      };
+
+      const is_top_row = activeIndex <= num_per_rpw - 1;
+      const is_bottom_row = activeIndex >= grid_num - num_per_rpw;
+      const is_left_col = activeIndex % num_per_rpw === 0;
+      const is_right_col = activeIndex % num_per_rpw === num_per_rpw - 1 || activeIndex === grid_num - 1;
+
+      switch (direction){
+      case "ArrowUp":
+        if (!is_top_row){
+          updateActiveItem(active, grid_children[activeIndex - num_per_rpw], active_class);
+        }
+        break;
+      case "ArrowDown":
+        if (!is_bottom_row){
+          updateActiveItem(active, grid_children[activeIndex + num_per_rpw], active_class);
+        }
+        break;
+      case "ArrowLeft":
+        if (!is_left_col){
+          updateActiveItem(active, grid_children[activeIndex - 1], active_class);
+        }
+        break;
+      case "ArrowRight":
+        if (!is_right_col){
+          updateActiveItem(active, grid_children[activeIndex + 1], active_class);
+        }
+        break;
+      case "RESET":
+        updateActiveItem(active, grid_children[0], active_class);
+        break;
+      case "NONE":
+        updateActiveItem(active, null, active_class);
+        break;
+      default: return;
+      }
     }
   }
 });

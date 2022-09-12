@@ -9,7 +9,7 @@
       <fa-icon v-else-if="image === '404'" class="remote-icon" size="5x" icon="cloud-download-alt" />
       <img v-else :src="image" width="200" />
     </div>
-    <div :class="'name' + (highlight? ' active' : '')">
+    <div :class="'name' + (running? ' active' : '')">
       <span :title="game.name">{{game.name}}</span>
     </div>
 
@@ -63,6 +63,20 @@ import { defineComponent } from "@vue/composition-api";
 import filters from "@/js/filters";
 import { GOG } from "@/types/gog/game_info";
 import {ipcRenderer as ipc} from "electron";
+import Vue from "vue";
+
+export interface GogGameEle extends Vue {
+  // Info functions
+  isRunning: boolean
+  isRemote: boolean
+
+  // Control Functions
+  downloadAndInstall: () => void;
+  launchGame: () => void;
+  uninstall: () => void;
+  download: () => void;
+  close: () => void;
+}
 
 export default defineComponent({
   props: {
@@ -70,7 +84,7 @@ export default defineComponent({
       type: Object as () => GOG.GameInfo,
       required: true
     },
-    highlight: {
+    running: {
       type: Boolean,
       required: false,
       default: false
@@ -89,6 +103,9 @@ export default defineComponent({
     };
   },
   computed: {
+    isRunning(): boolean{
+      return this.running;
+    },
     is_repacked(): boolean | undefined{
       if(this.game.remote?.download && this.game.remote?.download.length > 0){
         return this.game.remote?.download[0].includes(".zip");
@@ -234,11 +251,11 @@ export default defineComponent({
       ipc.on("zip-package-done", this.loadingOff);
       ipc.send("zip-package-make", this.game);
     },
-    downloadAndInstall(e: MouseEvent): void{
+    downloadAndInstall(e?: MouseEvent): void{
       this.loading = true;
       ipc.on("game-dl-start", this.loadingOff);
       ipc.on("game-dl-error", this.loadingOff);
-      if(e.ctrlKey){
+      if(e && e.ctrlKey){
         this.download();
         return;
       }
@@ -263,6 +280,11 @@ export default defineComponent({
       ipc.off("zip-package-done", this.loadingOff);
     },
     launchGame(): void{
+      // If not installed, install it
+      if(this.isRemote){
+        this.downloadAndInstall();
+        return;
+      }
       for(const i in this.game.playTasks){
         const task = this.game.playTasks[i];
         if(task.isPrimary){
@@ -293,11 +315,11 @@ export default defineComponent({
 
 <style scoped>
 	.game-card{
-		margin: 10px;
-		width: 200px;
-		height: 175px;
-		max-width: 200px;
-		max-height: 175px;
+		margin: 8px;
+		width: 208px;
+		height: 183px;
+		max-width: 208px;
+		max-height: 183px;
 		border-radius: 5px;
 		background-color: var(--v-data-table-hover-base);
 		cursor: pointer;
@@ -305,11 +327,17 @@ export default defineComponent({
 			0px 1px 1px 0px rgb(0 0 0 / 14%),
 			0px 1px 3px 0px rgb(0 0 0 / 12%);
 		transition: 0.3s;
-
+    border: 4px solid #000;
+    border-color: rgba(0,0,0,0);
 		display: flex;
 		flex-direction: column;
 		text-align: center;
 	}
+
+  .game-card.active{
+    border: 4px solid #000;
+    border-color: var(--v-success-base);
+  }
 
 	.game-card:hover{
 		box-shadow: 0px 2px 4px -1px rgb(0 0 0 / 20%),
