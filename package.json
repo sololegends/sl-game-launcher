@@ -2,7 +2,7 @@
   "name": "sl-gog-viewer",
   "description": "View, run, install, and uninstall GOG games in the SL Cloud",
   "author": "Sololegends",
-  "version": "v0.6.0",
+  "version": "v0.6.1",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve --mode=development",
