@@ -34,6 +34,9 @@
         <v-btn @click="minimize" exact tip-title="Minimize" icon>
           <fa-icon icon="minus" size="2x" style="color:white" />
         </v-btn>
+        <v-btn @click="doMaxRestore" exact tip-title="Maximize" icon>
+          <fa-icon :icon="win_max_restore" size="2x" style="color:white" />
+        </v-btn>
         <v-btn @click="exit" exact tip-title="Exit" icon>
           <fa-icon icon="times" size="2x" style="color:white" />
         </v-btn>
@@ -72,7 +75,6 @@
 </template>
 
 <script lang="ts">
-import { BrowserWindow, ipcRenderer as ipc } from "electron";
 import { defineComponent } from "@vue/composition-api";
 import DetailsModal from "@modals/DetailsModal.vue";
 import GameBanner from "@inserts/gog/GameBanner.vue";
@@ -80,6 +82,7 @@ import GeneralConfirm from "@modals/GeneralConfirm.vue";
 import { GeneralPopup } from "confirmation_modal";
 import GeneralPrompt from "@modals/GeneralPrompt.vue";
 import { GOG } from "./types/gog/game_info";
+import { ipcRenderer as ipc } from "electron";
 import MessageModal from "@modals/MessageModal.vue";
 import NotificationsPanel from "@plugins/NotificationsPanel.vue";
 import SettingsPanel from "@modals/SettingsPanel.vue";
@@ -107,7 +110,8 @@ export default defineComponent({
       menu: {
         dev: true
       },
-      running_game: undefined as undefined | GOG.GameInfo
+      running_game: undefined as undefined | GOG.GameInfo,
+      win_max_restore: "window-maximize"
     };
   },
   mounted(){
@@ -121,6 +125,14 @@ export default defineComponent({
     ipc.on("notify", (e, notify) => {
       this.$notify(notify);
     });
+
+    ipc.on("win-maximize", () => {
+      this.win_max_restore = "window-restore";
+    });
+
+    ipc.on("win-restore", () => {
+      this.win_max_restore = "window-maximize";
+    });
   },
   computed: {
 
@@ -129,8 +141,21 @@ export default defineComponent({
     exit(){
       ipc.send("quit");
     },
+    doMaxRestore(){
+      if(this.win_max_restore === "window-restore"){
+        this.winRestore();
+        return;
+      }
+      this.maximize();
+    },
     minimize(){
-      BrowserWindow.getFocusedWindow()?.minimize();
+      ipc.send("minimize");
+    },
+    maximize(){
+      ipc.send("maximize");
+    },
+    winRestore(){
+      ipc.send("win-restore");
     }
   }
 });

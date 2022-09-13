@@ -110,7 +110,9 @@ import {
   faUserShield,
   faWalking,
   faWeightHanging,
-  faWheelchair
+  faWheelchair,
+  faWindowMaximize,
+  faWindowRestore
 } from "@fortawesome/free-solid-svg-icons";
 import {
   faCentos,
@@ -245,6 +247,8 @@ library.add(
   faUserSecret,
   faUserShield,
   faWalking,
+  faWindowMaximize,
+  faWindowRestore,
   faWheelchair
 );
 library.add(

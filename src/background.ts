@@ -32,6 +32,27 @@ async function createWindow(){
     win?.webContents.send("gog-path-change", value);
   });
 
+  win.on("maximize", () => {
+    win?.webContents.send("win-maximize");
+  });
+  win.on("unmaximize", () => {
+    win?.webContents.send("win-restore");
+  });
+  ipcMain.on("minimize", () => {
+    win?.minimize();
+    win?.webContents.send("win-minimize");
+  });
+
+  ipcMain.on("maximize", () => {
+    win?.maximize();
+    win?.webContents.send("win-maximize");
+  });
+
+  ipcMain.on("win-restore", () => {
+    win?.restore();
+    win?.webContents.send("win-restore");
+  });
+
   // Load all the modules
   load(ipcMain, win);
 
