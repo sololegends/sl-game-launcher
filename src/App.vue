@@ -34,7 +34,7 @@
         <v-btn @click="minimize" exact tip-title="Minimize" icon>
           <fa-icon icon="minus" size="2x" style="color:white" />
         </v-btn>
-        <v-btn @click="doMaxRestore" exact tip-title="Maximize" icon>
+        <v-btn @click="doMaxRestore" exact :tip-title="win_max_restore_title" icon>
           <fa-icon :icon="win_max_restore" size="2x" style="color:white" />
         </v-btn>
         <v-btn @click="exit" exact tip-title="Exit" icon>
@@ -111,7 +111,8 @@ export default defineComponent({
         dev: true
       },
       running_game: undefined as undefined | GOG.GameInfo,
-      win_max_restore: "window-maximize"
+      win_max_restore: "window-maximize",
+      win_max_restore_title: "Maximize"
     };
   },
   mounted(){
@@ -128,10 +129,12 @@ export default defineComponent({
 
     ipc.on("win-maximize", () => {
       this.win_max_restore = "window-restore";
+      this.win_max_restore_title = "Restore";
     });
 
     ipc.on("win-restore", () => {
       this.win_max_restore = "window-maximize";
+      this.win_max_restore_title = "Maximize";
     });
   },
   computed: {
