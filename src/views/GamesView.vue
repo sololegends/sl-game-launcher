@@ -1,5 +1,5 @@
 <template>
-  <div @mousemove="clearSelectedGame">
+  <div>
     <DownloadInstallBanner ref="dl_banner" />
     <div style="margin:0px 20px">
       <v-text-field v-model="filter" clearable placeholder="Search..." @input="resetSelectedGame" />
@@ -13,6 +13,7 @@
           :running="val.name === active"
           :data-game="i"
           @remote="setNewRemote(val, $event)"
+          @mouseover="gameMouseOver(i)"
         />
       </div>
     </ScrollablePanel>
@@ -57,7 +58,11 @@ export default mixin(gamepad).extend({
       filter: null as null | string,
       banner_on: false,
       active_grid_ele: -1,
-      active_game: -1
+      active_game: -1,
+      flex_id: "#game_flex",
+      active_class: "active",
+      disable_mouse: false,
+      disable_mouse_to: -1
     };
   },
   computed: {
@@ -174,18 +179,28 @@ export default mixin(gamepad).extend({
     window.removeEventListener("keydown", this.keyHandler);
   },
   methods: {
+    enableMouseTO(){
+      if(this.disable_mouse_to !== -1){
+        clearTimeout(this.disable_mouse_to);
+      }
+      this.disable_mouse_to = setTimeout(() => { this.disable_mouse = false; }, 500) as unknown as number;
+    },
     registerControllerHandlers(): void{
       this.$g_on([ "d_up", "ls_up" ], () => {
-        this.navigateGrid("#game_flex", "ArrowUp", "active");
+        this.disable_mouse = true;
+        this.navigateGrid("ArrowUp");
+        this.enableMouseTO();
       });
       this.$g_on([ "d_down", "ls_down" ], () => {
-        this.navigateGrid("#game_flex", "ArrowDown", "active");
+        this.disable_mouse = true;
+        this.navigateGrid("ArrowDown");
+        this.enableMouseTO();
       });
       this.$g_on([ "d_right", "ls_right" ], () => {
-        this.navigateGrid("#game_flex", "ArrowRight", "active");
+        this.navigateGrid("ArrowRight");
       });
       this.$g_on([ "d_left", "ls_left" ], () => {
-        this.navigateGrid("#game_flex", "ArrowLeft", "active");
+        this.navigateGrid("ArrowLeft");
       });
       this.$g_on("a", () => {
         this.triggerGameAction();
@@ -203,22 +218,31 @@ export default mixin(gamepad).extend({
         this.clearSelectedGame();
       });
     },
+    gameMouseOver(game_id: number){
+      if(this.disable_mouse){
+        return;
+      }
+      this.navigateGrid(game_id);
+    },
     clearSelectedGame(){
+      console.log("HELL O THERE");
       if(this.active_game === -1){
         return;
       }
       this.active_game = -1;
-      this.navigateGrid("#game_flex", "NONE", "active");
+      this.navigateGrid("NONE");
     },
     resetSelectedGame(){
       this.active_game = 0;
-      this.navigateGrid("#game_flex", "RESET", "active");
+      this.navigateGrid("RESET");
     },
     keyHandler(e: KeyboardEvent){
       switch(e.key){
       case "ArrowUp": case "ArrowDown": case "ArrowLeft": case "ArrowRight":
+        this.disable_mouse = true;
         e.preventDefault();
-        this.navigateGrid("#game_flex", e.key, "active");
+        this.navigateGrid(e.key);
+        this.enableMouseTO();
         break;
       case "Enter":
         e.preventDefault();
@@ -262,7 +286,13 @@ export default mixin(gamepad).extend({
         }
       }
     },
-    navigateGrid: function(flexbox_grid: string, direction: string, active_class: string){
+    navigateGrid: function(direction_id: string | number, active_class?: string, flexbox_grid?: string){
+      if(!flexbox_grid){
+        flexbox_grid = this.flex_id;
+      }
+      if(!active_class){
+        active_class = this.active_class;
+      }
       const grid = document.querySelector(flexbox_grid);
       if(grid === null){
         console.log("Failed to find element with selector: [" + flexbox_grid + "]");
@@ -305,7 +335,11 @@ export default mixin(gamepad).extend({
       const is_left_col = activeIndex % num_per_rpw === 0;
       const is_right_col = activeIndex % num_per_rpw === num_per_rpw - 1 || activeIndex === grid_num - 1;
 
-      switch (direction){
+      if(typeof direction_id !== "string"){
+        updateActiveItem(active, grid_children[direction_id], active_class);
+        return;
+      }
+      switch (direction_id){
       case "ArrowUp":
         if (!is_top_row){
           updateActiveItem(active, grid_children[activeIndex - num_per_rpw], active_class);

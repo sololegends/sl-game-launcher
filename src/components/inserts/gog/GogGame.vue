@@ -3,6 +3,7 @@
     class="game-card" v-observe-visibility="visibilityChanged"
     :title="isRemote?'Install Game':'Launch Game'"
     @contextmenu.prevent="contextMenu"
+    @mouseover="$emit('mouseover', $event)"
   >
     <div :class="'image' + (isRemote? ' uninstalled' : '')" @click="launchGame">
       <v-progress-circular style="margin:auto" indeterminate size="100"  v-if="image === undefined" />
@@ -316,35 +317,30 @@ export default defineComponent({
 <style scoped>
 	.game-card{
 		margin: 8px;
-		width: 208px;
-		height: 183px;
-		max-width: 208px;
-		max-height: 183px;
+		width: 200px;
+		height: 175px;
+		max-width: 200px;
+		max-height: 175px;
 		border-radius: 5px;
 		background-color: var(--v-data-table-hover-base);
 		cursor: pointer;
 		box-shadow: 0px 2px 1px -1px rgb(0 0 0 / 20%),
 			0px 1px 1px 0px rgb(0 0 0 / 14%),
 			0px 1px 3px 0px rgb(0 0 0 / 12%);
-		transition: 0.3s;
-    border: 4px solid #000;
+		transition: 0.1s;
     border-color: rgba(0,0,0,0);
 		display: flex;
 		flex-direction: column;
 		text-align: center;
 	}
 
-  .game-card.active{
-    border: 4px solid #000;
-    border-color: var(--v-success-base);
-  }
-
-	.game-card:hover{
+  .game-cards:hover, .game-card.active{
+    outline: 4px solid #000;
+    outline-color: var(--v-success-base);
 		box-shadow: 0px 2px 4px -1px rgb(0 0 0 / 20%),
 		0px 4px 5px 0px rgb(0 0 0 / 14%),
 		0px 1px 10px 0px rgb(0 0 0 / 12%);
-		top: -2px;
-	}
+  }
 
 	.image{
     display: flex;
