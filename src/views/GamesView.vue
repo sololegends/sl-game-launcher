@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div @mousemove="clearSelectedGame">
     <DownloadInstallBanner ref="dl_banner" />
     <div style="margin:0px 20px">
       <v-text-field v-model="filter" clearable placeholder="Search..." @input="resetSelectedGame" />
@@ -56,7 +56,7 @@ export default mixin(gamepad).extend({
       timer: -1,
       filter: null as null | string,
       banner_on: false,
-      active_grid_ele: 0,
+      active_grid_ele: -1,
       active_game: -1
     };
   },
@@ -196,9 +196,22 @@ export default mixin(gamepad).extend({
           banner.cancel();
         }
       });
+      this.$g_on("gamepadconnected", () => {
+        this.resetSelectedGame();
+      });
+      this.$g_on("gamepaddisconnected", () => {
+        this.clearSelectedGame();
+      });
+    },
+    clearSelectedGame(){
+      if(this.active_game === -1){
+        return;
+      }
+      this.active_game = -1;
+      this.navigateGrid("#game_flex", "NONE", "active");
     },
     resetSelectedGame(){
-      this.active_game = -1;
+      this.active_game = 0;
       this.navigateGrid("#game_flex", "RESET", "active");
     },
     keyHandler(e: KeyboardEvent){
@@ -255,21 +268,11 @@ export default mixin(gamepad).extend({
         console.log("Failed to find element with selector: [" + flexbox_grid + "]");
         return;
       }
-      const active = grid.querySelector(`.${active_class}`) as HTMLElement;
-      if(active === null){
-        console.log("Failed to find active element in grid: [" + flexbox_grid + "]");
-        return;
-      }
-      const activeIndex = Array.from(grid.children).indexOf(active);
 
-      const grid_children = Array.from(grid.children) as HTMLElement[];
-      const grid_num = grid_children.length;
-      const base_offset = grid_children[0].offsetTop;
-      const break_index = grid_children.findIndex(item => item.offsetTop > base_offset);
-      const num_per_rpw = (break_index === -1 ? grid_num : break_index);
-
-      const updateActiveItem = (active: HTMLElement, next: HTMLElement | null, active_class: string) => {
-        active.classList.remove(active_class);
+      const updateActiveItem = (active: HTMLElement | null, next: HTMLElement | null, active_class: string) => {
+        if(active){
+          active.classList.remove(active_class);
+        }
         if(next){
           next.classList.add(active_class);
           const br = next.getBoundingClientRect();
@@ -277,8 +280,25 @@ export default mixin(gamepad).extend({
             next.scrollIntoView({behavior: "smooth", block: "nearest"});
           }
           this.active_game = parseInt(next.getAttribute("data-game") || "-1");
+        }else{
+          this.active_game = -1;
         }
       };
+      const active = grid.querySelector(`.${active_class}`) as HTMLElement;
+      if(active === null){
+        updateActiveItem(null, null, "active");
+      }
+      const grid_children = Array.from(grid.children) as HTMLElement[];
+      const activeIndex = grid_children.indexOf(active);
+
+      const grid_num = grid_children.length;
+      if(grid_num === 0){
+        return;
+      }
+      const base_offset = grid_children[0].offsetTop;
+      const break_index = grid_children.findIndex(item => item.offsetTop > base_offset);
+      const num_per_rpw = (break_index === -1 ? grid_num : break_index);
+
 
       const is_top_row = activeIndex <= num_per_rpw - 1;
       const is_bottom_row = activeIndex >= grid_num - num_per_rpw;

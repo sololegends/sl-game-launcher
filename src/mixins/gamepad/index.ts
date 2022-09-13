@@ -162,6 +162,7 @@ export default Vue.extend({
       }
     },
     addGamePad(gamepad: Gamepad): void{
+      this.$g_emit("gamepadconnected", gamepad);
       this.button_state[gamepad.index] = {};
       this.controllers[gamepad.index] = gamepad;
       this.$notify({
@@ -170,6 +171,7 @@ export default Vue.extend({
       });
     },
     removeGamePad(gamepad: Gamepad): void{
+      this.$g_emit("gamepaddisconnected", gamepad);
       delete this.controllers[gamepad.index];
       this.$notify({
         type: "warning",
