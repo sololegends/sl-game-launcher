@@ -187,7 +187,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     sendInstallStart(game, false);
     const gog_path = getConfig("gog_path");
     const tmp_download = gog_path + "\\.temp\\";
-    const ins_dir = gog_path + "\\" + game.name;
+    const ins_dir = gog_path + "\\" + globals.normalizeFolder(game.name);
     globals.ensureDir(ins_dir);
     const archive = new zip.async({file: tmp_download + zip_f});
     const total_count = await archive.entriesCount;
@@ -222,7 +222,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     const tmp_download = gog_path + "\\.temp\\";
     active_ins = child.execFile(
       tmp_download + "" + exe,
-      [ "/VERYSILENT",  "\"/dir=" + gog_path + "\\" + game.name + "\"", "/NoRestart" ],
+      [ "/VERYSILENT",  "\"/dir=" + gog_path + "\\" + globals.normalizeFolder(game.name) + "\"", "/NoRestart" ],
       function(err, data){
         if(err){
           console.error(err);

@@ -2,9 +2,13 @@
 v1.x.x Todo:
   ☐ DLC list respecting installed version
   ☐ Reinstall or switching versions installs the appropriate DLC
+  ☐ GamePad Support
+    ✔ Baisc Navigation @done(22-09-12 20:57)
+    ✔ Launching and closng games @done(22-09-12 20:57)
+    ☐ Manage DLC
+    ☐ Change Versions
 
 v2.x.x Todo: 
-  ☐ GamePad navigation Support
   ☐ Linux support
     ☐ Wine installation
     ☐ Adding as non-steam game

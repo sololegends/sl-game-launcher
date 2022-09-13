@@ -2,7 +2,7 @@
   <base-modal
     id='message' :action="action" :title="title"
     :light_header="true"
-    :closeable='true' :modal_width="500" @before-open="beforeOpen"
+    :closeable='true' modal_width="unset" @before-open="beforeOpen"
     @closed="closed"
   >
     <div class="text-subtitle-1">{{message}}.</div>

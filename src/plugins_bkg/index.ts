@@ -25,6 +25,7 @@ const fns = [
 export type Globals = {
 	app_dir: string
 	ensureDir: (dir: string) => void
+  normalizeFolder: (path: string) => string
 	notify: (options: Notify.Alert) => void
   getFolderSize: (folder: string) => number
 }
@@ -35,6 +36,9 @@ const globals = {
     if(!fs.existsSync(dir)){
       fs.mkdirSync(dir, {recursive: true});
     }
+  },
+  normalizeFolder: (path: string): string => {
+    return path.replaceAll(/[&|;:$()]/g, "");
   },
   getFolderSize: (folder: string): number => {
     if(folder.endsWith("\\") || folder.endsWith("/")){
