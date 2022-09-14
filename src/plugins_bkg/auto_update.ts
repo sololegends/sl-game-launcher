@@ -24,10 +24,6 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
 
   autoUpdater.on("checking-for-update", () => {
     globals.log("Checking for update...");
-    win.webContents.send("notify", {
-      title: "Checking for updates...",
-      type: "info"
-    }, "bell_alerts");
   });
   autoUpdater.on("update-available", (info: UpdateInfo) => {
     globals.log("Update available: " + info);
@@ -44,10 +40,6 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   });
   autoUpdater.on("update-not-available", () => {
     globals.log("Update not available");
-    win.webContents.send("notify", {
-      title: "No Updates available",
-      type: "info"
-    }, "bell_alerts");
   });
   autoUpdater.on("error", (err) => {
     if(downloading_update){
@@ -84,7 +76,8 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     }, "bell_alerts");
   });
 
-  autoUpdater.autoDownload = false;
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.disableWebInstaller = true;
   autoUpdater.checkForUpdatesAndNotify();
 }
