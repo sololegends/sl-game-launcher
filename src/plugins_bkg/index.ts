@@ -3,6 +3,7 @@ import * as child from "child_process";
 import { app, BrowserWindow, dialog, IpcMain } from "electron";
 import fs from "fs";
 import { Notify } from "@/types/notification/notify";
+import z_autoupdate from "./auto_update";
 import z_cache from "./cache";
 import z_cfg_init from "./config";
 import z_game_dl_install from "./game_dl_install";
@@ -18,7 +19,8 @@ const fns = [
   z_webdav_init,
   z_game_loader,
   z_process_cloud,
-  z_game_dl_install
+  z_game_dl_install,
+  z_autoupdate
 ];
 
 
@@ -28,6 +30,7 @@ export type Globals = {
   normalizeFolder: (path: string) => string
 	notify: (options: Notify.Alert) => void
   getFolderSize: (folder: string) => number
+  log: (log: string) => void
 }
 
 const globals = {
@@ -54,6 +57,10 @@ const globals = {
       return accumulator;
     }
     return dir_stat.size;
+  },
+  log: (log: string) => {
+    console.log(log);
+    // TODO: Do the file logging
   }
 } as Globals;
 

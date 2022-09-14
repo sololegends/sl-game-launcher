@@ -9,7 +9,29 @@ module.exports = {
   ],
   pluginOptions: {
     electronBuilder: {
-      nodeIntegration: true
+      nodeIntegration: true,
+      builderOptions: {
+        appId: "com.sololegends.launcher",
+        productName: "SL Game Launcher",
+        win: {
+          publisherName: "Sololegends",
+          icon: "icon.ico",
+          verifyUpdateCodeSignature: false
+        },
+        nsis: {
+          installerIcon: "icon.ico",
+          uninstallerIcon: "icon.ico"
+        },
+        linux: {
+          icon: "icon.png",
+          category: "Game"
+        },
+        publish: {
+          provider: "generic",
+          url: "https://test.sololegends.com/tools/public/updates/gamelauncher/",
+          channel: "latest"
+        }
+      }
     }
   },
   devServer: {

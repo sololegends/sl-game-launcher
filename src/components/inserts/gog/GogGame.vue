@@ -1,6 +1,6 @@
 <template>
   <v-card
-    class="game-card" v-observe-visibility="visibilityChanged"
+    :class="'game-card' + (active?' active':'') " v-observe-visibility="visibilityChanged"
     :title="isRemote?'Install Game':'Launch Game'"
     @contextmenu.prevent="contextMenu"
     @mouseover="$emit('mouseover', $event)"
@@ -10,7 +10,7 @@
       <fa-icon v-else-if="image === '404'" class="remote-icon" size="5x" icon="cloud-download-alt" />
       <img v-else :src="image" width="200" />
     </div>
-    <div :class="'name' + (running? ' active' : '')">
+    <div :class="name_class">
       <span :title="game.name">{{game.name}}</span>
     </div>
 
@@ -89,6 +89,11 @@ export default defineComponent({
       type: Boolean,
       required: false,
       default: false
+    },
+    active: {
+      type: Boolean,
+      required: false,
+      default: false
     }
   },
   data(){
@@ -104,6 +109,9 @@ export default defineComponent({
     };
   },
   computed: {
+    name_class(): string{
+      return "name" + (this.isRunning ? " active" : "");
+    },
     isRunning(): boolean{
       return this.running;
     },

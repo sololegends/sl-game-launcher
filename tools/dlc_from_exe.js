@@ -11,8 +11,8 @@ const INNO_OUT = "output";
 async function unpackExe(target, output = INNO_OUT){
   if(fs.existsSync(INNO_OUT)){
     fs.rmSync(INNO_OUT, {recursive: true});
+    fs.mkdirSync(INNO_OUT);
   }
-  fs.mkdirSync(INNO_OUT);
   const active_exe = child.execFile(
     INNOUNP,
     [  "-d" + output, "-x", target ],

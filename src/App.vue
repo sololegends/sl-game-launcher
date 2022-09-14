@@ -23,6 +23,8 @@
               color="red"
               :content="notification_count"
               :value="notification_count>0"
+              offset-x="12"
+              offset-y="13"
             >
               <fa-icon icon="bell" size="2x" style="color:white" />
             </v-badge>
@@ -123,8 +125,8 @@ export default defineComponent({
       this.running_game = game;
     });
 
-    ipc.on("notify", (e, notify) => {
-      this.$notify(notify);
+    ipc.on("notify", (e, notify, group) => {
+      this.$notify(notify, group);
     });
 
     ipc.on("win-maximize", () => {

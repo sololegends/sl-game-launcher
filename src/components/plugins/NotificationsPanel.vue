@@ -17,15 +17,25 @@
       <div class="alert-body" :style="'width:' + width">
         <span class="alert-title text-subtitle-2 font-weight-bold">{{alert.title}}</span>
         <v-divider class="app-details-border" style="opacity:0.25" v-if="alert.text != undefined && alert.title !== undefined"></v-divider>
-        <div :class="'text-body-2 alert-text'+(alert.timestamp==null ? '' : ' timestamp')">
-          <span v-if="alert.text && alert.text.includes('\n')">
+        <div :class="'text-body-2 alert-text'+(alert.timestamp || alert.action  ? ' timestamp' : '')">
+          <span v-if="alert.text!==undefined && alert.text.includes('\n')">
             <div v-for="(ele, i) in alert.text.split('\n')" :key="i">
               {{ele}}
             </div>
           </span>
           <span v-else>{{alert.text}}</span>
+          <div class="bottom-data">
+            <v-spacer />
+            <v-btn
+              @click="doAction(alert)"
+              v-if="alert.action"
+              x-small
+            >
+              {{alert.action.name}}
+            </v-btn>
+            <div class="text-caption text-right alert-sub-text">{{alert.timestamp}}</div>
+          </div>
         </div>
-        <div class="text-caption text-right alert-sub-text">{{alert.timestamp}}</div>
       </div>
       <div slot="close" @click="remove(alert)" class="vuetify-alert-dismiss" tip-title="Dismiss">
         <fa-icon icon="times" size="lg" v-if="alert.sticky && !alert.loading" />
@@ -38,6 +48,7 @@
 </template>
 <script lang="ts">
 import { defineComponent } from "@vue/composition-api";
+import { ipcRenderer as ipc } from "electron";
 import { Notify } from "@/types/notification/notify";
 
 export default defineComponent({
@@ -138,6 +149,14 @@ export default defineComponent({
     }
   },
   methods: {
+    doAction(alert: Notify.AlertInternal){
+      if(alert.action){
+        ipc.send(alert.action.event, alert.action.data);
+        if(alert.action.clear){
+          this.remove(alert);
+        }
+      }
+    },
     remove(alert: Notify.AlertInternal, do_global_alert = true): void{
       if(alert === undefined){ return; }
       this.$emit("alertClosed", alert);
@@ -220,6 +239,9 @@ export default defineComponent({
         return;
       }
       const params_int = params as Notify.AlertInternal;
+      if(params_int.text && typeof params_int.text !== "string"){
+        params_int.text = JSON.stringify(params_int.text);
+      }
       // Add the notification
       params_int.show = false;
       params_int.hover = false;
@@ -228,6 +250,7 @@ export default defineComponent({
       params_int.loading = params.loading || false;
       params_int.sticky = params.sticky || (this.duration === -1);
       params_int.interval = params.duration || this.duration / 10;
+      params_int.action = params.action;
 
       // De-dupe
       if(this.hasId(id)){
@@ -273,15 +296,23 @@ export default defineComponent({
 
 <style scoped>
   .alert-sub-text{
-    position:absolute;
+    /* position:absolute; */
     right:5px;
     bottom:0px;
+    padding-left:10px;
+    display: inline-flex;
+  }
+  .bottom-data{
+    display:flex;
+     position:absolute;
+    bottom:2px;
+    right:5px;
   }
   .alert-text{
     word-break: break-word;
   }
   .alert-text.timestamp{
-    padding-bottom: 10px;
+    padding-bottom: 12px;
   }
   .alert-body{
     overflow-x: hidden;

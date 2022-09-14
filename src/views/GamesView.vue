@@ -8,9 +8,10 @@
       <div class="games-container" id="game_flex">
         <GogGame
           v-for="val, i in gamesFiltered" :key="i" :game="val"
-          :class="'flex' + (active_grid_ele === i? ' active' : '')"
+          class="flex"
           :ref="'game' + i"
           :running="val.name === active"
+          :active="active_game === i"
           :data-game="i"
           @remote="setNewRemote(val, $event)"
           @mouseover="gameMouseOver(i)"
@@ -57,7 +58,6 @@ export default mixin(gamepad).extend({
       timer: -1,
       filter: null as null | string,
       banner_on: false,
-      active_grid_ele: -1,
       active_game: -1,
       flex_id: "#game_flex",
       active_class: "active",
@@ -286,12 +286,9 @@ export default mixin(gamepad).extend({
         }
       }
     },
-    navigateGrid: function(direction_id: string | number, active_class?: string, flexbox_grid?: string){
+    navigateGrid: function(direction_id: string | number, flexbox_grid?: string){
       if(!flexbox_grid){
         flexbox_grid = this.flex_id;
-      }
-      if(!active_class){
-        active_class = this.active_class;
       }
       const grid = document.querySelector(flexbox_grid);
       if(grid === null){
@@ -299,12 +296,8 @@ export default mixin(gamepad).extend({
         return;
       }
 
-      const updateActiveItem = (active: HTMLElement | null, next: HTMLElement | null, active_class: string) => {
-        if(active){
-          active.classList.remove(active_class);
-        }
+      const updateActiveItem = (next: HTMLElement | null) => {
         if(next){
-          next.classList.add(active_class);
           const br = next.getBoundingClientRect();
           if(br.y >= window.innerHeight - br.height || br.y < br.height){
             next.scrollIntoView({behavior: "smooth", block: "nearest"});
@@ -314,59 +307,70 @@ export default mixin(gamepad).extend({
           this.active_game = -1;
         }
       };
-      const active = grid.querySelector(`.${active_class}`) as HTMLElement;
+      const active = grid.querySelector(`.${this.active_class}`) as HTMLElement;
       if(active === null){
-        updateActiveItem(null, null, "active");
+        updateActiveItem(null);
       }
       const grid_children = Array.from(grid.children) as HTMLElement[];
-      const activeIndex = grid_children.indexOf(active);
-
+      const activeIndex = this.active_game;
       const grid_num = grid_children.length;
       if(grid_num === 0){
         return;
       }
       const base_offset = grid_children[0].offsetTop;
       const break_index = grid_children.findIndex(item => item.offsetTop > base_offset);
-      const num_per_rpw = (break_index === -1 ? grid_num : break_index);
+      const num_per_row = (break_index === -1 ? grid_num : break_index);
+      console.log("activeIndex", activeIndex);
+      console.log("num_per_row", num_per_row);
+      console.log("grid_num", grid_num);
+      console.log("direction_id", direction_id);
 
 
-      const is_top_row = activeIndex <= num_per_rpw - 1;
-      const is_bottom_row = activeIndex >= grid_num - num_per_rpw;
-      const is_left_col = activeIndex % num_per_rpw === 0;
-      const is_right_col = activeIndex % num_per_rpw === num_per_rpw - 1 || activeIndex === grid_num - 1;
+      const is_top_row = activeIndex <= num_per_row - 1;
+      const is_bottom_row = activeIndex >= grid_num - num_per_row;
+      const is_left_col = activeIndex % num_per_row === 0;
+      const is_right_col = activeIndex % num_per_row === num_per_row - 1 || activeIndex === grid_num - 1;
 
+      console.log(is_top_row, is_bottom_row, is_left_col, is_right_col);
       if(typeof direction_id !== "string"){
-        updateActiveItem(active, grid_children[direction_id], active_class);
+        // This.active_game = direction_id;
+        updateActiveItem(grid_children[direction_id]);
         return;
       }
       switch (direction_id){
       case "ArrowUp":
         if (!is_top_row){
-          updateActiveItem(active, grid_children[activeIndex - num_per_rpw], active_class);
+          // This.active_game = activeIndex - num_per_row;
+          updateActiveItem(grid_children[activeIndex - num_per_row]);
         }
         break;
       case "ArrowDown":
         if (!is_bottom_row){
-          updateActiveItem(active, grid_children[activeIndex + num_per_rpw], active_class);
+          // This.active_game = activeIndex + num_per_row;
+          updateActiveItem(grid_children[activeIndex + num_per_row]);
         }
         break;
       case "ArrowLeft":
         if (!is_left_col){
-          updateActiveItem(active, grid_children[activeIndex - 1], active_class);
+          // This.active_game = activeIndex - 1;
+          updateActiveItem(grid_children[activeIndex - 1]);
         }
         break;
       case "ArrowRight":
         if (!is_right_col){
-          updateActiveItem(active, grid_children[activeIndex + 1], active_class);
+          // This.active_game = activeIndex + 1;
+          updateActiveItem(grid_children[activeIndex + 1]);
         }
         break;
       case "RESET":
-        updateActiveItem(active, grid_children[0], active_class);
+        // This.active_game = 0;
+        updateActiveItem(grid_children[0]);
         break;
       case "NONE":
-        updateActiveItem(active, null, active_class);
+        // This.active_game = -1;
+        updateActiveItem(null);
         break;
-      default: return;
+      default: break;
       }
     }
   }

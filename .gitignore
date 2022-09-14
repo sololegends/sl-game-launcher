@@ -34,5 +34,8 @@ tools/*.json
 tools/output
 tools/temp_install
 tools/all_output
+tools/exes
+tools/new_game
 
 DID
+.cert-env

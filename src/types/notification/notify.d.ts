@@ -3,6 +3,13 @@ import Vue from "vue";
 export namespace Notify {
 	export type Type = "error" | "warning" | "success" | "info";
 
+	export type Action = {
+		name: string
+		event: string
+		data?: unknown,
+		clear?: boolean
+	}
+
 	export type Alert = {
 		id?: number;
 		title: string;
@@ -13,6 +20,7 @@ export namespace Notify {
 		timestamp?: string;
 		type: Notify.Type;
 		closed?: (alert: Notify.Alert) => void | Promise;
+		action?: Action
 	};
 
 	export interface AlertInternal extends Alert{
