@@ -2,7 +2,7 @@
 import * as child from "child_process";
 import { BrowserWindow, IpcMain } from "electron";
 import { DownloaderHelper, Stats } from "node-downloader-helper";
-import { removeFromVersionCache, saveToVersionCache } from "./cache";
+import { loadFromVersionCache, removeFromVersionCache, saveToVersionCache } from "./cache";
 import zip, { ZipEntry } from "node-stream-zip";
 import { ensureRemote } from "./game_loader";
 import { FileStat } from "webdav";
@@ -48,6 +48,7 @@ function handlePassURL(url: string): URLReturn{
 
 export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Globals){
   let active_dl = undefined as undefined | DownloaderHelper;
+  let download_cancel = false;
   let active_ins = undefined as undefined | child.ChildProcess;
 
   function triggerReload(){
@@ -84,8 +85,54 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     win?.webContents.send("progress-banner-hide");
   }
 
-  function uninstallDLC(game: GOG.GameInfo, dlc: GOG.RemoteGameDLC){
+  async function uninstallDLC(game: GOG.GameInfo, dlc: GOG.RemoteGameDLC, cb = nothing){
     sendUninstallStart(game, "dlc: " + procKey(dlc.slug));
+    if(dlc.uninstall){
+      let uninstall = dlc.uninstall;
+      if(typeof uninstall === "string"){
+        const webdav = await initWebDav();
+        const remote = await ensureRemote(game);
+        const uninstall_dat = await webdav?.getFileContents(remote.folder + "/.data/" + uninstall);
+        if(uninstall_dat === undefined){
+          sendUninstallFailed(game, "DLC: " + procKey(dlc.slug));
+          return;
+        }
+        uninstall = JSON.parse(uninstall_dat.toString()) as GOG.DLCUninstall;
+      }
+      const total_count = uninstall.files?.length + uninstall.folders?.length;
+      let processed = 0;
+      if(uninstall.files){
+        for(const f of uninstall.files){
+          const file = game.root_dir + "\\" + f;
+          if(fs.existsSync(file)){
+            fs.rmSync(file);
+          }
+          processed++;
+          win?.webContents.send("progress-banner-progress", {
+            total: total_count,
+            progress: processed
+          });
+        }
+      }
+      if(uninstall.folders){
+        for(const f of uninstall.folders){
+          const folder = game.root_dir + "\\" + f;
+          if(fs.existsSync(folder)){
+            fs.rmSync(folder, {recursive: true});
+          }
+          processed++;
+          win?.webContents.send("progress-banner-progress", {
+            total: total_count,
+            progress: processed
+          });
+        }
+      }
+      sendUninstallEnd(game, "DLC: " + procKey(dlc.slug));
+      cb(true);
+      return;
+    }
+
+    // Rough uninstall?
     const f1 = game.root_dir + "\\goggame-" + dlc.gameId + ".hashdb";
     const f2 = game.root_dir + "\\goggame-" + dlc.gameId + ".ico";
     const f3 = game.root_dir + "\\goggame-" + dlc.gameId + ".info";
@@ -153,7 +200,13 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
 
   async function uninstallGame(game: GOG.GameInfo, cb = nothing){
     game.remote = await ensureRemote(game);
-    if(game.remote.is_zip || (game.remote.download.length > 0 && game.remote.download[0].endsWith(".zip"))){
+    const version = loadFromVersionCache(flattenName(game.name));
+    let download = game.remote.download;
+    if(game.remote.versions && version && game.remote.versions[version]){
+      download = game.remote.versions[version].download;
+    }
+
+    if(game.remote.is_zip || (download.length > 0 && download[0].endsWith(".zip"))){
       uninstallGameZip(game, cb);
     }else if(game.remote === undefined || !game.remote.is_zip){
       uninstallGameExe(game, "game: " + game.name, cb);
@@ -266,6 +319,10 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   async function downloadGameSequence(
     game: GOG.GameInfo, title: string, dl_link_set: string[],
     install = true, pos: number, downloaded = 0, cb = nothing){
+    if(download_cancel){
+      cb(false);
+      return;
+    }
     try{
       game.remote = await ensureRemote(game);
     }catch(e){
@@ -308,6 +365,10 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       const total = game.remote.dl_size;
       const stat = await webdav.stat(game.remote.folder + "/" + item) as FileStat;
       const done = () => {
+        if(download_cancel){
+          cb(false);
+          return;
+        }
         win?.webContents.send("progress-banner-progress", {
           total: total,
           progress: downloaded + stat.size
@@ -376,6 +437,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       cb(false);
       return;
     }
+    download_cancel = false;
     if(game.remote === undefined){
       win?.webContents.send("progress-banner-error", "Failed to start download: No Remote Data");
       cb(false);
@@ -453,7 +515,8 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     prepDownloadGame(game, false);
   });
 
-  async function prepDownloadDLC(game: GOG.GameInfo, dlc_slug: string, install: boolean){
+  async function prepDownloadDLC(game: GOG.GameInfo, dlc_slug: string, install: boolean, cb = nothing){
+    download_cancel = false;
     try{
       game.remote = await ensureRemote(game);
     }catch(e){
@@ -475,10 +538,11 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
         break;
       }
     }
-    return downloadPrep(game, install, "dlc: " + procKey(dlc_slug), game.remote.dlc[idx].download, game.remote);
+    return downloadPrep(game, install, "dlc: " + procKey(dlc_slug), game.remote.dlc[idx].download, game.remote, cb);
   }
 
   async function prepDownloadVersion(game: GOG.GameInfo, version_id: string, version: GOG.RemoteGameDLC, install: boolean, cb = nothing){
+    download_cancel = false;
     try{
       game.remote = await ensureRemote(game);
     }catch(e){
@@ -496,17 +560,25 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   }
 
   // Init
-  ipcMain.on("install-dlc", async(e, game: GOG.GameInfo, dlc_slug: string) => {
-    prepDownloadDLC(game, dlc_slug, true);
+  ipcMain.on("install-dlc", (e, game: GOG.GameInfo, dlc_slug: string) => {
+    prepDownloadDLC(game, dlc_slug, true, (success: boolean) => {
+      if(success){
+        win?.webContents.send("gog-game-reload", game);
+      }
+    });
   });
 
   // Init
-  ipcMain.on("uninstall-dlc", async(e, game: GOG.GameInfo, dlc: GOG.RemoteGameDLC) => {
-    uninstallDLC(game, dlc);
+  ipcMain.on("uninstall-dlc", (e, game: GOG.GameInfo, dlc: GOG.RemoteGameDLC) => {
+    uninstallDLC(game, dlc, (success: boolean) => {
+      if(success){
+        win?.webContents.send("gog-game-reload", game);
+      }
+    });
   });
 
   // Init
-  ipcMain.on("download-dlc", async(e, game: GOG.GameInfo, dlc_slug: string) => {
+  ipcMain.on("download-dlc", (e, game: GOG.GameInfo, dlc_slug: string) => {
     prepDownloadDLC(game, dlc_slug, false);
   });
 
@@ -531,6 +603,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
 
   ipcMain.on("game-dl-cancel", (e, game: GOG.GameInfo) => {
     console.log("Canceling Download / Install");
+    download_cancel = true;
     if(active_dl !== undefined){
       active_dl.stop();
       active_dl = undefined;

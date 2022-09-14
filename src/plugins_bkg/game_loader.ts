@@ -39,7 +39,7 @@ export function loadPresentDLC(game: GOG.GameInfo, remote: GOG.RemoteGameData): 
       const data = fs.readFileSync(game_dir + "\\" + file, "utf8");
       const l_info = JSON.parse(data);
       if(l_info.gameId !== l_info.rootGameId){
-        const name = flattenName(l_info.name.substring(l_info.name.indexOf(" - ") + 3));
+        const name = flattenName(l_info.name);
         dlc_found.push(name);
         dlc_ids[name] = l_info.gameId;
       }
@@ -144,7 +144,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
             l_info.current_version = loadFromVersionCache(flattenName(l_info.name));
             if(remote){
               // Load remote data
-              l_info.remote = await getRemoteGameData(l_info);
+              l_info.remote = await ensureRemote(l_info);
             }
             // Finally have the info
             info = l_info;
@@ -154,12 +154,6 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
         }
       }
       if(info){
-        if(info.remote){
-          for(const i in info.remote.dlc){
-            const dlc = info.remote.dlc[i];
-            dlc.present = dlc_found.includes(dlc.slug.replace(info.remote.slug + "_", ""));
-          }
-        }
         game_list.push(info);
       }
     }

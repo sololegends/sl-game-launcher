@@ -26,3 +26,13 @@ pnpm-debug.log*
 
 #Electron-builder output
 /dist_electron
+
+# Tools rejextion 
+tools/setup*.exe 
+tools/*.zip
+tools/*.json
+tools/output
+tools/temp_install
+tools/all_output
+
+DID

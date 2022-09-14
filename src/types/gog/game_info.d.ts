@@ -26,12 +26,18 @@ export namespace GOG {
 		folder: string
 	}
 
+	export type DLCUninstall = {
+		files: string[]
+		folders: string[]
+	}
+
 	export type RemoteGameDLC = {
 		slug: string
 		dl_size: number
 		gameId: string
 		present: boolean
 		download: string[]
+		uninstall?: DLCUninstall | string
 	}
 
 	export type RemoteGameData = {

@@ -231,7 +231,7 @@ export default defineComponent({
         if(res.remote){
           this.$emit("remote", res.remote);
         }else{
-          console.log("remote undefiend for " + this.game.name);
+          console.log("remote undefined for " + this.game.name);
         }
       });
     },
