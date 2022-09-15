@@ -32,8 +32,8 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       text: "Version " + info.version + " is available as of " + info.releaseDate,
       type: "success",
       action: {
-        name: "Download",
-        event: "download-update",
+        name: "Install",
+        event: "install-update",
         clear: true
       }
     }, "bell_alerts");
