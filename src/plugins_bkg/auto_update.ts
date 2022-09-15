@@ -27,16 +27,6 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   });
   autoUpdater.on("update-available", (info: UpdateInfo) => {
     globals.log("Update available: " + info);
-    win.webContents.send("notify", {
-      title: "New version available!",
-      text: "Version " + info.version + " is available as of " + info.releaseDate,
-      type: "success",
-      action: {
-        name: "Install",
-        event: "install-update",
-        clear: true
-      }
-    }, "bell_alerts");
   });
   autoUpdater.on("update-not-available", () => {
     globals.log("Update not available");
