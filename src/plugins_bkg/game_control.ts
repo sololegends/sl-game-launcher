@@ -15,6 +15,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   }
 
   function quitGame(){
+    win?.webContents.send("game-running-stopped");
     if(running_game !== undefined && running_game.process !== undefined && !running_game.process.killed){
       console.log("Quitting Game");
       if(running_game.process.pid){
