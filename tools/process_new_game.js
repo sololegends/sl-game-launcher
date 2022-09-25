@@ -282,7 +282,7 @@ async function processGameFiles(data, format = "game-info"){
     const files = getFileList(data.output_folder, data.output_folder + "/app");
     for(const file of files){
       // Ensure directory
-      ensureDir(extractPathComponents(data.output_folder + "/" + file).dir);
+      ensureDir(extractPathComponents(file.replace("app", data.output_folder)).dir);
       fs.copyFileSync(data.output_folder + "/" + file, file.replace("app", data.output_folder));
     }
     // Clean up the app dir
@@ -432,17 +432,19 @@ async function main(game_exe, dlc_folder, options_arr){
   if(options.clear){
     console.log("Clearing exe/bin and DLC");
     // Removing DLC folder
-    if(dlc_folder === "default"){
-      dlc_folder = "proc/dlc";
-    }
-    const dlcs = fs.readdirSync(dlc_folder);
-    for(const dlc of dlcs){
-      console.log(dlc);
-      if(!dlc.endsWith(".exe") && !dlc.endsWith(".bin")){
-        continue;
+    if(dlc_folder !== "NONE"){
+      if(dlc_folder === "default"){
+        dlc_folder = "proc/dlc";
       }
-      console.log("Removing: ", dlc_folder + "/" + dlc);
-      fs.rmSync(dlc_folder + "/" + dlc);
+      const dlcs = fs.readdirSync(dlc_folder);
+      for(const dlc of dlcs){
+        console.log(dlc);
+        if(!dlc.endsWith(".exe") && !dlc.endsWith(".bin")){
+          continue;
+        }
+        console.log("Removing: ", dlc_folder + "/" + dlc);
+        fs.rmSync(dlc_folder + "/" + dlc);
+      }
     }
     if(game_exe !== "NONE"){
       console.log("Removing exe/bin");

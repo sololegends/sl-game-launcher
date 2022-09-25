@@ -35,8 +35,15 @@ async function createWindow(){
   win.on("maximize", () => {
     win?.webContents.send("win-maximize");
   });
-  win.on("unmaximize", () => {
+  win.on("blur", () => {
     win?.webContents.send("win-restore");
+  });
+
+  win.on("focus", () => {
+    win?.webContents.send("win-focus");
+  });
+  win.on("blur", () => {
+    win?.webContents.send("win-blur");
   });
   ipcMain.on("minimize", () => {
     win?.minimize();

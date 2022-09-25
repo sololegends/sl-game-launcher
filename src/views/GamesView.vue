@@ -63,7 +63,8 @@ export default mixin(gamepad).extend({
       active_class: "active",
       disable_mouse: false,
       disable_mouse_to: -1,
-      game_running: false
+      game_running: false,
+      window_blurred: false
     };
   },
   computed: {
@@ -110,6 +111,12 @@ export default mixin(gamepad).extend({
     });
     ipc.on("progress-banner-hide", () => {
       this.banner_on = false;
+    });
+    ipc.on("win-blur", () => {
+      this.window_blurred = true;
+    });
+    ipc.on("win-focus", () => {
+      this.window_blurred = false;
     });
     ipc.on("game-running-changed", (e, info: GOG.GameInfo) => {
       this.game_running = info !== undefined;
@@ -191,31 +198,31 @@ export default mixin(gamepad).extend({
     },
     registerControllerHandlers(): void{
       this.$g_on([ "d_up", "ls_up" ], () => {
-        if(this.game_running){ return; }
+        if(this.game_running || this.window_blurred){ return; }
         this.disable_mouse = true;
         this.navigateGrid("ArrowUp");
         this.enableMouseTO();
       });
       this.$g_on([ "d_down", "ls_down" ], () => {
-        if(this.game_running){ return; }
+        if(this.game_running || this.window_blurred){ return; }
         this.disable_mouse = true;
         this.navigateGrid("ArrowDown");
         this.enableMouseTO();
       });
       this.$g_on([ "d_right", "ls_right" ], () => {
-        if(this.game_running){ return; }
+        if(this.game_running || this.window_blurred){ return; }
         this.navigateGrid("ArrowRight");
       });
       this.$g_on([ "d_left", "ls_left" ], () => {
-        if(this.game_running){ return; }
+        if(this.game_running || this.window_blurred){ return; }
         this.navigateGrid("ArrowLeft");
       });
       this.$g_on("a", () => {
-        if(this.game_running){ return; }
+        if(this.game_running || this.window_blurred){ return; }
         this.triggerGameAction();
       });
       this.$g_on("b", () => {
-        if(this.game_running){ return; }
+        if(this.game_running || this.window_blurred){ return; }
         const banner = this.$refs.dl_banner as DIBanner;
         if(banner){
           banner.cancel();
