@@ -149,6 +149,11 @@ export default defineComponent({
           click: this.uninstall,
           icon: "trash-alt"
         });
+        items.push({
+          title: "Browse Local Folder",
+          click: this.browse,
+          icon: "folder"
+        });
       }
       if(this.game.remote !== undefined){
         if(this.game.remote.dlc.length > 0){
@@ -200,6 +205,9 @@ export default defineComponent({
     }
   },
   methods: {
+    browse(){
+      ipc.send("open-folder", this.game.root_dir);
+    },
     showDataDev(){
       this.$modal.show("message", {
         api_output: JSON.stringify(this.game, null, 2),
