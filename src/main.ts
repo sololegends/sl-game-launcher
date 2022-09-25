@@ -15,6 +15,7 @@ import FontAwesome from "@/plugins/fontawesome";
 import Large from "@cards/Large.vue";
 import notifications from "@/plugins/notifications";
 import router from "./router/index";
+import sleep from "@/mixins/sleep";
 import store from "./store";
 import VueObserveVisibility from "vue-observe-visibility";
 import vuetify from "./plugins/vuetify";
@@ -23,6 +24,7 @@ import Vuex from "vuex";
 
 
 Vue.mixin(confirmation_modal);
+Vue.mixin(sleep);
 Vue.component("large-card", Large);
 
 Vue.component("v-contextmenu", ContextMenuVue);
@@ -98,8 +100,8 @@ Vue.prototype.$fn = {
   }
 };
 
-window.APP_VERSION = "v0.7.5";
-window.BUILD_DATE = "2022-09-24 20:28:29";
+window.APP_VERSION = "0.7.6";
+window.BUILD_DATE = "2022-09-24 23:28:44";
 export default createApp({
   router,
   render: (h: ((app: VueConstructor) => void)) => h(App),

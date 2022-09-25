@@ -134,13 +134,7 @@ export default mixin(gamepad).extend({
       }
     });
 
-    this.timer = setInterval(() =>{
-      if(this.games.length > 0){
-        clearInterval(this.timer);
-        return;
-      }
-      this.updateGames();
-    }, 1000) as unknown as number;
+    this.awaitLoad();
 
     ipc.on("game-dl-end", (e, game: GOG.GameInfo, finished, title?: string) => {
       if(finished){
@@ -190,6 +184,12 @@ export default mixin(gamepad).extend({
     window.removeEventListener("keydown", this.keyHandler);
   },
   methods: {
+    async awaitLoad(){
+      while(this.games.length <= 0){
+        await this.updateGames();
+        await this.sleep(5000);
+      }
+    },
     enableMouseTO(){
       if(this.disable_mouse_to !== -1){
         clearTimeout(this.disable_mouse_to);
@@ -275,10 +275,10 @@ export default mixin(gamepad).extend({
     onScroll(){
       this.$context_int.closeAll();
     },
-    updateGames(): void{
-      ipc.invoke("read-games", true).then((res: GOG.GameInfo[]) => {
+    async updateGames(){
+      await ipc.invoke("read-games", true).then(async(res: GOG.GameInfo[]) => {
         this.games = res;
-        ipc.invoke("read-remote-games").then((remote_games: GOG.GameInfo[]) => {
+        await ipc.invoke("read-remote-games").then((remote_games: GOG.GameInfo[]) => {
           this.remote_games = remote_games;
         });
       });
@@ -337,54 +337,41 @@ export default mixin(gamepad).extend({
       const base_offset = grid_children[0].offsetTop;
       const break_index = grid_children.findIndex(item => item.offsetTop > base_offset);
       const num_per_row = (break_index === -1 ? grid_num : break_index);
-      console.log("activeIndex", activeIndex);
-      console.log("num_per_row", num_per_row);
-      console.log("grid_num", grid_num);
-      console.log("direction_id", direction_id);
-
 
       const is_top_row = activeIndex <= num_per_row - 1;
       const is_bottom_row = activeIndex >= grid_num - num_per_row;
       const is_left_col = activeIndex % num_per_row === 0;
       const is_right_col = activeIndex % num_per_row === num_per_row - 1 || activeIndex === grid_num - 1;
 
-      console.log(is_top_row, is_bottom_row, is_left_col, is_right_col);
       if(typeof direction_id !== "string"){
-        // This.active_game = direction_id;
         updateActiveItem(grid_children[direction_id]);
         return;
       }
       switch (direction_id){
       case "ArrowUp":
         if (!is_top_row){
-          // This.active_game = activeIndex - num_per_row;
           updateActiveItem(grid_children[activeIndex - num_per_row]);
         }
         break;
       case "ArrowDown":
         if (!is_bottom_row){
-          // This.active_game = activeIndex + num_per_row;
           updateActiveItem(grid_children[activeIndex + num_per_row]);
         }
         break;
       case "ArrowLeft":
         if (!is_left_col){
-          // This.active_game = activeIndex - 1;
           updateActiveItem(grid_children[activeIndex - 1]);
         }
         break;
       case "ArrowRight":
         if (!is_right_col){
-          // This.active_game = activeIndex + 1;
           updateActiveItem(grid_children[activeIndex + 1]);
         }
         break;
       case "RESET":
-        // This.active_game = 0;
         updateActiveItem(grid_children[0]);
         break;
       case "NONE":
-        // This.active_game = -1;
         updateActiveItem(null);
         break;
       default: break;

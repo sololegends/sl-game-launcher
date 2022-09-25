@@ -7,6 +7,8 @@ let data_cache_dir = "none";
 let version_cache_dir = "none";
 let l_globals = undefined as undefined | Globals;
 
+const LOADED = {} as Record<string, number>;
+
 function saveToCache(cache_dir: string, name: string, data: Buffer, folder?: string): boolean{
   if(!l_globals){
     return false;
@@ -72,6 +74,13 @@ export function saveToDataCache(name: string, data: Buffer, folder?: string): bo
 }
 
 export function loadFromDataCache(name: string, folder?: string): undefined | string{
+  const log_name = name + (folder ? "-" + folder : "-");
+  if(LOADED[log_name] !== undefined){
+    console.log(log_name + " was loaded [" + LOADED[log_name] + "] times");
+  }else{
+    LOADED[log_name] = 1;
+  }
+  LOADED[log_name] += 1;
   return loadFromCache(data_cache_dir, name, folder)?.toString();
 }
 
