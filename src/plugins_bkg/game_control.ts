@@ -4,6 +4,7 @@ import { BrowserWindow, IpcMain } from "electron";
 import { Globals } from ".";
 import { GOG } from "@/types/gog/game_info";
 import tk from "tree-kill";
+import { updatePlayTime } from "./play_time_tracker";
 
 // GAME CONTROL
 let running_game = undefined as undefined | GOG.RunningGame;
@@ -42,6 +43,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       quitGame();
       runningGameChanged();
     }
+    const start = new Date().getTime();
     let exec_file = undefined;
     for(const i in game.playTasks){
       const task = game.playTasks[i];
@@ -74,6 +76,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     running_game.process.addListener("close", (code: number) => {
       console.log("Game exited with code: " + code);
       running_game = undefined;
+      updatePlayTime(game, (new Date().getTime() - start) / 1000);
       quitGame();
     });
 

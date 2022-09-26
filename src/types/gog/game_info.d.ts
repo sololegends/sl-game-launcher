@@ -69,6 +69,7 @@ export namespace GOG {
 		install_size?: number
 		remote?: RemoteGameData
 		current_version?: string
+		play_time?: number
 	}
 
 	export type ImageResponse = {

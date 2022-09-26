@@ -134,6 +134,14 @@ export default mixin(gamepad).extend({
       }
     });
 
+    ipc.on("game-playtime-update", (e, game: GOG.GameInfo, playtime: number) => {
+      for(const g of this.games){
+        if(g.name === game.name){
+          g.play_time = playtime;
+        }
+      }
+    });
+
     this.awaitLoad();
 
     ipc.on("game-dl-end", (e, game: GOG.GameInfo, finished, title?: string) => {

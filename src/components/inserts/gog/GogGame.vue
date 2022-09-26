@@ -6,7 +6,7 @@
     @mouseover="$emit('mouseover', $event)"
   >
     <div :class="'image' + (isRemote? ' uninstalled' : '')" @click="launchGame">
-      <v-progress-circular style="margin:auto" indeterminate size="100"  v-if="image === undefined" />
+      <v-progress-circular style="margin:auto" indeterminate size="80"  v-if="image === undefined" />
       <fa-icon v-else-if="image === '404'" class="remote-icon" size="5x" icon="cloud-download-alt" />
       <img v-else :src="image" width="200" />
     </div>
@@ -37,6 +37,12 @@
       <span v-if="downloadSize && installSize"> / </span>
       <span v-if="installSize" tip-title="Install Size">
         {{formatSize(installSize)}}
+      </span>
+    </div>
+
+    <div :class="'playtime-note' + ($store.getters.dev_mode? ' dev-mode' : '')" v-if="game.play_time">
+      <span tip-title="Play Time">
+        {{formatTime(game.play_time)}}
       </span>
     </div>
 
@@ -325,6 +331,9 @@ export default defineComponent({
         return "";
       }
       return filters.formatSize(size, "iB");
+    },
+    formatTime(val: number){
+      return filters.betterSeconds(val);
     }
   }
 });
@@ -401,7 +410,7 @@ export default defineComponent({
 		opacity: 0.75;
 	}
 
-  .install-btn, .uninstall-btn, .package-btn, .size-note{
+  .install-btn, .uninstall-btn, .package-btn, .size-note, .playtime-note{
     width: 35px;
     height: 35px;
     display: flex;
@@ -434,6 +443,17 @@ export default defineComponent({
     height: 19px;
 		border-radius: 0px;
   }
+  .playtime-note{
+    left: 35px;
+    top: 0px;
+    width: calc(100% - 35px);
+    height: 19px;
+    border-radius: 0px;
+  }
+  .playtime-note.dev-mode{
+    width: calc(100% - 70px);
+  }
+
   .version-note{
     font-size: 10px;
     position: absolute;

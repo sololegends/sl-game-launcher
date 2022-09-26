@@ -9,12 +9,14 @@ import z_cfg_init from "./config";
 import z_game_dl_install from "./game_dl_install";
 import z_game_loader from "./game_loader";
 import z_gc_init from "./game_control";
+import z_play_time_tracker from "./play_time_tracker";
 import z_process_cloud from "./process_cloud";
 import z_webdav_init from "./nc_webdav";
 
 const fns = [
   z_cfg_init,
   z_cache,
+  z_play_time_tracker,
   z_gc_init,
   z_webdav_init,
   z_game_loader,

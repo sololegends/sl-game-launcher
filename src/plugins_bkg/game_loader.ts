@@ -14,6 +14,7 @@ import {
 import { FileStat } from "webdav";
 import fs from "fs";
 import { getConfig } from "./config";
+import { getPlaytime } from "./play_time_tracker";
 import { Globals } from ".";
 import { GOG } from "@/types/gog/game_info";
 import zip from "node-stream-zip";
@@ -141,6 +142,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
             l_info.webcache = game_dir + "\\webcache.zip";
             l_info.root_dir = game_dir;
             l_info.install_size = globals.getFolderSize(game_dir);
+            l_info.play_time = getPlaytime(l_info);
             l_info.current_version = loadFromVersionCache(flattenName(l_info.name));
             if(remote){
               // Load remote data
