@@ -4,7 +4,11 @@
     <div style="margin:0px 20px">
       <v-text-field v-model="filter" clearable placeholder="Search..." @input="resetSelectedGame" />
     </div>
-    <ScrollablePanel :max_height="maxScrollable" @scroll="onScroll">
+    <div v-if="gamesFiltered.length <= 0" class="flex h100" style="flex-direction: column;text-align: center;">
+      <v-progress-circular width="20" size="200" indeterminate style="margin:auto" />
+      <div class="text-h6">Loading Games...</div>
+    </div>
+    <ScrollablePanel :max_height="maxScrollable" @scroll="onScroll" v-else>
       <div class="games-container" id="game_flex">
         <GogGame
           v-for="val, i in gamesFiltered" :key="i" :game="val"
@@ -15,6 +19,10 @@
           :data-game="i"
           @remote="setNewRemote(val, $event)"
           @mouseover="gameMouseOver(i)"
+        />
+        <GenericCard
+          v-if="remote_games.length <= 0"
+          name="Loading Remote..."
         />
       </div>
     </ScrollablePanel>
@@ -28,6 +36,7 @@ import DownloadInstallBanner, { DIBanner } from "@components/inserts/gog/Downloa
 import GogGame, { GogGameEle } from "../components/inserts/gog/GogGame.vue";
 import DLCSelectionModal from "@modals/DLCSelectionModal.vue";
 import gamepad from "@mixins/gamepad";
+import GenericCard from "../components/inserts/gog/GenericCard.vue";
 import { GOG } from "@/types/gog/game_info";
 import {ipcRenderer as ipc} from "electron";
 import mixin from "@mixins/index";
@@ -39,6 +48,7 @@ export default mixin(gamepad).extend({
   name: "GamesView",
   components: {
     DLCSelectionModal,
+    GenericCard,
     GogGame,
     ScrollablePanel,
     VersionSelectionModal,

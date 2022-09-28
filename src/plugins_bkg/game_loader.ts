@@ -94,7 +94,16 @@ export async function ensureRemote(game: GOG.GameInfo): Promise<GOG.RemoteGameDa
   }
   game.remote = await getRemoteGameData(game);
   if(game.remote === undefined){
-    throw new Error("Failed to retrieve remote data for game: [" + game.name + "]");
+    console.error(new Error("Failed to retrieve remote data for game: [" + game.name + "]"));
+    return {
+      logo: "logo.jpg",
+      folder: "localonly",
+      logo_format: "image/jpg",
+      slug: game.name.toLowerCase().replaceAll("[^a-z0-1]", "_"),
+      download: [],
+      dl_size: 0,
+      dlc: []
+    };
   }
   return game.remote;
 }

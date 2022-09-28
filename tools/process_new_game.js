@@ -2,6 +2,7 @@
 const child = require("child_process");
 const fs = require("fs");
 const archiver = require("archiver");
+const zip = require("node-stream-zip");
 
 // My stuffs
 const FORMAT = "game-info";
@@ -294,6 +295,15 @@ async function processGameFiles(data, format = "game-info"){
       if(fs.existsSync(data.output_folder + "/__redist/ISI/scriptinterpreter.exe")){
         fs.rmSync(data.output_folder + "/__redist/ISI/scriptinterpreter.exe");
       }
+    }else if(fs.existsSync(data.output_folder + "/webcache.zip")){
+      const webcache = new zip.async({file: data.output_folder + "/webcache.zip"});
+      const resources = await webcache.entryData("resources.json");
+      const resource = JSON.parse(resources.toString());
+      const image = resource["images\\logo_2x"];
+      const img_data = await webcache.entryData(image);
+      const ext = image.substr(image.lastIndexOf(".") + 1);
+      fs.writeFileSync(data.output_folder + "/logo." + ext, img_data);
+      await webcache.close();
     }
     return;
   }
@@ -429,6 +439,10 @@ async function main(game_exe, dlc_folder, options_arr){
       options[key_val[0]] = key_val[1];
     }
   }
+  if(options){
+    console.debug(options);
+  }
+  const output_dir = options.output || "game_repacked";
   if(options.clear){
     console.log("Clearing exe/bin and DLC");
     // Removing DLC folder
@@ -459,25 +473,25 @@ async function main(game_exe, dlc_folder, options_arr){
       }
     }
     console.log("Removing packaging folder");
-    removeDir("game_repacked");
+    removeDir(output_dir);
     return;
   }
 
   // Process the main game
-  const game = game_exe === "NONE" ? {} : await repackGame(game_exe, "game_repacked", options);
+  const game = game_exe === "NONE" ? {} : await repackGame(game_exe, output_dir, options);
   game.dlc = [];
   if(dlc_folder !== "NONE"){
     const dlc_files = fs.readdirSync(dlc_folder);
     console.log(dlc_files);
     for(const dlc_file of dlc_files){
       if(dlc_file.endsWith(".exe")){
-        game.dlc.push(await repackDLC(dlc_folder + "/" + dlc_file, "game_repacked", options));
+        game.dlc.push(await repackDLC(dlc_folder + "/" + dlc_file, output_dir, options));
       }
     }
   }
   if(game_exe !== "NONE" || dlc_folder !== "NONE"){
     // Write game file
-    fs.writeFileSync("game_repacked/game-data.json", JSON.stringify(game, null, 2));
+    fs.writeFileSync(output_dir + "/game-data.json", JSON.stringify(game, null, 2));
   }else {
     console.log("No actions taken");
   }
