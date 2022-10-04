@@ -276,8 +276,12 @@ async function getDlcUninstall(props, format = "game-info"){
 async function processGameFiles(data, format = "game-info"){
   if(format === "game-info"){
     // Remove the tmp folder and commonappdata folders
-    fs.rmSync(data.output_folder + "/tmp", {recursive: true});
-    fs.rmSync(data.output_folder + "/commonappdata", {recursive: true});
+    if(fs.existsSync("/tmp")){
+      fs.rmSync(data.output_folder + "/tmp", {recursive: true});
+    }
+    if(fs.existsSync("/commonappdata")){
+      fs.rmSync(data.output_folder + "/commonappdata", {recursive: true});
+    }
     // Move the app contents to the main game folder
     // Get file list
     const files = getFileList(data.output_folder, data.output_folder + "/app");
@@ -299,11 +303,16 @@ async function processGameFiles(data, format = "game-info"){
       const webcache = new zip.async({file: data.output_folder + "/webcache.zip"});
       const resources = await webcache.entryData("resources.json");
       const resource = JSON.parse(resources.toString());
-      const image = resource["images\\logo_2x"];
-      const img_data = await webcache.entryData(image);
-      const ext = image.substr(image.lastIndexOf(".") + 1);
-      fs.writeFileSync(data.output_folder + "/logo." + ext, img_data);
-      await webcache.close();
+      let image = resource["images\\logo2x"];
+      if(image === undefined){
+        image = resource["images\\logo"];
+      }
+      if(image){
+        const img_data = await webcache.entryData(image);
+        const ext = image.substr(image.lastIndexOf(".") + 1);
+        fs.writeFileSync(data.output_folder + "/logo." + ext, img_data);
+        await webcache.close();
+      }
     }
     return;
   }

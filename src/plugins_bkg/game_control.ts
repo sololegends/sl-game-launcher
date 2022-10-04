@@ -38,6 +38,18 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     runningGameChanged();
   }
 
+  function procArgs(args?: string){
+    const regex = / (?=(?:[^"]|"[^"]*")*$)/gm;
+    if(args){
+      const args_a = [];
+      for(const e of args.split(regex)){
+        args_a.push(e.replaceAll("\"", ""));
+      }
+      return args_a;
+    }
+    return [];
+  }
+
   function launchGame(e: unknown, game: GOG.GameInfo){
     if(running_game !== undefined && running_game.process !== undefined){
       quitGame();
@@ -45,11 +57,13 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     }
     const start = new Date().getTime();
     let exec_file = undefined;
+    let the_task = undefined;
     for(const i in game.playTasks){
       const task = game.playTasks[i];
       console.log(task);
       if(task.isPrimary){
         exec_file = game.root_dir + "\\" + task.path;
+        the_task = task;
         break;
       }
     }
@@ -59,11 +73,16 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     running_game = {
       info: game
     };
-    console.log("Running Game: " + exec_file);
+    console.log(
+      "Running Game: " + exec_file,
+      game.root_dir + (the_task?.workingDir ? "/" + the_task?.workingDir : ""),
+      procArgs(the_task?.arguments)
+    );
     running_game.process = child.execFile(
       exec_file,
+      procArgs(the_task?.arguments),
       {
-        cwd: game.root_dir
+        cwd: game.root_dir + (the_task?.workingDir ? "/" + the_task?.workingDir : "")
       },
       function(err, data){
         if(err){
