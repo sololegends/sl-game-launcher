@@ -14,8 +14,7 @@ async function  sleep(milliseconds: number): Promise<void>{
 }
 async function getLock(){
   while(lock){
-    console.log("Config awaiting lock...");
-    await sleep(50);
+    await sleep(100);
   }
   lock = true;
 }
@@ -30,12 +29,12 @@ export function setConfig(key: string, value: unknown, conf_file: string){
   getLock().then(() => {
     config[key] = value;
     fs.writeFile(conf_file, JSON.stringify(config), function(err){
+      unlock();
       if (err){
         return console.log(err);
       }
       console.log("Config was saved!");
     });
-    unlock();
   });
 }
 
