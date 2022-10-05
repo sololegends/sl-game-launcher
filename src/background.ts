@@ -1,12 +1,12 @@
 "use strict";
 import { app, BrowserWindow, ipcMain, protocol } from "electron";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
+import { APP_URL_HANDLER } from "./plugins_bkg/config";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import load from "./plugins_bkg";
 const isDevelopment = process.env.NODE_ENV !== "production";
 
-const app_url = "slgame";
-app.setAsDefaultProtocolClient(app_url);
+app.setAsDefaultProtocolClient(APP_URL_HANDLER);
 
 let _win = undefined as undefined | BrowserWindow;
 const got_lock = app.requestSingleInstanceLock(process.argv.slice(1));
@@ -18,8 +18,8 @@ if (!got_lock){
     app.on("second-instance", (event, commandLine, workingDirectory, args) => {
       let url_data = undefined;
       for(const ele of args as string[]){
-        if(ele.startsWith(app_url)){
-          url_data = ele.substring(app_url.length + 3);
+        if(ele.startsWith(APP_URL_HANDLER)){
+          url_data = ele.substring(APP_URL_HANDLER.length + 3);
           url_data = url_data.substring(0, url_data.lastIndexOf("/"));
         }
       }

@@ -1,11 +1,23 @@
+
 import { BrowserWindow, IpcMain } from "electron";
 import fs from "fs";
 import { Globals } from ".";
+import { GOG } from "@/types/gog/game_info";
+
+// GLOBAL CONFIGS ====>
+// App
+export const APP_URL_HANDLER = "slgame";
+
+// Game Saves
+export const REMOTE_FOLDER = ".game-saves";
+export const REMOTE_FILE_BASE = "save-ng";
+// <===== GLOBAL CONFIGS
+
 
 let config = {} as Record<string, unknown>;
 
 let lock = false;
-async function  sleep(milliseconds: number): Promise<void>{
+async function sleep(milliseconds: number): Promise<void>{
   return new Promise<void>((resolved) => {
     setTimeout(() => {
       resolved();
@@ -20,6 +32,15 @@ async function getLock(){
 }
 function unlock(){
   lock = false;
+}
+
+export function getOS(): GOG.GamePlatform{
+  const platform = process.platform;
+  // TODO: Detect the Steam Deck Linux version
+  if(platform === "win32"){
+    return "windows";
+  }
+  return platform as GOG.GamePlatform;
 }
 
 export function getConfig(key: string){

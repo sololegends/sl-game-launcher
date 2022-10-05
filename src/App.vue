@@ -44,7 +44,7 @@
         </v-btn>
       </v-app-bar>
 
-      <v-main class="main-view">
+      <v-main class="main-view" style="padding: 0px;margin: 48px 0px 0px;top: 0px;position: fixed;">
         <GameBanner :game="running_game"  v-if="running_game !== undefined" />
         <div v-if="disconnected">
           <div class="centered-container">

@@ -1,3 +1,5 @@
+
+import zip, { ZipEntry } from "node-stream-zip";
 import archiver from "archiver";
 import fs from "fs";
 import { getFolderSize } from "./files";
@@ -7,7 +9,11 @@ export type CompressProgress = {
   progress: number
 }
 
-export async function compressFolder(input: string, zip_output: string, progress?: (p: CompressProgress) => void, level = 9){
+export async function compressFolder(
+  input: string,
+  zip_output: string,
+  progress?: (p: CompressProgress) => void,
+  level = 9){
   const archive_op = archiver.create("zip", {
     zlib: { level }
   });
@@ -35,4 +41,26 @@ export async function compressFolder(input: string, zip_output: string, progress
   return await archive_op.finalize().then(() => {
     return promise;
   });
+}
+
+export async function decompressFolder(
+  input: string,
+  output: string,
+  progress?: (p: CompressProgress) => void
+){
+
+  const archive = new zip.async({file: input});
+  const total = fs.statSync(input).size;
+  const pg = progress ? progress :  () => {
+    // Nothing here
+  };
+
+  let extracted = 0;
+  archive.on("extract", (entry: ZipEntry) => {
+    extracted += entry.compressedSize;
+    pg({total: total, progress: extracted});
+  });
+  // Do the output
+  await archive.extract(null, output);
+  await archive.close();
 }

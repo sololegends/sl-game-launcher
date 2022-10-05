@@ -2,22 +2,27 @@
 v1.x.x Todo:
   ✔ DLC list respecting installed version @done(22-09-24 21:27)
   ☐ Reinstall or switching versions installs the appropriate DLC
-  ☐ GamePad Support
+  ✔ GamePad Support @done(22-10-05 17:12)
     ✔ Baisc Navigation @done(22-09-12 20:57)
     ✔ Launching and closng games @done(22-09-12 20:57)
-    ☐ Manage DLC
-    ☐ Change Versions
-  ☐ Added support for different OSs in the save file location data 
+  ✔ Added support for different OSs in the save file location data @done(22-10-05 16:42)
+  ☐ Verify game names can be anything now.. 
+  ☐ Sync play time stats to cloud
 
 v2.x.x Todo: 
   ☐ Linux support
     ☐ Wine installation
     ☐ Adding as non-steam game
     ☐ Launching using steam + proton
+  ☐ Add support for detecting and deploying game updates
+  ☐ GamePad Support
+    ☐ Manage DLC
+    ☐ Change Versions
+  ☐ Support regestry keys in save data saving (which is stupid games do that but here we are)
 
 v3.x.x Todo: 
-  ☐ Cloud sav syncing 
-  ☐ Better support for non-GOG games 
-  ☐ Custom info files for data when using the zip packaging
+  ✔ Cloud sav syncing @done(22-10-05 17:12)
+  ✔ Better support for non-GOG games @done(22-10-05 17:12)
+  ✔ Custom info files for data when using the zip packaging @done(22-10-05 17:12)
   ☐ Support for regestry entries during install
   ☐ Support for installing dependencies / required libraries

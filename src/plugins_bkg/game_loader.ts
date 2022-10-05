@@ -60,7 +60,7 @@ export function loadPresentDLC(game: GOG.GameInfo, remote: GOG.RemoteGameData): 
   return remote;
 }
 
-export async function getRemoteGameData(game: GOG.GameInfo): Promise<undefined | GOG.RemoteGameData>{
+export async function getRemoteGameData(game: GOG.GameInfo, use_cache = true): Promise<undefined | GOG.RemoteGameData>{
   if(game.remote !== undefined){
     return game.remote;
   }
@@ -69,7 +69,7 @@ export async function getRemoteGameData(game: GOG.GameInfo): Promise<undefined |
   const web_dav_cfg = webDavConfig();
   const web_dav = await initWebDav();
   const remote_folder = mutateFolder(web_dav_cfg.folder + "/" + game.remote_name);
-  if(remote_cache_data){
+  if(use_cache && remote_cache_data){
     const game_data = loadPresentDLC(game, JSON.parse(remote_cache_data));
     game_data.folder = remote_folder;
     return game_data as GOG.RemoteGameData;
@@ -89,11 +89,11 @@ export async function getRemoteGameData(game: GOG.GameInfo): Promise<undefined |
   return undefined;
 }
 
-export async function ensureRemote(game: GOG.GameInfo): Promise<GOG.RemoteGameData>{
+export async function ensureRemote(game: GOG.GameInfo, use_cache = true): Promise<GOG.RemoteGameData>{
   if(game.remote){
     return game.remote;
   }
-  game.remote = await getRemoteGameData(game);
+  game.remote = await getRemoteGameData(game, use_cache);
   if(game.remote === undefined){
     console.error(new Error("Failed to retrieve remote data for game: [" + game.name + " -- " + game.remote_name + "]"));
     return {

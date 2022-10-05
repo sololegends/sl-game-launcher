@@ -2,6 +2,7 @@
 import * as child from "child_process";
 import { BrowserWindow, IpcMain } from "electron";
 import { syncGameSave, uploadGameSave } from "./cloud_saves";
+import { ensureRemote } from "./game_loader";
 import { Globals } from ".";
 import { GOG } from "@/types/gog/game_info";
 import tk from "tree-kill";
@@ -56,6 +57,9 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       quitGame();
       runningGameChanged();
     }
+    win?.webContents.send("save-game-sync-state", game, "Syncing Remote Data");
+    game.remote = await ensureRemote(game, false);
+    win?.webContents.send("save-game-stopped", game);
     // Check for new cloud sync
     const cloud_sync = new Promise<boolean>((resolver)=>{
       syncGameSave(game, resolver);

@@ -164,7 +164,7 @@ export default defineComponent({
           click: this.browse,
           icon: "folder"
         });
-        if(this.game.remote?.save_location){
+        if(this.game.remote?.saves){
           items.push({
             title: "Upload Save Files",
             click: this.uploadSaveFiles,

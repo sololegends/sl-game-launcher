@@ -42,6 +42,12 @@ export namespace GOG {
 		uninstall?: DLCUninstall | string
 	}
 
+	export type GamePlatform = "aix" | "darwin" | "freebsd" | "linux" | "openbsd" | "sunos" | "windows" | "deck"
+
+	export type GameSave = Record<string, string>;
+
+	export type GameSavesLocation = Record<GamePlatform, GameSave>
+
 	export type RemoteGameData = {
 		logo: string
 		folder: string
@@ -53,7 +59,7 @@ export namespace GOG {
 		dlc: RemoteGameDLC[]
 		versions?: Record<string, RemoteGameDLC>
 		is_zip?: boolean,
-		save_location?: string
+		saves?: GameSavesLocation
 	}
 
 	export type GameInfo = {
