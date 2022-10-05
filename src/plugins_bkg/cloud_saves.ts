@@ -130,7 +130,7 @@ export async function uploadGameSave(game: GOG.GameInfo){
 
   if(nc_cfg !== undefined && web_dav !== undefined){
     const remote_save_folder = getRemoteSaveDirectory(game);
-    const remove_save_file = remote_save_folder + "/" + REMOTE_FILE_BASE + ".zip";
+    const remove_save_file = remote_save_folder + "/" + REMOTE_FILE_BASE;
     // Make the game folder here
     if(!await web_dav.exists(remote_save_folder)){
       await web_dav.createDirectory(remote_save_folder, {recursive: true});
@@ -150,20 +150,20 @@ export async function uploadGameSave(game: GOG.GameInfo){
     // Time to upload!!
     win?.webContents.send("save-game-dl-progress", game, "Uploading save", {total: -1, progress: -1});
     const read_stream = fs.createReadStream(save_zip);
-    await web_dav.putFileContents(remove_save_file + ".new", read_stream);
+    await web_dav.putFileContents(remove_save_file + ".new.zip", read_stream);
     // Backup old save if present
-    if(await web_dav.exists(remove_save_file + ".new")){
+    if(await web_dav.exists(remove_save_file + ".new.zip")){
       // Backup old save if present
-      if(await web_dav.exists(remove_save_file)){
+      if(await web_dav.exists(remove_save_file + ".zip")){
         const d = new Date();
         await web_dav.moveFile(
-          remove_save_file,
+          remove_save_file + ".zip",
           remove_save_file
             + "." + d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate()
             + "." + d.getHours() + "-" + d.getMinutes()
             + ".zip");
       }
-      await web_dav.moveFile(remove_save_file + ".new",  remove_save_file);
+      await web_dav.moveFile(remove_save_file + ".new.zip",  remove_save_file + ".zip");
       // Update folder time
       for(const save in save_files){
         fs.utimesSync(save_files[save], new Date(), new Date());
