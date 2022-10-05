@@ -39,6 +39,9 @@
           <v-text-field dense v-model="webdav.folder" label="WebDAV Folder" />
         </v-list-item>
         <v-list-item>
+          <v-text-field dense v-model="remote_save_folder" label="Cloud Save Folder" />
+        </v-list-item>
+        <v-list-item>
           <v-btn class="primary" @click="saveWebDav">
             Save Config
           </v-btn>
@@ -159,6 +162,7 @@ export default defineComponent({
         pass: "",
         folder: ""
       } as GOG.WebDavConfig,
+      remote_save_folder: ".game-saves",
       version_copy_color: "white--text",
       cache: {
         data_size: -1,
@@ -173,6 +177,9 @@ export default defineComponent({
     this.loadDevMode();
     ipc.invoke("cfg-get", "gog_path").then((res) => {
       this.setGogFolder(res);
+    });
+    ipc.invoke("cfg-get", "remote_save_folder").then((res) => {
+      this.remote_save_folder = res || ".game-saves";
     });
     ipc.invoke("cfg-get", "webdav").then((res) => {
       if(res !== undefined){
@@ -229,6 +236,7 @@ export default defineComponent({
     },
     saveWebDav(){
       ipc.send("cfg-set", "webdav", this.webdav);
+      ipc.send("cfg-set", "remote_save_folder", this.remote_save_folder);
     },
     copyVersionInfo(): void{
       let string = "APP Versions";

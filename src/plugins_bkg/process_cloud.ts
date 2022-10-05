@@ -116,7 +116,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
     // ========== FILE ZIPPING ==========
     const output = fs.createWriteStream(zip_file);
     const archive_op = archiver.create("zip", {
-      comment: "SL Game Packages GOG Game",
+      comment: "SL Game Packaged Game",
       zlib: {
         level: 9
       }

@@ -40,6 +40,7 @@ export default defineComponent({
 <style scoped>
 .game-banner{
 	background-color: var(--v-success-base)!important;
+  top: 0px;
 }
 .game-state{
 	font-weight: bold;

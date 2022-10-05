@@ -1,6 +1,7 @@
 
 import * as child from "child_process";
 import { BrowserWindow, IpcMain } from "electron";
+import { syncGameSave, uploadGameSave } from "./cloud_saves";
 import { Globals } from ".";
 import { GOG } from "@/types/gog/game_info";
 import tk from "tree-kill";
@@ -50,11 +51,16 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     return [];
   }
 
-  function launchGame(e: unknown, game: GOG.GameInfo){
+  async function launchGame(e: unknown, game: GOG.GameInfo){
     if(running_game !== undefined && running_game.process !== undefined){
       quitGame();
       runningGameChanged();
     }
+    // Check for new cloud sync
+    const cloud_sync = new Promise<boolean>((resolver)=>{
+      syncGameSave(game, resolver);
+    });
+    await cloud_sync;
     const start = new Date().getTime();
     let exec_file = undefined;
     let the_task = undefined;
@@ -96,6 +102,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       console.log("Game exited with code: " + code);
       running_game = undefined;
       updatePlayTime(game, (new Date().getTime() - start) / 1000);
+      uploadGameSave(game);
       quitGame();
     });
 

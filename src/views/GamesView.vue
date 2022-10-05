@@ -28,6 +28,7 @@
     </ScrollablePanel>
     <DLCSelectionModal />
     <VersionSelectionModal />
+    <SaveSyncStatus />
   </div>
 </template>
 
@@ -40,6 +41,7 @@ import GenericCard from "../components/inserts/gog/GenericCard.vue";
 import { GOG } from "@/types/gog/game_info";
 import {ipcRenderer as ipc} from "electron";
 import mixin from "@mixins/index";
+import SaveSyncStatus from "@/components/inserts/gog/SaveSyncStatus.vue";
 import ScrollablePanel from "@/components/general/ScrollablePanel.vue";
 import VersionSelectionModal from "@modals/VersionSelectionModal.vue";
 
@@ -52,7 +54,8 @@ export default mixin(gamepad).extend({
     GogGame,
     ScrollablePanel,
     VersionSelectionModal,
-    DownloadInstallBanner
+    DownloadInstallBanner,
+    SaveSyncStatus
   },
   mixins: [
     gamepad
@@ -149,6 +152,24 @@ export default mixin(gamepad).extend({
         if(g.name === game.name){
           g.play_time = playtime;
         }
+      }
+    });
+
+    ipc.on("launch-game-from-url",  async(e, game_id: string) => {
+      while(this.games.length <= 0){
+        console.log("Awaiting games:", this.games.length);
+        await this.sleep(1000);
+      }
+      let game = undefined;
+      for(const ele of this.games){
+        if(game_id === ele.gameId || game_id === ele.remote_name){
+          game = ele;
+          break;
+        }
+      }
+      console.log("Attempting to launch game:", game);
+      if(game){
+        this.launchGame(game);
       }
     });
 
@@ -260,7 +281,6 @@ export default mixin(gamepad).extend({
       this.navigateGrid(game_id);
     },
     clearSelectedGame(){
-      console.log("HELL O THERE");
       if(this.active_game === -1){
         return;
       }
@@ -300,6 +320,19 @@ export default mixin(gamepad).extend({
           this.remote_games = remote_games;
         });
       });
+    },
+    launchGame(game: GOG.GameInfo){
+      for(const g in this.$refs){
+        const ele_t = this.$refs[g] as GogGameEle | GogGameEle[];
+        const ele = Array.isArray(ele_t) ? ele_t[0] : ele_t;
+        const gd = ele.gameData;
+        if(!gd){
+          continue;
+        }
+        if(gd && gd.gameId === game.gameId && !ele.isRemote){
+          ele.launchGame();
+        }
+      }
     },
     triggerGameAction(){
       if(this.active_game === -1){

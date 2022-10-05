@@ -52,7 +52,8 @@ export namespace GOG {
 		install_size?: number
 		dlc: RemoteGameDLC[]
 		versions?: Record<string, RemoteGameDLC>
-		is_zip?: boolean
+		is_zip?: boolean,
+		save_location?: string
 	}
 
 	export type GameInfo = {
@@ -71,7 +72,8 @@ export namespace GOG {
 		install_size?: number
 		remote?: RemoteGameData
 		current_version?: string
-		play_time?: number
+		play_time?: number,
+		remote_name: string
 	}
 
 	export type ImageResponse = {

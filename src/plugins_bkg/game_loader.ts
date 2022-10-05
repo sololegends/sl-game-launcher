@@ -13,6 +13,7 @@ import {
 
 import { FileStat } from "webdav";
 import fs from "fs";
+import { game_name_file } from "@/json/files.json";
 import { getConfig } from "./config";
 import { getPlaytime } from "./play_time_tracker";
 import { Globals } from ".";
@@ -36,7 +37,7 @@ export function loadPresentDLC(game: GOG.GameInfo, remote: GOG.RemoteGameData): 
   const dlc_ids = {} as Record<string, string>;
   for(const i in files){
     const file = files[i];
-    if(file.endsWith(".info")){
+    if(file.endsWith(".info") && (file.startsWith("goggame") || file.startsWith("game-data"))){
       const data = fs.readFileSync(game_dir + "\\" + file, "utf8");
       const l_info = JSON.parse(data);
       if(l_info.gameId !== l_info.rootGameId){
@@ -63,11 +64,11 @@ export async function getRemoteGameData(game: GOG.GameInfo): Promise<undefined |
   if(game.remote !== undefined){
     return game.remote;
   }
-  const cache_name = flattenName(game.name);
+  const cache_name = flattenName(game.remote_name);
   const remote_cache_data = loadFromDataCache("game-data.json", cache_name);
   const web_dav_cfg = webDavConfig();
   const web_dav = await initWebDav();
-  const remote_folder = mutateFolder(web_dav_cfg.folder + "/" + game.name);
+  const remote_folder = mutateFolder(web_dav_cfg.folder + "/" + game.remote_name);
   if(remote_cache_data){
     const game_data = loadPresentDLC(game, JSON.parse(remote_cache_data));
     game_data.folder = remote_folder;
@@ -94,7 +95,7 @@ export async function ensureRemote(game: GOG.GameInfo): Promise<GOG.RemoteGameDa
   }
   game.remote = await getRemoteGameData(game);
   if(game.remote === undefined){
-    console.error(new Error("Failed to retrieve remote data for game: [" + game.name + "]"));
+    console.error(new Error("Failed to retrieve remote data for game: [" + game.name + " -- " + game.remote_name + "]"));
     return {
       logo: "logo.jpg",
       folder: "localonly",
@@ -108,28 +109,9 @@ export async function ensureRemote(game: GOG.GameInfo): Promise<GOG.RemoteGameDa
   return game.remote;
 }
 
-export async function loadDownloadSize(game: GOG.GameInfo): Promise<number>{
-  try{
-    game.remote = await ensureRemote(game);
-  }catch(e){
-    return -1;
-  }
-  const web_dav = await initWebDav();
-  const remote_folder = game.remote?.folder;
-  let total_size = 0;
-  for(const i in game.remote.download){
-    const dl = game.remote.download[i];
-    if(await web_dav?.exists(remote_folder + "/" + dl)){
-      const stat = await web_dav?.stat(remote_folder + "/" + dl) as FileStat;
-      total_size += stat.size;
-    }
-  }
-  return total_size;
-}
-
 export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Globals){
 
-  async function getLocalGames(remote = true): Promise<GOG.GameInfo[]>{
+  async function getLocalGames(heavy = true): Promise<GOG.GameInfo[]>{
     const folder = getConfig("gog_path") as string;
     const game_list = [] as GOG.GameInfo[];
     const games = fs.readdirSync(folder);
@@ -144,18 +126,26 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       const dlc_found = [];
       for(const i in files){
         const file = files[i];
-        if(file.endsWith(".info")){
+        if(file.endsWith(".info") && (file.startsWith("goggame") || file.startsWith("game-data"))){
           const data = fs.readFileSync(game_dir + "\\" + file, "utf8");
           const l_info = JSON.parse(data) as GOG.GameInfo;
           if(l_info.gameId === l_info.rootGameId){
+            l_info.remote_name = l_info.name;
+            if(fs.existsSync(game_dir + "/" + game_name_file)){
+              l_info.remote_name = fs.readFileSync(game_dir + "/" + game_name_file).toString();
+            }
             l_info.webcache = game_dir + "\\webcache.zip";
             l_info.root_dir = game_dir;
-            l_info.install_size = globals.getFolderSize(game_dir);
-            l_info.play_time = getPlaytime(l_info);
-            l_info.current_version = loadFromVersionCache(flattenName(l_info.name));
-            if(remote){
+            if(heavy){
+              l_info.install_size = globals.getFolderSize(game_dir);
+              l_info.play_time = getPlaytime(l_info);
+              l_info.current_version = loadFromVersionCache(flattenName(l_info.name));
               // Load remote data
-              l_info.remote = await ensureRemote(l_info);
+              try{
+                l_info.remote = await ensureRemote(l_info);
+              } catch(e){
+                console.log("Failed to get remote game data" + e);
+              }
             }
             // Finally have the info
             info = l_info;
@@ -176,7 +166,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     const flat_games = [];
     for(const i in local_games){
       const game = local_games[i];
-      flat_games.push(game.name);
+      flat_games.push(game.remote_name);
     }
     return flat_games;
   }
@@ -195,16 +185,17 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
         if(file.type === "directory" && !name.startsWith("~") && !local_games.includes(name)){
           // Get the remote data payload
           const game = {
-            "clientId": "remote",
-            "gameId": file.filename,
-            "language": "remote",
-            "languages": ["remote"],
-            "name": name,
-            "playTasks": [] as GOG.PlayTasks[],
-            "rootGameId": "remote",
-            "version": 0,
-            "webcache": "remote",
-            "root_dir": "remote"
+            clientId: "remote",
+            gameId: file.filename,
+            language: "remote",
+            languages: ["remote"],
+            name: name,
+            remote_name: name,
+            playTasks: [] as GOG.PlayTasks[],
+            rootGameId: "remote",
+            version: 0,
+            webcache: "remote",
+            root_dir: "remote"
           } as GOG.GameInfo;
           remote_games.push(game);
         }
@@ -219,7 +210,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     try{
       game.remote = await ensureRemote(game);
     }catch(e){
-      console.log("Failed to get remote for game [" + game.name + "]");
+      console.log("Failed to get remote for game [" + game.name + " -- " + game.remote_name + "]");
       return { icon: "404", remote: undefined };
     }
     if(nc_cfg !== undefined && web_dav !== undefined && game.remote?.logo){
@@ -258,11 +249,23 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     if(cache_zip === "remote"){
       return getRemoteGameIcon(game);
     }
+    if(game.remote){
+      const image = loadFromImageCache(game.remote.logo, game.remote.slug);
+      if(image){
+        return {
+          icon: "data:" + game.remote.logo_format + ";base64," + image.toString("base64"),
+          remote: game.remote
+        };
+      }
+    }
     const webcache = new zip.async({file: cache_zip});
     const data = await webcache.entryData("resources.json");
     const resource = JSON.parse(data.toString());
     const image = resource["images\\" + type];
     const img_data = await webcache.entryData(image);
+    if(game.remote){
+      saveToImageCache(game.remote.logo, img_data, game.remote.slug);
+    }
     const ext = image.substr(image.lastIndexOf(".") + 1);
     await webcache.close();
     return {
@@ -294,16 +297,4 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     return getGameImage(type, game);
   });
 
-  ipcMain.handle("get-dl-size", async(e, game: GOG.GameInfo) => {
-    try{
-      game.remote = await ensureRemote(game);
-    }catch(e){
-      return -1;
-    }
-    const dl_size =  await loadDownloadSize(game);
-    game.remote.dl_size = dl_size;
-    const cache_name = flattenName(game.name);
-    saveToDataCache("game-data.json", Buffer.from(JSON.stringify(game.remote, null, 2)), cache_name);
-    return dl_size;
-  });
 }

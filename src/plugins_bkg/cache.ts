@@ -17,7 +17,7 @@ function saveToCache(cache_dir: string, name: string, data: Buffer, folder?: str
   if(folder){
     l_globals.ensureDir(cache_dir + folder);
   }
-  console.log("Data [" + ((folder ? (folder + "/") : "") + name) + "] saved to cache");
+  // Console.log("Data [" + ((folder ? (folder + "/") : "") + name) + "] saved to cache");
   const fsw = fs.createWriteStream(file);
   const bool = fsw.write(data);
   fsw.close();
@@ -27,7 +27,7 @@ function saveToCache(cache_dir: string, name: string, data: Buffer, folder?: str
 function loadFromCache(cache_dir: string, name: string, folder?: string): undefined | Buffer{
   const file = cache_dir + (folder ? (folder + "/") : "") + name;
   if(fs.existsSync(file)){
-    console.log("Data [" + ((folder ? (folder + "/") : "") + name) + "] loaded from cache");
+    // Console.log("Data [" + ((folder ? (folder + "/") : "") + name) + "] loaded from cache");
     return fs.readFileSync(file);
   }
   return undefined;
@@ -36,7 +36,7 @@ function loadFromCache(cache_dir: string, name: string, folder?: string): undefi
 function removeFromCache(cache_dir: string, name: string, folder?: string){
   const file = cache_dir + (folder ? (folder + "/") : "") + name;
   if(fs.existsSync(file)){
-    console.log("Data [" + ((folder ? (folder + "/") : "") + name) + "] deleted from cache");
+    // Console.log("Data [" + ((folder ? (folder + "/") : "") + name) + "] deleted from cache");
     fs.rmSync(file);
   }
 }
@@ -76,7 +76,7 @@ export function saveToDataCache(name: string, data: Buffer, folder?: string): bo
 export function loadFromDataCache(name: string, folder?: string): undefined | string{
   const log_name = name + (folder ? "-" + folder : "-");
   if(LOADED[log_name] !== undefined){
-    console.log(log_name + " was loaded [" + LOADED[log_name] + "] times");
+    // Console.log(log_name + " was loaded [" + LOADED[log_name] + "] times");
   }else{
     LOADED[log_name] = 1;
   }

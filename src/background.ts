@@ -5,6 +5,36 @@ import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import load from "./plugins_bkg";
 const isDevelopment = process.env.NODE_ENV !== "production";
 
+const app_url = "slgame";
+app.setAsDefaultProtocolClient(app_url);
+
+let _win = undefined as undefined | BrowserWindow;
+const got_lock = app.requestSingleInstanceLock(process.argv.slice(1));
+
+if (!got_lock){
+  app.quit();
+} else {
+  app.whenReady().then(() => {
+    app.on("second-instance", (event, commandLine, workingDirectory, args) => {
+      let url_data = undefined;
+      for(const ele of args as string[]){
+        if(ele.startsWith(app_url)){
+          url_data = ele.substring(app_url.length + 3);
+          url_data = url_data.substring(0, url_data.lastIndexOf("/"));
+        }
+      }
+      // Someone tried to run a second instance, we should focus our window.
+      if (_win){
+        if(url_data){
+          _win.webContents.send("launch-game-from-url", url_data);
+        }
+        if (_win.isMinimized()){ _win.restore(); }
+        _win.focus();
+      }
+    });
+  });
+}
+
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
   { scheme: "app", privileges: { secure: true, standard: true } }
@@ -27,6 +57,7 @@ async function createWindow(){
       contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION
     }
   });
+  _win = win;
 
   ipcMain.on("gog-path-change", (e, value) => {
     win?.webContents.send("gog-path-change", value);

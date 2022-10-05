@@ -21,6 +21,7 @@ export namespace Notify {
 		type: Notify.Type;
 		closed?: (alert: Notify.Alert) => void | Promise;
 		action?: Action
+		actions?: Action[]
 	};
 
 	export interface AlertInternal extends Alert{

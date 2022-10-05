@@ -7,6 +7,7 @@ v1.x.x Todo:
     ✔ Launching and closng games @done(22-09-12 20:57)
     ☐ Manage DLC
     ☐ Change Versions
+  ☐ Added support for different OSs in the save file location data 
 
 v2.x.x Todo: 
   ☐ Linux support

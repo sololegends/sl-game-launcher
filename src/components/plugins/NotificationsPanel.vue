@@ -26,8 +26,16 @@
           <span v-else>{{alert.text}}</span>
           <div class="bottom-data">
             <v-spacer />
+            <div v-if="alert.actions">
+              <v-btn
+                v-for="action of alert.actions" :key="action.name"
+                @click="doAction(alert, action)" x-small
+              >
+                {{action.name}}
+              </v-btn>
+            </div>
             <v-btn
-              @click="doAction(alert)"
+              @click="doAction(alert, alert.action)"
               v-if="alert.action"
               x-small
             >
@@ -149,10 +157,10 @@ export default defineComponent({
     }
   },
   methods: {
-    doAction(alert: Notify.AlertInternal){
-      if(alert.action){
-        ipc.send(alert.action.event, alert.action.data);
-        if(alert.action.clear){
+    doAction(alert: Notify.AlertInternal, action: Notify.Action){
+      if(action){
+        ipc.send(action.event, action.data);
+        if(action.clear){
           this.remove(alert);
         }
       }

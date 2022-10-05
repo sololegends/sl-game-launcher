@@ -4,16 +4,38 @@ import { Globals } from ".";
 
 let config = {} as Record<string, unknown>;
 
+let lock = false;
+async function  sleep(milliseconds: number): Promise<void>{
+  return new Promise<void>((resolved) => {
+    setTimeout(() => {
+      resolved();
+    }, milliseconds);
+  });
+}
+async function getLock(){
+  while(lock){
+    console.log("Config awaiting lock...");
+    await sleep(50);
+  }
+  lock = true;
+}
+function unlock(){
+  lock = false;
+}
+
 export function getConfig(key: string){
   return config[key];
 }
 export function setConfig(key: string, value: unknown, conf_file: string){
-  config[key] = value;
-  fs.writeFile(conf_file, JSON.stringify(config), function(err){
-    if (err){
-      return console.log(err);
-    }
-    console.log("Config was saved!");
+  getLock().then(() => {
+    config[key] = value;
+    fs.writeFile(conf_file, JSON.stringify(config), function(err){
+      if (err){
+        return console.log(err);
+      }
+      console.log("Config was saved!");
+    });
+    unlock();
   });
 }
 
@@ -32,12 +54,11 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     });
   });
 
-
   ipcMain.handle("cfg-get", (e, key: string) => {
     return getConfig(key);
   });
   ipcMain.on("cfg-set", (e, key: string, value: unknown) => {
-    return setConfig(key, value, conf_file);
+    setConfig(key, value, conf_file);
   });
 
 

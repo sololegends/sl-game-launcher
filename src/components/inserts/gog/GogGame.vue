@@ -76,6 +76,7 @@ export interface GogGameEle extends Vue {
   // Info functions
   isRunning: boolean
   isRemote: boolean
+  gameData: GOG.GameInfo
 
   // Control Functions
   downloadAndInstall: () => void;
@@ -136,6 +137,9 @@ export default defineComponent({
     isRemote(): boolean{
       return this.game.webcache === "remote";
     },
+    gameData(): GOG.GameInfo{
+      return this.game;
+    },
     items(): ContextMenu.MenuItem[]{
       const items = [];
       if(this.isRemote){
@@ -160,6 +164,18 @@ export default defineComponent({
           click: this.browse,
           icon: "folder"
         });
+        if(this.game.remote?.save_location){
+          items.push({
+            title: "Upload Save Files",
+            click: this.uploadSaveFiles,
+            icon: "upload"
+          });
+          items.push({
+            title: "Sync Save Files",
+            click: this.syncSaveFiles,
+            icon: "sync-alt"
+          });
+        }
       }
       if(this.game.remote !== undefined){
         if(this.game.remote.dlc.length > 0){
@@ -211,6 +227,12 @@ export default defineComponent({
     }
   },
   methods: {
+    uploadSaveFiles(){
+      ipc.send("upload-game-save", this.game);
+    },
+    syncSaveFiles(){
+      ipc.send("sync-game-save", this.game);
+    },
     browse(){
       ipc.send("open-folder", this.game.root_dir);
     },

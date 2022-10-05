@@ -2,22 +2,18 @@
 import * as child from "child_process";
 import { BrowserWindow, IpcMain } from "electron";
 import { DownloaderHelper, Stats } from "node-downloader-helper";
+import { downloadFile, initWebDav } from "./nc_webdav";
 import { loadFromVersionCache, removeFromVersionCache, saveToVersionCache } from "./cache";
 import zip, { ZipEntry } from "node-stream-zip";
 import { ensureRemote } from "./game_loader";
 import { FileStat } from "webdav";
 import filters from "@/js/filters";
 import fs from "fs";
+import { game_name_file } from "@/json/files.json";
 import { getConfig } from "./config";
 import { Globals } from ".";
 import { GOG } from "@/types/gog/game_info";
-import { initWebDav } from "./nc_webdav";
 import tk from "tree-kill";
-
-type URLReturn = {
-  url: string
-  auth: string
-}
 
 function procKey(key: string){
   return filters.procKey(key);
@@ -30,20 +26,6 @@ function flattenName(name: string): string{
 function nothing(success: boolean){
   // Nothing
   console.log(success);
-}
-
-function handlePassURL(url: string): URLReturn{
-  // Extract the credentials
-  const at_idx = url.lastIndexOf("@");
-  const proto_idx = url.indexOf(":") + 3;
-  const proto = url.substring(0, proto_idx);
-  const creds = url.substring(proto_idx, at_idx);
-  const user = creds.substring(0, creds.indexOf(":"));
-  const pass = encodeURIComponent(creds.substring(creds.indexOf(":") + 1));
-  return {
-    url: proto + url.substring(at_idx),
-    auth: "Basic " + Buffer.from(user + ":" + pass).toString("base64")
-  };
 }
 
 export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Globals){
@@ -264,6 +246,8 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
 
     console.log("Extracted:" + count);
     await archive.close();
+    // Write game name to file
+    fs.writeFileSync(ins_dir + "/" + game_name_file, game.name);
     cleanupDownloaded(dl_files);
     sendInstallEnd(game);
     triggerReload();
@@ -273,9 +257,10 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     sendInstallStart(game);
     const gog_path = getConfig("gog_path");
     const tmp_download = gog_path + "\\.temp\\";
+    const ins_dir = gog_path + "\\" + globals.normalizeFolder(game.name);
     active_ins = child.execFile(
       tmp_download + "" + exe,
-      [ "/VERYSILENT",  "\"/dir=" + gog_path + "\\" + globals.normalizeFolder(game.name) + "\"", "/NoRestart" ],
+      [ "/VERYSILENT",  "\"/dir=" + ins_dir + "\"", "/NoRestart" ],
       function(err, data){
         if(err){
           console.error(err);
@@ -291,6 +276,8 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     });
     active_ins.addListener("close", (code: number) => {
       console.log("Game installed with code: " + code);
+      // Write game name to file
+      fs.writeFileSync(ins_dir + "/" + game_name_file, game.name);
       if(code === 3221226525){
         cleanupDownloaded(dl_files);
         sendInstallEnd(game);
@@ -388,16 +375,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
           return;
         }
       }
-      const dl_link = handlePassURL(webdav.getFileDownloadLink(game.remote.folder + "/" + item));
-      active_dl = new DownloaderHelper(dl_link.url, tmp_download, {
-        headers: {
-          "Authorization": dl_link.auth
-        },
-        fileName: item,
-        resumeIfFileExists: true,
-        removeOnStop: false,
-        removeOnFail: false
-      });
+      active_dl = downloadFile(webdav.getFileDownloadLink(game.remote.folder + "/" + item), item);
 
       active_dl.on("end", () => {
         done();
@@ -425,10 +403,32 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       }
     }
   }
+  function downloadCancel(game: GOG.GameInfo){
+    console.log("Canceling Download / Install");
+    download_cancel = true;
+    if(active_dl !== undefined){
+      active_dl.stop();
+      active_dl = undefined;
+    }
+    if(active_ins !== undefined && active_ins.pid){
+      tk(active_ins.pid, "SIGKILL", function(err){
+        if(err){
+          console.log(err);
+          globals.notify({
+            type: "error",
+            title: "Failed to kill install!"
+          });
+        }
+      });
+    }
+    win?.webContents.send("game-ins-end", game, false);
+    win?.webContents.send("progress-banner-hide");
+  }
 
   async function downloadPrep(
     game: GOG.GameInfo, install: boolean, title:
     string, dl_link_set: string[], remote: GOG.RemoteGameData, cb = nothing){
+    downloadCancel(game);
     if(active_dl !== undefined){
       globals.notify({
         type: "warning",
@@ -601,26 +601,8 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     prepDownloadVersion(game, version_id, version, false);
   });
 
-  ipcMain.on("game-dl-cancel", (e, game: GOG.GameInfo) => {
-    console.log("Canceling Download / Install");
-    download_cancel = true;
-    if(active_dl !== undefined){
-      active_dl.stop();
-      active_dl = undefined;
-    }
-    if(active_ins !== undefined && active_ins.pid){
-      tk(active_ins.pid, "SIGKILL", function(err){
-        if(err){
-          console.log(err);
-          globals.notify({
-            type: "error",
-            title: "Failed to kill install!"
-          });
-        }
-      });
-    }
-    win?.webContents.send("game-ins-end", game, false);
-    win?.webContents.send("progress-banner-hide");
+  ipcMain.on("game-dl-cancel", (e,  game: GOG.GameInfo) => {
+    downloadCancel(game);
   });
 
   ipcMain.on("uninstall-game", (e, game: GOG.GameInfo) => {

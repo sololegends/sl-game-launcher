@@ -1,5 +1,6 @@
 
 import _Vue from "vue";
+import { ipcRenderer } from "electron";
 import { Notify } from "@/types/notification/notify";
 
 export default function(Vue: typeof _Vue, options?: Notify.PluginOptions): void{
@@ -18,9 +19,16 @@ export default function(Vue: typeof _Vue, options?: Notify.PluginOptions): void{
    * @param params {{Notification}} - The parameters to use for creating the notification
    * @param group {{string}} - The grouping for the notification container
    */
-  const notify = function(params: Notify.Alert, group = "default"): string{
+  const notify = function(params: Notify.Alert, group = "default", icon?: string): string{
     const id = params.id || Vue.prototype.$notify_data.getId();
     Vue.prototype.$notify_data._cont.$emit("notify>" + group, params, id);
+    // Send the system alert
+    const obj = {
+      title: params.title,
+      text: params.text,
+      type: params.type
+    };
+    ipcRenderer.send("sys-notify", obj, icon, params.action?.event, params.action?.data);
     return id;
   };
 

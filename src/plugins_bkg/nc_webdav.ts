@@ -1,11 +1,15 @@
 
+import { BrowserWindow, IpcMain } from "electron";
 import { createClient, WebDAVClient, WebDAVClientOptions } from "webdav";
+import { DownloaderHelper } from "node-downloader-helper";
 import { getConfig } from "./config";
+import { Globals } from ".";
 import { GOG } from "@/types/gog/game_info";
 
 
 // Next cloud Web Dav connection
 let nc_client = undefined as undefined | WebDAVClient;
+let globals = undefined as undefined | Globals;
 
 export function webDavConfig(){
   return getConfig("webdav") as GOG.WebDavConfig;
@@ -34,6 +38,49 @@ export async function initWebDav(options: WebDAVClientOptions = {}, force = fals
   return nc_client;
 }
 
-export default function init(){
-  // Init
+export type URLReturn = {
+  url: string
+  auth: string
+}
+
+export function handlePassURL(url: string): URLReturn{
+  // Extract the credentials
+  const at_idx = url.lastIndexOf("@");
+  const proto_idx = url.indexOf(":") + 3;
+  const proto = url.substring(0, proto_idx);
+  const creds = url.substring(proto_idx, at_idx);
+  const user = creds.substring(0, creds.indexOf(":"));
+  const pass = encodeURIComponent(creds.substring(creds.indexOf(":") + 1));
+  return {
+    url: proto + url.substring(at_idx),
+    auth: "Basic " + Buffer.from(user + ":" + pass).toString("base64")
+  };
+}
+
+/**
+ * NOTE: The download has to be started, and event bound BEFORE starting.
+ * @param _dl_link - Link to the file to download
+ * @param file_name - Name of the save file
+ */
+export function downloadFile(_dl_link: string, file_name: string): DownloaderHelper{
+  const dl_link = handlePassURL(_dl_link);
+  const gog_path = getConfig("gog_path");
+  const tmp_download = gog_path + "\\.temp\\";
+  globals?.ensureDir(tmp_download);
+
+  const active_dl = new DownloaderHelper(dl_link.url, tmp_download, {
+    headers: {
+      "Authorization": dl_link.auth
+    },
+    fileName: file_name,
+    resumeIfFileExists: true,
+    removeOnStop: false,
+    removeOnFail: true
+  });
+
+  return active_dl;
+}
+
+export default function init(ipcMain: IpcMain, _win: BrowserWindow, _globals: Globals){
+  globals = _globals;
 }
