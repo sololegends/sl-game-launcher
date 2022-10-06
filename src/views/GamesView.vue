@@ -214,6 +214,15 @@ export default mixin(gamepad).extend({
       });
     });
 
+    ipc.on("game-remote-updated", (e, game: GOG.GameInfo, remote: GOG.RemoteGameData) => {
+      // Find the game to update it
+      for(const g in this.games){
+        if(game.gameId === this.games[g].gameId){
+          this.games[g].remote = remote;
+        }
+      }
+    });
+
     // ! TEST CODE
     window.addEventListener("keydown", this.keyHandler);
 

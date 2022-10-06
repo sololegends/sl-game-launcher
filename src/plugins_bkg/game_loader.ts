@@ -20,6 +20,8 @@ import { Globals } from ".";
 import { GOG } from "@/types/gog/game_info";
 import zip from "node-stream-zip";
 
+let _win = undefined as undefined | BrowserWindow;
+
 function flattenName(name: string): string{
   return name.trim().toLowerCase().replace(/[^-a-z0-9_]/gm, "_");
 }
@@ -61,7 +63,7 @@ export function loadPresentDLC(game: GOG.GameInfo, remote: GOG.RemoteGameData): 
 }
 
 export async function getRemoteGameData(game: GOG.GameInfo, use_cache = true): Promise<undefined | GOG.RemoteGameData>{
-  if(game.remote !== undefined){
+  if(use_cache && game.remote !== undefined){
     return game.remote;
   }
   const cache_name = flattenName(game.remote_name);
@@ -83,6 +85,7 @@ export async function getRemoteGameData(game: GOG.GameInfo, use_cache = true): P
       const game_data = loadPresentDLC(game, JSON.parse(file_data.toString()));
       game_data.folder = remote_folder;
       saveToDataCache("game-data.json", file_data, cache_name);
+      _win?.webContents.send("game-remote-updated", game, game_data);
       return game_data as GOG.RemoteGameData;
     }
   }
@@ -90,7 +93,7 @@ export async function getRemoteGameData(game: GOG.GameInfo, use_cache = true): P
 }
 
 export async function ensureRemote(game: GOG.GameInfo, use_cache = true): Promise<GOG.RemoteGameData>{
-  if(game.remote){
+  if(use_cache && game.remote){
     return game.remote;
   }
   game.remote = await getRemoteGameData(game, use_cache);
@@ -110,7 +113,7 @@ export async function ensureRemote(game: GOG.GameInfo, use_cache = true): Promis
 }
 
 export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Globals){
-
+  _win = win;
   async function getLocalGames(heavy = true): Promise<GOG.GameInfo[]>{
     const folder = getConfig("gog_path") as string;
     const game_list = [] as GOG.GameInfo[];

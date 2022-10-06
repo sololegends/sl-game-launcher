@@ -65,9 +65,11 @@
 </template>
 
 <script lang="ts">
+import { getSavesLocation, procSaveFile } from "@/plugins_bkg/cloud_saves";
 import { ContextMenu } from "@/components/plugins/context-menu/context-menu";
 import { defineComponent } from "@vue/composition-api";
 import filters from "@/js/filters";
+import { getOS } from "@/plugins_bkg/config";
 import { GOG } from "@/types/gog/game_info";
 import {ipcRenderer as ipc} from "electron";
 import Vue from "vue";
@@ -164,6 +166,15 @@ export default defineComponent({
           click: this.browse,
           icon: "folder"
         });
+
+        const os = getOS();
+        if(this.game.remote?.saves && this.game.remote?.saves[os]){
+          items.push({
+            title: "Browse Saves Folder",
+            click: this.browseSaves,
+            icon: "save"
+          });
+        }
         if(this.game.remote?.saves){
           items.push({
             title: "Upload Save Files",
@@ -235,6 +246,15 @@ export default defineComponent({
     },
     browse(){
       ipc.send("open-folder", this.game.root_dir);
+    },
+    browseSaves(){
+      const saves = getSavesLocation(this.game);
+      if(saves){
+        for(const save in saves){
+          console.log(procSaveFile(saves[save], this.game));
+          ipc.send("open-folder", procSaveFile(saves[save], this.game));
+        }
+      }
     },
     showDataDev(){
       this.$modal.show("message", {

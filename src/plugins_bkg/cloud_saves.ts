@@ -14,7 +14,7 @@ import os from "os";
 let win = undefined as undefined | BrowserWindow;
 let globals = undefined as undefined | Globals;
 
-function procSaveFile(save_file_raw: string, game: GOG.GameInfo){
+export function procSaveFile(save_file_raw: string, game: GOG.GameInfo){
   if(save_file_raw.startsWith("~")){
     return os.homedir()  + save_file_raw.substring(1);
   }else if(save_file_raw.startsWith("./")){
@@ -31,7 +31,7 @@ function getRemoteSaveDirectory(game: GOG.GameInfo){
   return mutated_folder + "/" + game.remote_name;
 }
 
-function getSavesLocation(game: GOG.GameInfo): undefined | GOG.GameSave{
+export function getSavesLocation(game: GOG.GameInfo): undefined | GOG.GameSave{
   const saves = game.remote?.saves as GOG.GameSavesLocation;
   if(saves){
     const os = getOS();

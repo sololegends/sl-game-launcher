@@ -2,10 +2,11 @@
 import * as child from "child_process";
 import { app, BrowserWindow, dialog, IpcMain } from "electron";
 import { ensureDir, getFolderSize, normalizeFolder } from "./tools/files";
+import z_cfg_init, { getOS } from "./config";
+import fs from "fs";
 import { Notify } from "@/types/notification/notify";
 import z_autoupdate from "./auto_update";
 import z_cache from "./cache";
-import z_cfg_init from "./config";
 import z_cloud_saves from "./cloud_saves";
 import z_game_dl_install from "./game_dl_install";
 import z_game_loader from "./game_loader";
@@ -63,7 +64,17 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
   }
 
   ipcMain.on("open-folder", (e, path: string) => {
-    child.exec("explorer.exe " + path.replaceAll("[&|;:$()]+", ""));
+    path = path.replaceAll("[&|;:$()]+", "");
+    const os = getOS();
+    switch(os){
+    case "windows": path = path.replaceAll("/", "\\"); break;
+    case "linux": path = path.replaceAll("\\", "/"); break;
+    default: break;
+    }
+    console.log("Opening path:", path);
+    if(fs.existsSync(path)){
+      child.exec("explorer.exe " + path);
+    }
   });
 
   ipcMain.handle("browse-folder", async() => {
