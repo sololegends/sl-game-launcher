@@ -61,6 +61,11 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     const cancel_launch_evt = "cancel-game-launch";
     const haltfn = () => {
       halt = true;
+      win?.webContents.send("progress-banner-init", {
+        title: "Launch Canceled",
+        indeterminate: true,
+        color: "primary"
+      });
     };
     ipcMain.on(cancel_launch_evt, haltfn);
     win?.webContents.send("progress-banner-init", {
@@ -80,7 +85,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     win?.webContents.send("progress-banner-hide");
     ipcMain.off(cancel_launch_evt, haltfn);
     if(halt){
-      return;
+      return true;
     }
     const start = new Date().getTime();
     let exec_file = undefined;
