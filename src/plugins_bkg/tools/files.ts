@@ -1,5 +1,6 @@
 
 import fs from "fs";
+import { glob } from "glob";
 
 export function ensureDir(dir: string){
   if(!fs.existsSync(dir)){
@@ -25,4 +26,21 @@ export function getFolderSize(folder: string): number{
     return accumulator;
   }
   return dir_stat.size;
+}
+
+export function globAsync(input: string): Promise<string[]>{
+  return new Promise<string[]>((resolver) => {
+    const globber = glob(input, {
+      stat: true,
+      dot: true
+    }, (e) => {
+      if(e){
+        console.log(e);
+        resolver([]);
+      }
+    } );
+    globber.on("end", () => {
+      resolver(globber.found);
+    });
+  });
 }

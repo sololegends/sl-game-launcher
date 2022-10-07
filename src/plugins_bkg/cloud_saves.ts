@@ -1,12 +1,13 @@
 
 import { BrowserWindow, ipcMain, IpcMain } from "electron";
-import { compressFolder, CompressProgress, decompressFolder } from "./tools/compression";
+import { compressFolder, compressGlob, CompressProgress, decompressFolder } from "./tools/compression";
 import { downloadFile, initWebDav, mutateFolder, webDavConfig } from "./nc_webdav";
 import { ErrorStats, Stats } from "node-downloader-helper";
 import { FileStat, WebDAVClient } from "webdav";
 import { getConfig, getOS, REMOTE_FILE_BASE, REMOTE_FOLDER } from "./config";
 import fs from "fs";
 import { Globals } from ".";
+import { globAsync } from "./tools/files";
 import { GOG } from "@/types/gog/game_info";
 import os from "os";
 
@@ -47,8 +48,20 @@ export function getSavesLocation(game: GOG.GameInfo): undefined | GOG.GameSave{
   return undefined;
 }
 
-function saveGamesExists(game: GOG.GameInfo, saves: GOG.GameSave): boolean{
+function isGlob(input: string): boolean{
+  return input.includes("*");
+}
+
+async function saveGamesExists(game: GOG.GameInfo, saves: GOG.GameSave): Promise<boolean>{
   for(const save in saves){
+    if(isGlob(saves[save])){
+      const files = await globAsync(saves[save]);
+      for(const s in files){
+        if(fs.existsSync(files[s])){
+          return true;
+        }
+      }
+    }
     if(fs.existsSync(saves[save])){
       return true;
     }
@@ -65,6 +78,12 @@ async function packGameSave(game: GOG.GameInfo, saves: GOG.GameSave): Promise<st
 
   let found = 0;
   for(const save in saves){
+    if(isGlob(saves[save])){
+      await compressGlob(saves[save], save_tmp + save + ".zip", (p: CompressProgress) =>{
+        win?.webContents.send("save-game-dl-progress", game, "Compressing save: " + save, p);
+      });
+      found++;
+    }
     if(fs.existsSync(saves[save])){
       await compressFolder(saves[save], save_tmp + save + ".zip", (p: CompressProgress) =>{
         win?.webContents.send("save-game-dl-progress", game, "Compressing save: " + save, p);
@@ -74,6 +93,17 @@ async function packGameSave(game: GOG.GameInfo, saves: GOG.GameSave): Promise<st
   }
   if(found <= 0){
     return undefined;
+  }
+  // Update folder time
+  for(const save in saves){
+    if(isGlob(saves[save])){
+      const files = await globAsync(saves[save]);
+      for(const s of files){
+        fs.utimesSync(s, new Date(), new Date());
+      }
+      continue;
+    }
+    fs.utimesSync(saves[save], new Date(), new Date());
   }
 
   // Compress final save folder
@@ -98,7 +128,11 @@ async function unpackGameSave(game: GOG.GameInfo, saves: GOG.GameSave, save_pack
   // Decompress save packages
   for(const save in saves){
     if(fs.existsSync(save_tmp + save + ".zip")){
-      await decompressFolder(save_tmp + save + ".zip", saves[save], (p: CompressProgress) =>{
+      let folder = saves[save];
+      if(isGlob(saves[save])){
+        folder = saves[save].substring(0, saves[save].replace("\\", "/").lastIndexOf("/"));
+      }
+      await decompressFolder(save_tmp + save + ".zip", folder, (p: CompressProgress) =>{
         win?.webContents.send("save-game-dl-progress", game, "Unpacking save: " + save, p);
       });
     }
@@ -113,7 +147,7 @@ export async function uploadGameSave(game: GOG.GameInfo){
   if(save_files === undefined){
     return;
   }
-  if(!saveGamesExists(game, save_files)){
+  if(!await saveGamesExists(game, save_files)){
     globals?.notify({
       title: "Cloud Save",
       text: "Failed to locate saves for game " + game.remote_name,
@@ -164,10 +198,6 @@ export async function uploadGameSave(game: GOG.GameInfo){
             + ".zip");
       }
       await web_dav.moveFile(remove_save_file + ".new.zip",  remove_save_file + ".zip");
-      // Update folder time
-      for(const save in save_files){
-        fs.utimesSync(save_files[save], new Date(), new Date());
-      }
     }
     read_stream.close();
     // Delete tmp save file
@@ -249,8 +279,18 @@ async function newerInCloud(
   // Check each folder for earliest date
   let oldest = -1;
   for(const s in save_files){
+    if(isGlob(save_files[s])){
+      const files = await globAsync(save_files[s]);
+      for(const f of files){
+        const fstat = fs.statSync(f);
+        if(oldest === -1 || oldest > fstat.mtimeMs){
+          oldest = fstat.mtimeMs;
+        }
+      }
+      continue;
+    }
     const f = fs.statSync(save_files[s]);
-    if(oldest === -1 || oldest > f.mtimeMs){
+    if(oldest === -1 || oldest > f.mtimeMs + 30_000){
       oldest = f.mtimeMs;
     }
   }
