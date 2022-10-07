@@ -57,6 +57,18 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       quitGame();
       runningGameChanged();
     }
+    let halt = false;
+    const cancel_launch_evt = "cancel-game-launch";
+    const haltfn = () => {
+      halt = true;
+    };
+    ipcMain.on(cancel_launch_evt, haltfn);
+    win?.webContents.send("progress-banner-init", {
+      title: "Launching Game",
+      indeterminate: true,
+      color: "warning",
+      cancel_event: cancel_launch_evt
+    });
     win?.webContents.send("save-game-sync-state", game, "Syncing Remote Data");
     game.remote = await ensureRemote(game, false);
     win?.webContents.send("save-game-stopped", game);
@@ -65,6 +77,11 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       syncGameSave(game, resolver);
     });
     await cloud_sync;
+    win?.webContents.send("progress-banner-hide");
+    ipcMain.off(cancel_launch_evt, haltfn);
+    if(halt){
+      return;
+    }
     const start = new Date().getTime();
     let exec_file = undefined;
     let the_task = undefined;
