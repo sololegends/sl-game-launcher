@@ -8,6 +8,7 @@ v1.x.x Todo:
   ✔ Added support for different OSs in the save file location data @done(22-10-05 16:42)
   ☐ Verify game names can be anything now.. 
   ☐ Sync play time stats to cloud
+  ☐ Add rating locks / parental controls (local storage)
 
 v2.x.x Todo: 
   ☐ Linux support

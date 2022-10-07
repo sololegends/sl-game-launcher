@@ -85,7 +85,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     win?.webContents.send("progress-banner-hide");
     ipcMain.off(cancel_launch_evt, haltfn);
     if(halt){
-      return true;
+      return false;
     }
     const start = new Date().getTime();
     let exec_file = undefined;
