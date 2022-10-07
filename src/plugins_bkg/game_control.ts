@@ -62,7 +62,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     const haltfn = () => {
       halt = true;
       win?.webContents.send("progress-banner-init", {
-        title: "Launch Canceled",
+        title: "Canceling Launch",
         indeterminate: true,
         color: "primary"
       });
