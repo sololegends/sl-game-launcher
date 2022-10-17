@@ -1,7 +1,6 @@
-image: electronuserland/builder:16-wine
-
 build:
   stage: build
+  image: electronuserland/builder:16-wine
   before_script:
     - ls -la
     - wine --version
@@ -24,6 +23,7 @@ build:
 
 # build-dev:
 #   stage: build
+#   image: electronuserland/builder:16-wine
 #   before_script:
 #     - yarn
 #   script:
