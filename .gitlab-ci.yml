@@ -11,6 +11,7 @@ stages:
 
 # Template includes
 include:
+  - .gitlab/Yarn-Build.gitlab-ci.yml
   - .gitlab/Yarn-Test.gitlab-ci.yml
 #   - template: Jobs/Code-Quality.gitlab-ci.yml
 
