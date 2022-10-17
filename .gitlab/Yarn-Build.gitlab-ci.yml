@@ -4,7 +4,7 @@ build:
   stage: build
   script:
     - yarn
-    - yarn pack
+    - yarn exe-build-ci
     - rm -rf dist_electron/mac
     - rm -rf dist_electron/win-unpacked
     - rm -rf dist_electron/linux-unpacked
@@ -22,7 +22,7 @@ build:
 #   before_script:
 #     - yarn
 #   script:
-#     - yarn pack
+#     - yarn exe-build-ci
 #     - rm -rf dist_electron/mac
 #     - rm -rf dist_electron/win-unpacked
 #     - rm -rf dist_electron/linux-unpacked

@@ -20,7 +20,7 @@
     "ui": "vue ui",
     "exe": "vue-cli-service electron:serve",
     "exe-build": "vue-cli-service electron:build",
-    "pack": "electron-builder --linux --win --x64"
+    "exe-build-ci": "electron-builder --linux --win --x64"
 
   },
   "main": "background.js",
