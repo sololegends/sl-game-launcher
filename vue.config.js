@@ -30,7 +30,13 @@ module.exports = {
           provider: "generic",
           url: "https://test.sololegends.com/tools/public/updates/gamelauncher/",
           channel: "latest"
-        }
+        },
+        files: [
+          "dist/**/*",
+          "node_modules/**/*",
+          "package.json",
+          "background.js"
+        ]
       }
     }
   },
