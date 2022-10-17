@@ -411,6 +411,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       active_dl = undefined;
     }
     if(active_ins !== undefined && active_ins.pid){
+      win?.webContents.send("game-ins-end", game, false);
       tk(active_ins.pid, "SIGKILL", function(err){
         if(err){
           console.log(err);
@@ -421,7 +422,6 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
         }
       });
     }
-    win?.webContents.send("game-ins-end", game, false);
     win?.webContents.send("progress-banner-hide");
   }
 

@@ -7,7 +7,30 @@ stages:
  - build
  - test
  - secure
+ - deploy
 
 # Template includes
-# include:
+include:
+  - .gitlab/Yarn-Test.gitlab-ci.yml
 #   - template: Jobs/Code-Quality.gitlab-ci.yml
+
+
+
+# =================================================
+# DEPLOY
+# =================================================
+
+pages:
+  stage: deploy
+  dependencies: 
+    - build
+  script:
+    - mkdir .public
+    - cp -r * .public
+    - mv .public public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
+      when: always

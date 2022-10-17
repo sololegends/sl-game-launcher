@@ -1,0 +1,40 @@
+
+build:
+  stage: build
+  image: electronuserland/electron-builder:wine
+  script:
+    - yarn
+    - yarn pack
+    - rm -rf dist_electron/mac
+    - rm -rf dist_electron/win-unpacked
+    - rm -rf dist_electron/linux-unpacked
+    - mv dist_electron ../dist_electron
+  artifacts:
+    paths:
+      - dist_electron
+    expire_in: 1w
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
+      when: always
+
+# build-dev:
+#   stage: build
+#   image: electronuserland/electron-builder:wine
+#   before_script:
+#     - yarn
+#   script:
+#     - yarn pack
+#     - rm -rf dist_electron/mac
+#     - rm -rf dist_electron/win-unpacked
+#     - rm -rf dist_electron/linux-unpacked
+#     - mv dist_electron ../dist_electron
+#   artifacts:
+#     paths:
+#       - dist_electron
+#     expire_in: 1w
+#   rules:
+#     - if: '$CI_COMMIT_BRANCH == "master"'
+#       when: never
+#     - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
+#       when: never
+#     - if: '$CI_COMMIT_BRANCH'
