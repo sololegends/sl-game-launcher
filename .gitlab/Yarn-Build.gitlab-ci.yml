@@ -1,7 +1,7 @@
+image: electronuserland/builder:16-wine
 
 build:
   stage: build
-  image: electronuserland/builder:wine
   script:
     - yarn
     - yarn pack
@@ -19,7 +19,6 @@ build:
 
 # build-dev:
 #   stage: build
-#   image: electronuserland/builder:wine
 #   before_script:
 #     - yarn
 #   script:
