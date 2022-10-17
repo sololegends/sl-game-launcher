@@ -25,9 +25,7 @@ pages:
   dependencies: 
     - build
   script:
-    - mkdir .public
-    - cp -r * .public
-    - mv .public public
+    - mv dist_electron public
   artifacts:
     paths:
       - public
