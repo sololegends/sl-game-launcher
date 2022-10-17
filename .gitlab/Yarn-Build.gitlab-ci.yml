@@ -2,6 +2,9 @@ image: electronuserland/builder:16-wine
 
 build:
   stage: build
+  before_script:
+    - wine --version
+    - ls -la
   script:
     - yarn
     - yarn exe-build-ci
