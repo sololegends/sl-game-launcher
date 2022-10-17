@@ -10,6 +10,7 @@ module.exports = {
   pluginOptions: {
     electronBuilder: {
       nodeIntegration: true,
+      extends: null,
       builderOptions: {
         appId: "com.sololegends.launcher",
         productName: "SL Game Launcher",
@@ -24,6 +25,7 @@ module.exports = {
         },
         linux: {
           icon: "icon.png",
+          maintainer: "Sololegends",
           category: "Game"
         },
         publish: {
