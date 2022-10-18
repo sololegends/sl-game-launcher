@@ -38,13 +38,7 @@ module.exports = {
           provider: "generic",
           url: "https://sololegends.slgit.io/sl-game-launcher/",
           channel: "latest"
-        },
-        files: [
-          "dist/**/*",
-          "node_modules/**/*",
-          "package.json",
-          "background.js"
-        ]
+        }
       }
     }
   },
