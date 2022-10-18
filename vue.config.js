@@ -36,7 +36,7 @@ module.exports = {
         },
         publish: {
           provider: "generic",
-          url: "https://test.sololegends.com/tools/public/updates/gamelauncher/",
+          url: "https://sololegends.slgit.io/sl-game-launcher/",
           channel: "latest"
         },
         files: [

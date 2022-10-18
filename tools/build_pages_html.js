@@ -69,7 +69,7 @@ if(options){
 }
 const template_loc = options["--template"] || "templates/file_list.html";
 const folder = options["--folder"];
-const dest = options["--dest"] || folder + "/index.html";
+const dest = options["--dest"] || "index.html";
 
 if(folder === undefined){
   console.error("Failed to get folder to build index..");
@@ -86,29 +86,36 @@ function buildRow(path, folder){
 </tr>`;
 }
 
-const paths = fs.readdirSync(folder);
-const folders = [];
-const files = [];
-let data = "";
+function buildIndex(folder, template){
+  const paths = fs.readdirSync(folder);
+  const folders = [];
+  const files = [];
+  let data = "";
 
-console.log(paths);
+  console.log(paths);
 
-// Build data sets
-for(const path of paths){
-  const p_path = folder + "/" + path;
-  const stat = fs.statSync(p_path);
-  if(stat.isDirectory()){
-    folders.push(path);
-    continue;
+  // Build data sets
+  for(const path of paths){
+    const p_path = folder + "/" + path;
+    const stat = fs.statSync(p_path);
+    if(stat.isDirectory()){
+      folders.push(path);
+      if(options["--recursive"] || options["-r"]){
+        buildIndex(p_path, template);
+      }
+      continue;
+    }
+    files.push(path);
   }
-  files.push(path);
-}
-// Generate the HTML using the template
-for(const path of [ ...folders.sort(), ...files.sort() ]){
-  data += buildRow(path, folder);
-}
-// Load the template
-const template = fs.readFileSync(template_loc).toString();
+  // Generate the HTML using the template
+  for(const path of [ ...folders.sort(), ...files.sort() ]){
+    data += buildRow(path, folder);
+  }
+  // Load the template
+  const template_data = fs.readFileSync(template).toString();
 
-// Inject into the template
-fs.writeFileSync(dest, template.replace("{#DATA}", data));
+  // Inject into the template
+  fs.writeFileSync(folder + "/" + dest, template_data.replace("{#DATA}", data));
+}
+
+buildIndex(folder, template_loc);

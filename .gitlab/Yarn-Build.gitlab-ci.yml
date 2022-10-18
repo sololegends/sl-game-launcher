@@ -11,7 +11,7 @@ build:
     - rm -rf dist_electron/win-unpacked
     - rm -rf dist_electron/linux-unpacked
     # Build the index for pages
-    - node tools/build_pages_html.js --folder=dist_electron --template=tools/templates/file_list.html
+    - node tools/build_pages_html.js --folder=dist_electron --template=tools/templates/file_list.html --recursive
   artifacts:
     paths:
       - dist_electron
