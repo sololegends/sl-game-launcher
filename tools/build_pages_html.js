@@ -95,7 +95,7 @@ for(const path of [ ...folders.sort(), ...files.sort() ]){
   data += buildRow(path);
 }
 // Load the template
-const template = fs.readFileSync("templates/file_list.html").toString();
+const template = fs.readFileSync(folder + "/templates/file_list.html").toString();
 
 // Inject into the template
 fs.writeFileSync(dest, template.replace("{#DATA}", data));
