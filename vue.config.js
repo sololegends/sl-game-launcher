@@ -30,7 +30,7 @@ module.exports = {
           target: [
             "deb",
             "rpm",
-            "flatpack"
+            "flatpak"
           ]
         },
         publish: {
