@@ -25,6 +25,7 @@ pages:
   dependencies: 
     - build
   script:
+    - rm -rf public
     - mv dist_electron public
   artifacts:
     paths:
