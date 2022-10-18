@@ -46,19 +46,34 @@ function betterBytes(bytes, format = "B", precision = 1, raw = false, unit_cap){
   }
   return [ (neg ? "-" : "") + Math.max(bytes, 0).toFixed(precision), units[i] + (format.endsWith("ps") ? "/s" : "") ];
 }
-
 function formatSize(bytes, format = "B", precision = 1){
   const byte_data = betterBytes(bytes, format, precision);
   return byte_data[0] + " " + byte_data[1];
 }
+/* global process */
+const args = process.argv.slice(2);
 
-if(process.argv.length < 3){
-  console.error("Failed to get folder to build ith..");
-  return;
+const options = {};
+if(args){
+  for(const part of args){
+    const key_val = part.split("=");
+    if(key_val.length === 1){
+      options[key_val[0]] = true;
+      continue;
+    }
+    options[key_val[0]] = key_val[1];
+  }
 }
-let dest = "index.html";
-if(process.argv.length >= 4){
-  dest = process.argv[3];
+if(options){
+  console.debug(options);
+}
+const dest = options["--dest"] || "index.html";
+const template_loc = options["--template"] || "templates/file_list.html";
+const folder = options["--folder"];
+
+if(folder === undefined){
+  console.error("Failed to get folder to build index..");
+  return;
 }
 
 function buildRow(path){
@@ -71,8 +86,6 @@ function buildRow(path){
 </tr>`;
 }
 
-/* global process */
-const folder = process.argv[2];
 const paths = fs.readdirSync(folder);
 const folders = [];
 const files = [];
@@ -95,7 +108,7 @@ for(const path of [ ...folders.sort(), ...files.sort() ]){
   data += buildRow(path);
 }
 // Load the template
-const template = fs.readFileSync(folder + "/templates/file_list.html").toString();
+const template = fs.readFileSync(template_loc).toString();
 
 // Inject into the template
 fs.writeFileSync(dest, template.replace("{#DATA}", data));
