@@ -26,7 +26,12 @@ module.exports = {
         linux: {
           icon: "icon.png",
           maintainer: "Sololegends",
-          category: "Game"
+          category: "Game",
+          target: [
+            "deb",
+            "rpm",
+            "flatpack"
+          ]
         },
         publish: {
           provider: "generic",

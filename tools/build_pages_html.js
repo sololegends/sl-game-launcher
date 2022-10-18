@@ -84,10 +84,10 @@ console.log(paths);
 for(const path of paths){
   const stat = fs.statSync(path);
   if(stat.isDirectory()){
-    folders.push(path);
+    folders.push(folder + "/" + path);
     continue;
   }
-  files.push(path);
+  files.push(folder + "/" + path);
 }
 // Generate the HTML using the template
 for(const path of [ ...folders.sort(), ...files.sort() ]){
