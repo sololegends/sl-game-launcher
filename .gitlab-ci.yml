@@ -33,3 +33,5 @@ pages:
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
       when: always
+    - if: '$CI_COMMIT_BRANCH == "ci"'
+      when: always
