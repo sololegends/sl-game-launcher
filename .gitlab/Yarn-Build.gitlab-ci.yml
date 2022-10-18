@@ -10,6 +10,8 @@ build:
     - rm -rf dist_electron/mac
     - rm -rf dist_electron/win-unpacked
     - rm -rf dist_electron/linux-unpacked
+    # Build the index for pages
+    - node tools/build_pages_html.js dist_electron dist_electron/index.html 
   artifacts:
     paths:
       - dist_electron
