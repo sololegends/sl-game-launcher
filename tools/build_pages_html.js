@@ -67,17 +67,17 @@ if(args){
 if(options){
   console.debug(options);
 }
-const dest = options["--dest"] || "index.html";
 const template_loc = options["--template"] || "templates/file_list.html";
 const folder = options["--folder"];
+const dest = options["--dest"] || folder + "/index.html";
 
 if(folder === undefined){
   console.error("Failed to get folder to build index..");
   return;
 }
 
-function buildRow(path){
-  const stat = fs.statSync(path);
+function buildRow(path, folder){
+  const stat = fs.statSync(folder + "/" + path);
   return `<tr>
 	<td><div class="icon ${stat.isDirectory() ? "dir" : "file"}"></div></td>
 	<td><a href="${path}">${path}</a></td>
@@ -98,14 +98,14 @@ for(const path of paths){
   const p_path = folder + "/" + path;
   const stat = fs.statSync(p_path);
   if(stat.isDirectory()){
-    folders.push(p_path);
+    folders.push(path);
     continue;
   }
-  files.push(p_path);
+  files.push(path);
 }
 // Generate the HTML using the template
 for(const path of [ ...folders.sort(), ...files.sort() ]){
-  data += buildRow(path);
+  data += buildRow(path, folder);
 }
 // Load the template
 const template = fs.readFileSync(template_loc).toString();
