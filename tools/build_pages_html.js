@@ -82,12 +82,13 @@ console.log(paths);
 
 // Build data sets
 for(const path of paths){
-  const stat = fs.statSync(path);
+  const p_path = folder + "/" + path;
+  const stat = fs.statSync(p_path);
   if(stat.isDirectory()){
-    folders.push(folder + "/" + path);
+    folders.push(p_path);
     continue;
   }
-  files.push(folder + "/" + path);
+  files.push(p_path);
 }
 // Generate the HTML using the template
 for(const path of [ ...folders.sort(), ...files.sort() ]){
