@@ -311,6 +311,7 @@ async function processGameFiles(data, format = "game-info"){
         const img_data = await webcache.entryData(image);
         const ext = image.substr(image.lastIndexOf(".") + 1);
         fs.writeFileSync(data.output_folder + "/logo." + ext, img_data);
+        fs.writeFileSync(data.pack_root + "/logo." + ext, img_data);
         await webcache.close();
       }
     }
@@ -347,6 +348,7 @@ async function repackGame(game_exe, output_dir, options){
   const props = {
     unpack_folder,
     output_folder: game_folder,
+    pack_root: output_dir,
     inno_script
   };
 

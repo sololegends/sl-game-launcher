@@ -1,0 +1,7 @@
+#!/bin/bash 
+
+echo "#===========================#"
+echo "# SL Launcher Game Repacker #"
+echo "#===========================#"
+
+node ./process_new_game.js "$@"

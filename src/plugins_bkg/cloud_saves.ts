@@ -290,7 +290,7 @@ async function newerInCloud(
       continue;
     }
     const f = fs.statSync(save_files[s]);
-    if(oldest === -1 || oldest > f.mtimeMs + 30_000){
+    if(oldest === -1 || oldest > f.mtimeMs){
       oldest = f.mtimeMs;
     }
   }
@@ -301,7 +301,7 @@ async function newerInCloud(
   // Get save age in cloud
   const stat = await web_dav.stat(remote_save_file) as FileStat;
   console.log("oldest:", oldest, "Date.parse(stat.lastmod):", Date.parse(stat.lastmod));
-  return oldest < Date.parse(stat.lastmod);
+  return oldest + 15000 < Date.parse(stat.lastmod);
 }
 
 export async function syncGameSave(game: GOG.GameInfo, resolver: (cloud: boolean) => void){
