@@ -294,6 +294,10 @@ async function newerInCloud(
       }
       continue;
     }
+    if(!fs.existsSync(save_files[s])){
+      oldest = 0;
+      break;
+    }
     const f = fs.statSync(save_files[s]);
     if(oldest === -1 || oldest > f.mtimeMs){
       oldest = f.mtimeMs;
