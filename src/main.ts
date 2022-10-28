@@ -100,8 +100,19 @@ Vue.prototype.$fn = {
   }
 };
 
+// App plugin
+Vue.prototype.$app = {
+  _cont: new Vue(),
+  toggleSettings: function(){
+    this._cont.$emit("toggle_settings");
+  },
+  toggleNotify: function(){
+    this._cont.$emit("toggle_notify");
+  }
+};
+
 window.APP_VERSION = "v0.9.13";
-window.BUILD_DATE = "2022-10-28 15:26:13";
+window.BUILD_DATE = "2022-10-28 17:54:41";
 export default createApp({
   router,
   render: (h: ((app: VueConstructor) => void)) => h(App),

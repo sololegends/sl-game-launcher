@@ -12,7 +12,7 @@ export default Vue.extend({
   data(){
     return {
       controllers: [] as Gamepad[],
-      button_state: [] as Record<string, boolean>[],
+      button_state: [] as Record<string, number>[],
       check_gp: -1,
       input_interval: -1,
       gp_listeners: {} as Record<string, (data: unknown) => void>,
@@ -78,13 +78,15 @@ export default Vue.extend({
         for(const [ key, val ] of Object.entries(profile)){
           if(gamepad.buttons[val].pressed || gamepad.buttons[val].touched){
             button_combo.push(key);
-            if(this.button_state[i][val] === false){
-              this.button_state[i][val] = true;
+            if(this.button_state[i][val]-- < 0){
+              this.button_state[i][val] = 10;
               this.$g_emit(key, gamepad.buttons[val]);
               this.$g_emit("btn" + val, gamepad.buttons[val]);
             }
+          }else if(gamepad.buttons[val] === undefined){
+            console.log("Non-Tracked button!", val, i, gamepad.buttons[val]);
           }else{
-            this.button_state[i][val] = false;
+            this.button_state[i][val] = 0;
           }
         }
         if(button_combo.length > 0){
@@ -106,53 +108,53 @@ export default Vue.extend({
 
         // Overall Stick position event
         this.$g_emit(name + "_stick", {x: x, y: y});
-        if(this.button_state[gpid][name + "_stick"] === false){
-          this.button_state[gpid][name + "_stick"] = true;
+        if(this.button_state[gpid][name + "_stick"]-- < 0){
+          this.button_state[gpid][name + "_stick"] = 10;
           this.$g_emit(name + "_stick", {x: x, y: y});
         }
         // X Axis
         if(x < 0 - this.dead_zone){
           // LEFT
-          this.button_state[gpid][name + "_stick_right"] = false;
-          if(this.button_state[gpid][name + "_stick_left"] === false){
-            this.button_state[gpid][name + "_stick_left"] = true;
+          this.button_state[gpid][name + "_stick_right"] = 0;
+          if(this.button_state[gpid][name + "_stick_left"]-- < 0){
+            this.button_state[gpid][name + "_stick_left"] = 10;
             this.$g_emit(short + "s_left", {x: x, y: y});
           }
         }else if(x > this.dead_zone){
           // RIGHT
-          this.button_state[gpid][name + "_stick_left"] = false;
-          if(this.button_state[gpid][name + "_stick_right"] === false){
-            this.button_state[gpid][name + "_stick_right"] = true;
+          this.button_state[gpid][name + "_stick_left"] = 0;
+          if(this.button_state[gpid][name + "_stick_right"]-- < 0){
+            this.button_state[gpid][name + "_stick_right"] = 10;
             this.$g_emit(short + "s_right", {x: x, y: y});
           }
         }else if(!this.assessDeadZones({y: 0, x})){
-          this.button_state[gpid][name + "_stick_right"] = false;
-          this.button_state[gpid][name + "_stick_left"] = false;
+          this.button_state[gpid][name + "_stick_right"] = 0;
+          this.button_state[gpid][name + "_stick_left"] = 0;
         }
         // Y Axis
         if(y < 0 - this.dead_zone){
           // UP
-          this.button_state[gpid][name + "_stick_down"] = false;
-          if(this.button_state[gpid][name + "_stick_up"] === false){
-            this.button_state[gpid][name + "_stick_up"] = true;
+          this.button_state[gpid][name + "_stick_down"] = 0;
+          if(this.button_state[gpid][name + "_stick_up"]-- < 0){
+            this.button_state[gpid][name + "_stick_up"] = 10;
             this.$g_emit(short + "s_up", {x: x, y: y});
           }
         }else if(y > this.dead_zone){
           // DOWN
-          this.button_state[gpid][name + "_stick_up"] = false;
-          if(this.button_state[gpid][name + "_stick_down"] === false){
-            this.button_state[gpid][name + "_stick_down"] = true;
+          this.button_state[gpid][name + "_stick_up"] = 0;
+          if(this.button_state[gpid][name + "_stick_down"]-- < 0){
+            this.button_state[gpid][name + "_stick_down"] = 10;
             this.$g_emit(short + "s_down", {x: x, y: y});
           }
         }else if(!this.assessDeadZones({y, x: 0})){
-          this.button_state[gpid][name + "_stick_up"] = false;
-          this.button_state[gpid][name + "_stick_down"] = false;
+          this.button_state[gpid][name + "_stick_up"] = 0;
+          this.button_state[gpid][name + "_stick_down"] = 0;
         }
       }else{
-        this.button_state[gpid][name + "_stick_up"] = false;
-        this.button_state[gpid][name + "_stick_down"] = false;
-        this.button_state[gpid][name + "_stick_left"] = false;
-        this.button_state[gpid][name + "_stick_right"] = false;
+        this.button_state[gpid][name + "_stick_up"] = 0;
+        this.button_state[gpid][name + "_stick_down"] = 0;
+        this.button_state[gpid][name + "_stick_left"] = 0;
+        this.button_state[gpid][name + "_stick_right"] = 0;
       }
     },
     assessDeadZones({x, y}: AxisPosition){

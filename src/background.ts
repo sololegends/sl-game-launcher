@@ -13,6 +13,7 @@ let _win = undefined as undefined | BrowserWindow;
 const got_lock = app.requestSingleInstanceLock(argsv);
 
 const is_fullscreen = argsv.length > 0 && argsv[0] === "fullscreen";
+const is_maximize = argsv.length > 0 && argsv[0] === "maximize";
 
 if (!got_lock){
   app.quit();
@@ -21,6 +22,8 @@ if (!got_lock){
     if(is_fullscreen){
       _win?.maximize();
       _win?.setFullScreen(true);
+    }else if(is_maximize){
+      _win?.maximize();
     }
     app.on("second-instance", (event, commandLine, workingDirectory, args) => {
       let url_data = undefined;

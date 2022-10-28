@@ -161,7 +161,21 @@ export default defineComponent({
     },
     winRestore(){
       ipc.send("win-restore");
+    },
+    toggleSettings(){
+      this.show_side_settings = !this.show_side_settings;
+    },
+    toggleNotify(){
+      this.show_side_notify = !this.show_side_notify;
     }
+  },
+  beforeMount(): void{
+    this.$app._cont.$on("toggle_settings", this.toggleSettings);
+    this.$app._cont.$on("toggle_notify", this.toggleNotify);
+  },
+  beforeDestroy(): void{
+    this.$app._cont.$off("toggle_settings", this.toggleSettings);
+    this.$app._cont.$off("toggle_notify", this.toggleNotify);
   }
 });
 </script>

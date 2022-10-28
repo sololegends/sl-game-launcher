@@ -8,7 +8,7 @@
       <v-progress-circular width="20" size="200" indeterminate style="margin:auto" />
       <div class="text-h6">Loading Games...</div>
     </div>
-    <ScrollablePanel :max_height="maxScrollable" @scroll="onScroll" v-else>
+    <ScrollablePanel v-model="scroll_panel" :max_height="maxScrollable" @scroll="onScroll" v-else>
       <div class="games-container" id="game_flex">
         <GogGame
           v-for="val, i in gamesFiltered" :key="i" :game="val"
@@ -35,6 +35,7 @@
 <script lang="ts">
 import DownloadInstallBanner, { DIBanner } from "@components/inserts/gog/DownloadInstallBanner.vue";
 import GogGame, { GogGameEle } from "../components/inserts/gog/GogGame.vue";
+import ScrollablePanel, { ScrollData } from "@/components/general/ScrollablePanel.vue";
 import DLCSelectionModal from "@modals/DLCSelectionModal.vue";
 import gamepad from "@mixins/gamepad";
 import GenericCard from "../components/inserts/gog/GenericCard.vue";
@@ -42,7 +43,6 @@ import { GOG } from "@/types/gog/game_info";
 import {ipcRenderer as ipc} from "electron";
 import mixin from "@mixins/index";
 import SaveSyncStatus from "@/components/inserts/gog/SaveSyncStatus.vue";
-import ScrollablePanel from "@/components/general/ScrollablePanel.vue";
 import VersionSelectionModal from "@modals/VersionSelectionModal.vue";
 
 
@@ -77,7 +77,8 @@ export default mixin(gamepad).extend({
       disable_mouse: false,
       disable_mouse_to: -1,
       game_running: false,
-      window_blurred: false
+      window_blurred: false,
+      scroll_panel: {} as ScrollData
     };
   },
   computed: {
@@ -238,6 +239,17 @@ export default mixin(gamepad).extend({
         await this.sleep(5000);
       }
     },
+    scrollDown(){
+      // If not at bottom
+      if(!this.scroll_panel.atBottom){
+        this.scroll_panel.scrollTop += 100;
+      }
+    },
+    scrollUp(){
+      if(!this.scroll_panel.atTop){
+        this.scroll_panel.scrollTop -= 100;
+      }
+    },
     enableMouseTO(){
       if(this.disable_mouse_to !== -1){
         clearTimeout(this.disable_mouse_to);
@@ -267,6 +279,26 @@ export default mixin(gamepad).extend({
       this.$g_on([ "d_left", "ls_left" ], () => {
         if(this.game_running || this.window_blurred){ return; }
         this.navigateGrid("ArrowLeft");
+      });
+      this.$g_on("rs_up", () => {
+        if(this.game_running || this.window_blurred){ return; }
+        this.scrollUp();
+      });
+      this.$g_on("rs_down", () => {
+        if(this.game_running || this.window_blurred){ return; }
+        this.scrollDown();
+      });
+      this.$g_on("r1", () => {
+        if(this.game_running || this.window_blurred){ return; }
+        this.$app.toggleSettings();
+      });
+      this.$g_on("l1", () => {
+        if(this.game_running || this.window_blurred){ return; }
+        this.$app.toggleNotify();
+      });
+      this.$g_on("select", () => {
+        if(this.game_running || this.window_blurred){ return; }
+        ipc.send("install-update");
       });
       this.$g_on("a", () => {
         if(this.game_running || this.window_blurred){ return; }

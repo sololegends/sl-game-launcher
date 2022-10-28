@@ -1,7 +1,7 @@
 <template>
   <div :class="'scrollable-wrap' + shadow_class" :style="'max-height:'+maxHeight">
     <div ref="scrollable" :class="'scrollable' + (allow_x ? '' : ' no-x')" :style="'max-height:'+maxHeight">
-      <div class="scrollable-content">
+      <div class="scrollable-content"  ref="content">
         <slot />
       </div>
     </div>
@@ -15,6 +15,17 @@ interface ElementC extends Element {
   scrollTopMax: number
 }
 
+export type ScrollData = {
+  scrollHeight: number
+  clientHeight: number
+  scrollTop: number
+  scrollTopMax: number
+  scrollLeft: number
+  atBottom: boolean
+  atTop: boolean,
+  isScrollable: boolean
+}
+
 export default defineComponent({
   props: {
     allow_x: {
@@ -26,28 +37,65 @@ export default defineComponent({
       type: [ Number, String ],
       required: false,
       default: "100%"
+    },
+    value: {
+      type: Object as () => ScrollData,
+      required: false
     }
   },
   data(){
     return {
       shadow_class: " " as string,
       scroll_ele: null as ElementC | null,
-      interval: -1 as number
+      scroll_cont: null as ElementC | null,
+      interval: -1 as number,
+      interval2: -1 as number,
+      observer: undefined as undefined | ResizeObserver
     };
   },
+  watch: {
+    "value": {
+      handler(new_val: ScrollData){
+        if(this.scroll_ele && (new_val.scrollTop !== this.scroll_ele.scrollTop || new_val.scrollLeft !== this.scroll_ele.scrollLeft)){
+          this.scroll_ele.scrollTo({
+            behavior: "smooth",
+            left: new_val.scrollLeft,
+            top: new_val.scrollTop
+          });
+        }
+      },
+      deep: true
+    }
+  },
   mounted(): void{
-    const that = this;
+    this.observer = new ResizeObserver(this.shadowCalc);
     this.interval = setInterval(() => {
-      if(that.$refs.scrollable){
-        that.scroll_ele = that.$refs.scrollable as ElementC;
-        that.scroll_ele.addEventListener("scroll", that.shadowCalc);
-        that.shadowCalc();
-        clearInterval(that.interval);
+      if(this.$refs.scrollable){
+        clearInterval(this.interval);
+        this.scroll_ele = this.$refs.scrollable as ElementC;
+        this.scroll_ele.addEventListener("scroll", this.shadowCalc);
+        this.shadowCalc();
+      }
+    }, 100) as unknown as number;
+    this.interval2 = setInterval(() => {
+      if(this.$refs.content && this.observer){
+        clearInterval(this.interval2);
+        this.scroll_cont = this.$refs.content as ElementC;
+        this.observer.observe(this.scroll_cont);
+        this.shadowCalc();
       }
     }, 100) as unknown as number;
   },
   beforeDestroy(): void{
     clearInterval(this.interval);
+    clearInterval(this.interval2);
+    if(this.scroll_ele){
+      this.scroll_ele.removeEventListener("scroll", this.shadowCalc);
+    }
+    if(this.observer){
+      this.observer.disconnect();
+      this.observer = undefined;
+    }
   },
   computed: {
     maxHeight(): string{
@@ -57,12 +105,23 @@ export default defineComponent({
   },
   methods: {
     shadowCalc(): void{
-      this.$emit("scroll", {
-        scrollHeight: this.scroll_ele?.scrollHeight,
-        clientHeight: this.scroll_ele?.clientHeight,
-        scrollTopMax: this.scroll_ele?.scrollTopMax
-      });
-      if(this.scroll_ele && this.scroll_ele.scrollHeight > this.scroll_ele.clientHeight){
+      if(this.scroll_ele){
+        const scrollTopMax = this.scroll_ele.scrollTopMax || (this.scroll_ele.scrollHeight - this.scroll_ele.clientHeight);
+        this.$emit("input", {
+          scrollHeight: this.scroll_ele.scrollHeight,
+          clientHeight: this.scroll_ele.clientHeight,
+          scrollTop: this.scroll_ele.scrollTop,
+          scrollTopMax: scrollTopMax,
+          scrollLeft: this.scroll_ele.scrollLeft,
+          atBottom: this.scroll_ele.scrollTop === this.scroll_ele.scrollTopMax,
+          atTop: this.scroll_ele.scrollTop === 0,
+          isScrollable: this.scroll_ele.scrollHeight < this.scroll_ele.clientHeight
+        });
+        // If not even scrollable
+        if(this.scroll_ele.scrollHeight < this.scroll_ele.clientHeight){
+          this.shadow_class = " ";
+          return;
+        }
         if(this.scroll_ele.scrollTop === 0){
           if(this.scroll_ele.scrollHeight === this.scroll_ele.clientHeight){
             this.shadow_class = " ";
@@ -71,7 +130,7 @@ export default defineComponent({
           this.shadow_class = " shadow-bottom";
           return;
         }
-        if(this.scroll_ele.scrollTop === this.scroll_ele.scrollTopMax){
+        if(this.scroll_ele.scrollTop === scrollTopMax){
           this.shadow_class = " shadow-top";
           return;
         }

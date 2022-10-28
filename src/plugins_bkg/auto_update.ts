@@ -7,6 +7,7 @@ import { Globals } from ".";
 export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Globals){
 
   let downloading_update = false;
+  let update_available = false;
 
   ipcMain.on("download-update", () => {
     globals.log("Update download triggered...");
@@ -18,14 +19,17 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   });
 
   ipcMain.on("install-update", () => {
-    globals.log("Update install triggered...");
-    autoUpdater.quitAndInstall();
+    if(update_available){
+      globals.log("Update install triggered...");
+      autoUpdater.quitAndInstall();
+    }
   });
 
   autoUpdater.on("checking-for-update", () => {
     globals.log("Checking for update...");
   });
   autoUpdater.on("update-available", (info: UpdateInfo) => {
+    update_available = true;
     globals.log("Update available: " + info);
   });
   autoUpdater.on("update-not-available", () => {

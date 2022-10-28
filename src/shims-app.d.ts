@@ -45,18 +45,24 @@ export type SomeMap = {
 }
 export type SomeArray = unknown[]
 
+export type AppFunctions = {
+	_cont: Vue
+	toggleSettings: () => void
+	toggleNotify: () => void
+}
 
 declare module "vue/types/vue" {
   interface Vue {
-    $hash: () => string,
-		$api_root: string,
+    $hash: () => string
+		$api_root: string
     $modal: BaseModalN.Modal
-    $fn: APPFunctions,
-    $user: UserFunctions,
+    $fn: APPFunctions
+    $user: UserFunctions
 		$isAuditor: () => boolean
 		$isUser: () => boolean
 		$isAdmin: () => boolean
 		$isOwner: () => boolean
 		$properties: AppProperties
+    $app: AppFunctions
   }
 }
