@@ -30,7 +30,6 @@ module.exports = {
           target: [
             "deb",
             "rpm",
-            "snap",
             "pacman"
           ]
         },

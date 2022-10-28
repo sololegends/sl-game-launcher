@@ -1,4 +1,4 @@
-image: dev-docker.cdpc-telesis.org:443/external/docker-nodejs:build-16-14-2
+image: docker.sololegends.com:443/docker/nodejs:build-16-14-2
 
     
 lint-eslint:
