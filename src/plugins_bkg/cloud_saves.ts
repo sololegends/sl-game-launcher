@@ -282,6 +282,11 @@ async function newerInCloud(
     if(isGlob(save_files[s])){
       const files = await globAsync(save_files[s]);
       for(const f of files){
+        // If nothing is there, then clearly it is not newer
+        if(!fs.existsSync(f)){
+          oldest = 0;
+          break;
+        }
         const fstat = fs.statSync(f);
         if(oldest === -1 || oldest > fstat.mtimeMs){
           oldest = fstat.mtimeMs;
