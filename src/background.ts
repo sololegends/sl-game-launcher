@@ -7,14 +7,21 @@ import load from "./plugins_bkg";
 const isDevelopment = process.env.NODE_ENV !== "production";
 
 app.setAsDefaultProtocolClient(APP_URL_HANDLER);
+const argsv = process.argv.slice(1);
 
 let _win = undefined as undefined | BrowserWindow;
-const got_lock = app.requestSingleInstanceLock(process.argv.slice(1));
+const got_lock = app.requestSingleInstanceLock(argsv);
+
+const is_fullscreen = argsv.length > 0 && argsv[0] === "fullscreen";
 
 if (!got_lock){
   app.quit();
 } else {
   app.whenReady().then(() => {
+    if(is_fullscreen){
+      _win?.maximize();
+      _win?.setFullScreen(true);
+    }
     app.on("second-instance", (event, commandLine, workingDirectory, args) => {
       let url_data = undefined;
       for(const ele of args as string[]){
@@ -30,11 +37,6 @@ if (!got_lock){
         }
         if (_win.isMinimized()){ _win.restore(); }
         _win.focus();
-      }
-      const argsv = process.argv.slice(1);
-      if(argsv.length > 0 && argsv[0] === "fullscreen"){
-        _win?.maximize();
-        _win?.setFullScreen(true);
       }
     });
   });
@@ -54,6 +56,7 @@ async function createWindow(){
     backgroundColor: "#424242",
     titleBarStyle: "hidden",
     titleBarOverlay: false,
+    fullscreen: is_fullscreen,
     webPreferences: {
       // Use pluginOptions.nodeIntegration, leave this alone
       // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
