@@ -31,6 +31,11 @@ if (!got_lock){
         if (_win.isMinimized()){ _win.restore(); }
         _win.focus();
       }
+      const argsv = process.argv.slice(1);
+      if(argsv.length > 0 && argsv[0] === "fullscreen"){
+        _win?.maximize();
+        _win?.setFullScreen(true);
+      }
     });
   });
 }
