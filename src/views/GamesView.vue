@@ -245,6 +245,9 @@ export default mixin(gamepad).extend({
       this.disable_mouse_to = setTimeout(() => { this.disable_mouse = false; }, 500) as unknown as number;
     },
     registerControllerHandlers(): void{
+      this.$g_onCombo([ "start", "select" ], () => {
+        ipc.send("quit");
+      });
       this.$g_on([ "d_up", "ls_up" ], () => {
         if(this.game_running || this.window_blurred){ return; }
         this.disable_mouse = true;

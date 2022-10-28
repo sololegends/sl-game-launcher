@@ -15,8 +15,9 @@ export default Vue.extend({
       button_state: [] as Record<string, boolean>[],
       check_gp: -1,
       input_interval: -1,
-      listeners: {} as Record<string, (data: unknown) => void>,
-      dead_zone: 0.2
+      gp_listeners: {} as Record<string, (data: unknown) => void>,
+      dead_zone: 0.2,
+      gp_combo_listeners: {} as Record<string, (data: unknown) => void>
     };
   },
   mounted(){
@@ -46,16 +47,19 @@ export default Vue.extend({
     $g_on(event: string | string[], handler: (data: unknown) => void): void{
       if(Array.isArray(event)){
         for(const ele of event){
-          this.listeners[ele] = handler;
+          this.gp_listeners[ele] = handler;
         }
         return;
       }
-      this.listeners[event] = handler;
+      this.gp_listeners[event] = handler;
+    },
+    $g_onCombo(buttons: string[], handler: (data: unknown) => void){
+      this.gp_combo_listeners[buttons.join("+")] = handler;
     },
     $g_emit(event: string, data: unknown): void{
       this.$emit(event, data);
-      if(this.listeners[event]){
-        this.listeners[event](data);
+      if(this.gp_listeners[event]){
+        this.gp_listeners[event](data);
       }
     },
     getProfileFromId(id: string): Record<string, number>{
@@ -70,9 +74,10 @@ export default Vue.extend({
       for(const i in this.controllers){
         const gamepad = this.controllers[i];
         const profile = this.getProfileFromId(gamepad.id);
-
+        const button_combo = [];
         for(const [ key, val ] of Object.entries(profile)){
           if(gamepad.buttons[val].pressed || gamepad.buttons[val].touched){
+            button_combo.push(key);
             if(this.button_state[i][val] === false){
               this.button_state[i][val] = true;
               this.$g_emit(key, gamepad.buttons[val]);
@@ -80,6 +85,11 @@ export default Vue.extend({
             }
           }else{
             this.button_state[i][val] = false;
+          }
+        }
+        if(button_combo.length > 0){
+          if(this.gp_combo_listeners[button_combo.join("+")]){
+            this.gp_combo_listeners[button_combo.join("+")](gamepad.buttons);
           }
         }
         const index = parseInt(i);
