@@ -7,6 +7,11 @@
           <v-switch dense v-model="theme.dark_mode" label="Dark Mode" @click="toggleTheme"></v-switch>
         </v-list-item>
 
+
+        <v-list-item @click="toggleShowUninstalled">
+          <v-switch dense v-model="show_uninstalled" label="Show Only Installed" @click="toggleShowUninstalled"></v-switch>
+        </v-list-item>
+
         <v-card-title class="primary header" style="padding: 0px 12px;">
           <div class="subtitle-1 white--text">GOG Games Folder</div>
           <v-spacer />
@@ -169,7 +174,8 @@ export default defineComponent({
         image_size: -1,
         version_size: -1,
         loading: true
-      }
+      },
+      show_uninstalled: true
     };
   },
   mounted(){
@@ -187,6 +193,7 @@ export default defineComponent({
       }
     });
     this.reloadCacheData();
+    this.show_uninstalled = this.$store.getters.showUninstalled;
   },
   computed: {
     gogPath(): string{
@@ -194,6 +201,9 @@ export default defineComponent({
     }
   },
   methods: {
+    toggleShowUninstalled(){
+      this.$store.dispatch("set_show_uninstalled", this.show_uninstalled);
+    },
     async reloadCacheData(){
       this.cache.loading = true;
       const s = new Date().getTime();
