@@ -3,17 +3,18 @@ import * as child from "child_process";
 import { BrowserWindow, IpcMain } from "electron";
 import { DownloaderHelper, Stats } from "node-downloader-helper";
 import { downloadFile, initWebDav } from "./nc_webdav";
+import { game_iter_id, game_name_file, game_version } from "@/json/files.json";
 import { loadFromVersionCache, removeFromVersionCache, saveToVersionCache } from "./cache";
 import zip, { ZipEntry } from "node-stream-zip";
 import { ensureRemote } from "./game_loader";
 import { FileStat } from "webdav";
 import filters from "@/js/filters";
 import fs from "fs";
-import { game_name_file } from "@/json/files.json";
 import { getConfig } from "./config";
 import { Globals } from ".";
 import { GOG } from "@/types/gog/game_info";
 import tk from "tree-kill";
+import { uploadGameSave } from "./cloud_saves";
 
 function procKey(key: string){
   return filters.procKey(key);
@@ -33,8 +34,8 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   let download_cancel = false;
   let active_ins = undefined as undefined | child.ChildProcess;
 
-  function triggerReload(){
-    win?.webContents.send("gog-game-reload");
+  function triggerReload(game?: GOG.GameInfo){
+    win?.webContents.send("gog-game-reload", game);
   }
 
   function cleanupDownloaded(dl_link_set: string[]){
@@ -248,6 +249,8 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     await archive.close();
     // Write game name to file
     fs.writeFileSync(ins_dir + "/" + game_name_file, game.name);
+    fs.writeFileSync(ins_dir + "/" + game_version, game.remote?.version ? game.remote?.version : "0");
+    fs.writeFileSync(ins_dir + "/" + game_iter_id, (game.remote?.iter_id ? game.remote?.iter_id : 0) + "");
     cleanupDownloaded(dl_files);
     sendInstallEnd(game);
     triggerReload();
@@ -495,6 +498,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
 
   // Init
   ipcMain.on("reinstall-game", async(e, game: GOG.GameInfo) => {
+    await uploadGameSave(game);
     prepDownloadGame(game, false, (success2) => {
       if(success2){
         uninstallGame(game, (success1) => {
@@ -563,7 +567,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   ipcMain.on("install-dlc", (e, game: GOG.GameInfo, dlc_slug: string) => {
     prepDownloadDLC(game, dlc_slug, true, (success: boolean) => {
       if(success){
-        win?.webContents.send("gog-game-reload", game);
+        triggerReload(game);
       }
     });
   });
@@ -572,7 +576,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   ipcMain.on("uninstall-dlc", (e, game: GOG.GameInfo, dlc: GOG.RemoteGameDLC) => {
     uninstallDLC(game, dlc, (success: boolean) => {
       if(success){
-        win?.webContents.send("gog-game-reload", game);
+        triggerReload(game);
       }
     });
   });

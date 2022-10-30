@@ -157,7 +157,7 @@ export default defineComponent({
     }
   },
   methods: {
-    doAction(alert: Notify.AlertInternal, action: Notify.Action){
+    doAction(alert: Notify.AlertInternal, action?: Notify.Action){
       if(action){
         ipc.send(action.event, action.data);
         if(action.clear){
@@ -181,6 +181,11 @@ export default defineComponent({
           });
           return;
         }
+      }else if(alert.closed !== undefined && typeof alert.closed === "string"){
+        alert.loading = true;
+        ipc.invoke(alert.closed).then(() => {
+          this.dispose(alert);
+        });
       }
       this.dispose(alert);
     },

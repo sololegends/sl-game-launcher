@@ -40,22 +40,14 @@
       </span>
     </div>
 
-    <div :class="'playtime-note' + ($store.getters.dev_mode? ' dev-mode' : '')" v-if="game.play_time">
+    <div class="playtime-note" v-if="game.play_time">
       <span tip-title="Play Time">
         {{formatTime(game.play_time)}}
       </span>
     </div>
 
-    <!-- Admin Only -->
-    <div v-if="$store.getters.dev_mode && !isRemote">
-      <div class="package-btn" tip-title="Package Game" @click="packageGame">
-        <v-progress-circular v-if="loading_archival" indeterminate size="20"></v-progress-circular>
-        <fa-icon size="lg" icon="archive" v-else />
-      </div>
-    </div>
-
-    <div class="version-note" v-if="game.current_version">
-      {{game.current_version}}
+    <div class="version-note" v-if="game.current_version || game.c_version">
+      {{game.current_version || game.c_version}}
     </div>
 
     <div class="repacked-note" v-if="is_repacked">
@@ -187,6 +179,13 @@ export default defineComponent({
             icon: "sync-alt"
           });
         }
+        if(this.game.remote?.iter_id){
+          items.push({
+            title: "Check for Updates",
+            click: this.checkForUpdates,
+            icon: "cloud"
+          });
+        }
       }
       if(this.game.remote !== undefined){
         if(this.game.remote.dlc.length > 0){
@@ -205,13 +204,6 @@ export default defineComponent({
         }
       }
       if(this.$store.getters.dev_mode){
-        if(!this.isRemote){
-          items.push({
-            title: "Package",
-            click: this.packageGame,
-            icon: "archive"
-          });
-        }
         items.push({
           title: "Reload Cache",
           click: this.reloadCache,
@@ -238,6 +230,9 @@ export default defineComponent({
     }
   },
   methods: {
+    checkForUpdates(){
+      ipc.invoke("check-update-game", this.game, true);
+    },
     uploadSaveFiles(){
       ipc.send("upload-game-save", this.game);
     },
@@ -492,10 +487,6 @@ export default defineComponent({
     height: 19px;
     border-radius: 0px;
   }
-  .playtime-note.dev-mode{
-    width: calc(100% - 70px);
-  }
-
   .version-note{
     font-size: 10px;
     position: absolute;

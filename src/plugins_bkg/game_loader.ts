@@ -1,5 +1,6 @@
 
 import { BrowserWindow, IpcMain } from "electron";
+import { game_iter_id, game_name_file, game_version } from "@/json/files.json";
 import { initWebDav, mutateFolder, webDavConfig } from "./nc_webdav";
 import {
   loadFromDataCache,
@@ -13,7 +14,6 @@ import {
 
 import { FileStat } from "webdav";
 import fs from "fs";
-import { game_name_file } from "@/json/files.json";
 import { getConfig } from "./config";
 import { getPlaytime } from "./play_time_tracker";
 import { Globals } from ".";
@@ -136,6 +136,12 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
             l_info.remote_name = l_info.name;
             if(fs.existsSync(game_dir + "/" + game_name_file)){
               l_info.remote_name = fs.readFileSync(game_dir + "/" + game_name_file).toString();
+            }
+            if(fs.existsSync(game_dir + "/" + game_iter_id)){
+              l_info.iter_id = parseInt(fs.readFileSync(game_dir + "/" + game_iter_id).toString());
+            }
+            if(fs.existsSync(game_dir + "/" + game_version)){
+              l_info.c_version = fs.readFileSync(game_dir + "/" + game_version).toString();
             }
             l_info.webcache = game_dir + "\\webcache.zip";
             l_info.root_dir = game_dir;

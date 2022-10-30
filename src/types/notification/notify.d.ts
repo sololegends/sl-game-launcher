@@ -19,7 +19,7 @@ export namespace Notify {
 		duration?: number;
 		timestamp?: string;
 		type: Notify.Type;
-		closed?: (alert: Notify.Alert) => void | Promise;
+		closed?: string | ((alert: Notify.Alert) => void | Promise);
 		action?: Action
 		actions?: Action[]
 	};

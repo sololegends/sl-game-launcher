@@ -11,7 +11,51 @@ import { updatePlayTime } from "./play_time_tracker";
 // GAME CONTROL
 let running_game = undefined as undefined | GOG.RunningGame;
 
+
 export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Globals){
+
+  async function checkForUpdates(game: GOG.GameInfo, sticky = false){
+    game.remote = await ensureRemote(game);
+    return new Promise<boolean>((resolver) => {
+      win?.webContents.send("save-game-sync-state", game, "Checking for updates");
+      const game_id = game.iter_id || 0;
+      if(game.remote?.iter_id && game.remote.iter_id > game_id && win){
+        const evt_1 = "ignore-game-update-" + new Date().getTime();
+        win?.webContents.send("notify", {
+          title: "Game update available!",
+          text: game.name + " has a new version available. " + game.remote.version,
+          type: "info",
+          sticky,
+          closed: evt_1,
+          actions: [
+            {
+              name: "Update Now",
+              event: "reinstall-game",
+              data: game,
+              clear: true
+            },
+            {
+              name: "Ignore",
+              event: evt_1,
+              clear: true
+            }
+          ]
+        });
+        ipcMain.handleOnce(evt_1, async() => {
+          win?.webContents.send("save-game-stopped");
+          resolver(true);
+          return true;
+        });
+        ipcMain.once(evt_1, async() => {
+          win?.webContents.send("save-game-stopped");
+          resolver(false);
+          return false;
+        });
+        return;
+      }
+      win?.webContents.send("save-game-stopped");
+    });
+  }
 
   function runningGameChanged(){
     win?.webContents.send("game-running-changed", running_game?.info);
@@ -82,6 +126,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       syncGameSave(game, resolver);
     });
     await cloud_sync;
+    await checkForUpdates(game);
     win?.webContents.send("progress-banner-hide");
     ipcMain.off(cancel_launch_evt, haltfn);
     if(halt){
@@ -139,6 +184,10 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   ipcMain.handle("run-game", launchGame);
 
   ipcMain.on("quit-game", quitGame);
+
+  ipcMain.handle("check-update-game", (e, game: GOG.GameInfo, sticky: boolean) => {
+    return checkForUpdates(game, sticky);
+  });
 
   ipcMain.handle("running-game", () => {
     return running_game;
