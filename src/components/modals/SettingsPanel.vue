@@ -9,7 +9,7 @@
 
 
         <v-list-item @click="toggleShowUninstalled">
-          <v-switch dense v-model="show_uninstalled" label="Show Only Installed" @click="toggleShowUninstalled"></v-switch>
+          <v-switch dense v-model="show_uninstalled" label="Show Uninstalled" @click="toggleShowUninstalled"></v-switch>
         </v-list-item>
 
         <v-card-title class="primary header" style="padding: 0px 12px;">
