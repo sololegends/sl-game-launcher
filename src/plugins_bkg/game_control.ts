@@ -54,6 +54,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
         return;
       }
       win?.webContents.send("save-game-stopped");
+      resolver(false);
     });
   }
 
