@@ -15,6 +15,7 @@ import z_logging from "./logging";
 import z_play_time_tracker from "./play_time_tracker";
 import z_process_cloud from "./process_cloud";
 import z_sys_notifications from "./sys_notifications";
+import z_update_check from "./update_check";
 import z_webdav_init from "./nc_webdav";
 
 const fns = [
@@ -29,7 +30,8 @@ const fns = [
   z_process_cloud,
   z_game_dl_install,
   z_autoupdate,
-  z_cloud_saves
+  z_cloud_saves,
+  z_update_check
 ];
 
 

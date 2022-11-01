@@ -9,7 +9,8 @@ export default new Vuex.Store({
     minimal_ui: false,
     minimal_ui_title: "",
     dev_mode: localStorage.getItem("dev_mode") === "true",
-    show_uninstalled: localStorage.getItem("show_uninstalled") === "true"
+    show_uninstalled: localStorage.getItem("show_uninstalled") === "true",
+    show_repacked_only: localStorage.getItem("show_repacked_only") === "true"
   },
   mutations: {
     set_minimal_ui(state, minimal_ui){
@@ -25,6 +26,10 @@ export default new Vuex.Store({
     set_show_uninstalled(state, show_uninstalled){
       state.show_uninstalled = show_uninstalled;
       localStorage.setItem("show_uninstalled", show_uninstalled);
+    },
+    set_show_repacked_only(state, show_repacked_only){
+      state.show_repacked_only = show_repacked_only;
+      localStorage.setItem("show_repacked_only", show_repacked_only);
     }
   },
   actions: {
@@ -39,13 +44,17 @@ export default new Vuex.Store({
     },
     set_show_uninstalled({ commit }, show_uninstalled: string){
       commit("set_show_uninstalled", show_uninstalled);
+    },
+    set_show_repacked_only({ commit }, show_repacked_only: string){
+      commit("set_show_repacked_only", show_repacked_only);
     }
   },
   getters: {
     minimal_ui: (state): boolean  => state.minimal_ui,
     minimal_ui_title: (state): string  => state.minimal_ui_title,
     dev_mode: (state): boolean  => state.dev_mode,
-    showUninstalled: (state): boolean => state.show_uninstalled
+    showUninstalled: (state): boolean => state.show_uninstalled,
+    showRepackedOnly: (state): boolean => state.show_repacked_only
   }
 });
 

@@ -40,10 +40,17 @@
       </span>
     </div>
 
-    <div class="playtime-note" v-if="game.play_time">
+    <div :class="'playtime-note' + (updateAvailable? ' short-mode' : '')" v-if="game.play_time">
       <span tip-title="Play Time">
         {{formatTime(game.play_time)}}
       </span>
+    </div>
+
+    <div v-if="!isRemote && updateAvailable">
+      <div class="package-btn" tip-title="Update Game" @click="checkForUpdates">
+        <v-progress-circular v-if="loading_update" indeterminate size="20"></v-progress-circular>
+        <fa-icon v-else size="lg" icon="cloud" class="success--text" />
+      </div>
     </div>
 
     <div class="version-note" v-if="game.current_version || game.c_version">
@@ -101,7 +108,7 @@ export default defineComponent({
     return {
       image: undefined as undefined | string,
       loading: false,
-      loading_archival: false,
+      loading_update: false,
       context_menu: {
         show: false,
         x: 0,
@@ -110,6 +117,12 @@ export default defineComponent({
     };
   },
   computed: {
+    updateAvailable(): boolean{
+      if(this.game.remote === undefined || this.game.remote.iter_id === undefined){
+        return false;
+      }
+      return this.game.iter_id === undefined || this.game.iter_id < this.game.remote.iter_id;
+    },
     name_class(): string{
       return "name" + (this.isRunning ? " active" : "");
     },
@@ -230,8 +243,10 @@ export default defineComponent({
     }
   },
   methods: {
-    checkForUpdates(){
-      ipc.invoke("check-update-game", this.game, true);
+    async checkForUpdates(){
+      this.loading_update = true;
+      await ipc.invoke("check-update-game", this.game, true);
+      this.loading_update = false;
     },
     uploadSaveFiles(){
       ipc.send("upload-game-save", this.game);
@@ -306,11 +321,6 @@ export default defineComponent({
         this.image = icon;
       });
     },
-    packageGame(): void{
-      this.loading_archival = true;
-      ipc.on("zip-package-done", this.loadingOff);
-      ipc.send("zip-package-make", this.game);
-    },
     downloadAndInstall(e?: MouseEvent): void{
       this.loading = true;
       ipc.on("game-dl-start", this.loadingOff);
@@ -332,7 +342,7 @@ export default defineComponent({
     },
     loadingOff(): void{
       this.loading = false;
-      this.loading_archival = false;
+      this.loading_update = false;
       ipc.off("game-dl-start", this.loadingOff);
       ipc.off("game-dl-error", this.loadingOff);
       ipc.off("game-uns-start", this.loadingOff);
@@ -506,5 +516,8 @@ export default defineComponent({
     position: absolute;
     width:7px;
     height:7px;
+  }
+  .playtime-note.short-mode{
+    width: calc(100% - 70px);
   }
 </style>

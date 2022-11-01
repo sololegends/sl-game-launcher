@@ -4,14 +4,14 @@
     <div style="margin:0px 20px">
       <v-text-field v-model="filter" clearable placeholder="Search..." @input="resetSelectedGame" />
     </div>
-    <div v-if="gamesFiltered.length <= 0" class="flex h100" style="flex-direction: column;text-align: center;">
+    <div v-if="filtered_games.length <= 0" class="flex h100" style="flex-direction: column;text-align: center;">
       <v-progress-circular width="20" size="200" indeterminate style="margin:auto" />
       <div class="text-h6">Loading Games...</div>
     </div>
     <ScrollablePanel :max_height="maxScrollable" @scroll="onScroll" v-else>
       <div class="games-container" id="game_flex">
         <GogGame
-          v-for="val, i in gamesFiltered" :key="i" :game="val"
+          v-for="val, i in filtered_games" :key="i" :game="val"
           class="flex"
           :ref="'game' + i"
           :running="val.name === active"
@@ -67,6 +67,7 @@ export default mixin(gamepad).extend({
     return {
       games: [] as GOG.GameInfo[],
       remote_games: [] as GOG.GameInfo[],
+      filtered_games: [] as GOG.GameInfo[],
       active: undefined as undefined | string,
       timer: -1,
       filter: null as null | string,
@@ -77,51 +78,21 @@ export default mixin(gamepad).extend({
       disable_mouse: false,
       disable_mouse_to: -1,
       game_running: false,
-      window_blurred: false
+      window_blurred: false,
+      store_subscription: undefined as (() => void) | undefined
     };
   },
   computed: {
     maxScrollable(): string{
       return this.banner_on ? "calc(100vh - 160px)" : "calc(100vh - 130px)";
-    },
-    gamesFiltered(): GOG.GameInfo[]{
-      const show_uninstalled = this.$store.getters.showUninstalled;
-      if(this.filter === null || this.filter.trim() === ""){
-        if(!show_uninstalled){
-          return [...this.games];
-        }
-        return [ ...this.games, ...this.remote_games ];
-      }
-      let actual_f = this.filter;
-      let installed = true;
-      let remote = show_uninstalled;
-      if(this.filter.startsWith("installed:")){
-        remote = false;
-        actual_f = this.filter.substring(10);
-      }
-      if(this.filter.startsWith("remote:")){
-        installed = false;
-        actual_f = this.filter.substring(7);
-      }
-      const filtered = [] as GOG.GameInfo[];
-      if(installed){
-        for(const i in this.games){
-          if(this.games[i].name.toLowerCase().includes(actual_f.trim())){
-            filtered.push(this.games[i]);
-          }
-        }
-      }
-      if(remote){
-        for(const i in this.remote_games){
-          if(this.remote_games[i].name.toLowerCase().includes(actual_f.trim())){
-            filtered.push(this.remote_games[i]);
-          }
-        }
-      }
-      return filtered;
     }
   },
   mounted(){
+    this.store_subscription = this.$store.subscribe((mutation) => {
+      if(mutation.type === "set_show_repacked_only" || mutation.type === "set_show_uninstalled"){
+        this.filterGames();
+      }
+    });
     const that = this;
     ipc.on("progress-banner-init", () => {
       this.banner_on = true;
@@ -225,14 +196,20 @@ export default mixin(gamepad).extend({
           this.games[g].remote = remote;
         }
       }
+      this.filterGames();
     });
 
     // ! TEST CODE
     window.addEventListener("keydown", this.keyHandler);
 
     this.registerControllerHandlers();
+    // Run the update check
+    ipc.send("check-for-updates");
   },
   beforeDestroy(){
+    if(this.store_subscription){
+      this.store_subscription();
+    }
     window.removeEventListener("keydown", this.keyHandler);
   },
   methods: {
@@ -303,6 +280,7 @@ export default mixin(gamepad).extend({
     resetSelectedGame(){
       this.active_game = 0;
       this.navigateGrid("RESET");
+      this.filterGames();
     },
     keyHandler(e: KeyboardEvent){
       switch(e.key){
@@ -321,7 +299,45 @@ export default mixin(gamepad).extend({
       }
     },
     setNewRemote(game: GOG.GameInfo, remote: GOG.RemoteGameData){
+      const different = game.remote !== remote;
       this.$set(game, "remote", remote);
+      if(different){
+        this.filterGames();
+      }
+    },
+    isRepacked(game: GOG.GameInfo): boolean | undefined{
+      if(game.remote?.download && game.remote?.download.length > 0){
+        return game.remote?.download[0].includes(".zip");
+      }
+      return false;
+    },
+
+    filterGames(): void{
+      const is_filtered = this.filter !== null && this.filter.trim() !== "";
+      const installed_only = is_filtered && this.filter?.startsWith("installed:");
+      const uninstalled_only = is_filtered && this.filter?.startsWith("uninstalled:");
+      const actual_filter = installed_only ? this.filter?.substring(10) : (uninstalled_only ? this.filter?.substring(12) : this.filter);
+      let games = [...this.games];
+      if(this.$store.getters.showUninstalled && !installed_only){
+        games = [ ...this.games, ...this.remote_games ];
+      }
+      if(uninstalled_only){
+        games = [...this.remote_games];
+      }
+      this.filtered_games = games.filter((game) => {
+        // If not repacked and set to repacked only
+        // If not remote always pass
+        if(game.webcache === "remote"
+          && this.$store.getters.showRepackedOnly && !this.isRepacked(game)){
+          return false;
+        }
+        // If the filter is populated
+        if(actual_filter && actual_filter.trim() !== ""){
+          console.log("filter filter");
+          return game.name.toLowerCase().includes(actual_filter.trim().toLowerCase());
+        }
+        return true;
+      });
     },
     onScroll(){
       this.$context_int.closeAll();
@@ -331,6 +347,7 @@ export default mixin(gamepad).extend({
         this.games = res;
         await ipc.invoke("read-remote-games").then((remote_games: GOG.GameInfo[]) => {
           this.remote_games = remote_games;
+          this.filterGames();
         });
       });
     },
