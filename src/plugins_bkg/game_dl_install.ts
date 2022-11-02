@@ -273,11 +273,12 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       });
 
     active_ins.addListener("error", (code: number) => {
+      active_ins = undefined;
       console.log("Game error installed with code: " + code);
       sendInstallError(game);
-      active_ins = undefined;
     });
     active_ins.addListener("close", (code: number) => {
+      active_ins = undefined;
       console.log("Game installed with code: " + code);
       // Write game name to file
       fs.writeFileSync(ins_dir + "/" + game_name_file, game.name);
@@ -293,7 +294,6 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       if(code === 2){
         sendInstallError(game);
       }
-      active_ins = undefined;
     });
   }
 
@@ -424,6 +424,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
           });
         }
       });
+      active_ins = undefined;
     }
     win?.webContents.send("progress-banner-hide");
   }
