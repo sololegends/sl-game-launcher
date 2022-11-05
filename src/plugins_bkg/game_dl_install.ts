@@ -223,7 +223,11 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     sendInstallStart(game, false);
     const gog_path = getConfig("gog_path");
     const tmp_download = gog_path + "\\.temp\\";
-    const ins_dir = gog_path + "\\" + globals.normalizeFolder(game.name);
+    let ins_dir = game.root_dir;
+    if(ins_dir === undefined || ins_dir === "remote"){
+      ins_dir = gog_path + "\\" + globals.normalizeFolder(game.name);
+    }
+    console.log("Installing " + game.name + " into: ", ins_dir);
     globals.ensureDir(ins_dir);
     const archive = new zip.async({file: tmp_download + zip_f});
     const total_count = await archive.entriesCount;
