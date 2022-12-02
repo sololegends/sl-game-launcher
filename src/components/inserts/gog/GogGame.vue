@@ -323,7 +323,7 @@ export default defineComponent({
     },
     downloadAndInstall(e?: MouseEvent): void{
       this.loading = true;
-      ipc.on("game-dl-start", this.loadingOff);
+      ipc.on("game-dlins-end", this.loadingOff);
       ipc.on("game-dl-error", this.loadingOff);
       if(e && e.ctrlKey){
         this.download();
@@ -343,7 +343,7 @@ export default defineComponent({
     loadingOff(): void{
       this.loading = false;
       this.loading_update = false;
-      ipc.off("game-dl-start", this.loadingOff);
+      ipc.off("game-dlins-end", this.loadingOff);
       ipc.off("game-dl-error", this.loadingOff);
       ipc.off("game-uns-start", this.loadingOff);
       ipc.off("game-uns-error", this.loadingOff);

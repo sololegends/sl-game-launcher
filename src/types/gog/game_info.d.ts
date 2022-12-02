@@ -48,6 +48,11 @@ export namespace GOG {
 
 	export type GameSavesLocation = Record<GamePlatform, GameSave>
 
+	export type UninstallDef = {
+		files: string[]
+		folders: string[]
+	}
+
 	export type RemoteGameData = {
 		logo: string
 		folder: string

@@ -4,6 +4,7 @@ import { app, BrowserWindow, dialog, IpcMain } from "electron";
 import { ensureDir, getFolderSize, normalizeFolder } from "./tools/files";
 import z_cfg_init, { getOS } from "./config";
 import fs from "fs";
+import { GOG } from "@/types/gog/game_info";
 import { Notify } from "@/types/notification/notify";
 import z_autoupdate from "./auto_update";
 import z_cache from "./cache";
@@ -57,10 +58,34 @@ const globals = {
 
 globals.ensureDir(globals.app_dir);
 
+
+export function undefinedOrNull(_var: BrowserWindow | BrowserWindow[]){
+  return typeof _var === "undefined" || _var === null;
+}
+
+export function win(): BrowserWindow | null{
+  // Main process
+  const mainWindow = BrowserWindow.getAllWindows();
+  if (
+    undefinedOrNull(mainWindow) ||
+    undefinedOrNull(mainWindow[mainWindow.length - 1])
+  ){
+    return null;
+  }
+
+  return mainWindow[mainWindow.length - 1];
+}
+
+export function triggerReload(game?: GOG.GameInfo){
+  win()?.webContents.send("gog-game-reload", game);
+}
+
+export function notify(options: Notify.Alert){
+  win()?.webContents.send("notify", options);
+}
+
 export default function init(ipcMain: IpcMain, win: BrowserWindow){
-  globals.notify = (options: Notify.Alert) => {
-    win?.webContents.send("notify", options);
-  };
+  globals.notify = notify;
 
   // Init the different modules here
   for(const i in fns){

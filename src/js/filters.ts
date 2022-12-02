@@ -49,6 +49,9 @@ function betterBytes(bytes: number, format = "B", precision = 1, raw = false, un
 }
 
 export default {
+  flattenName(name: string): string{
+    return name.trim().toLowerCase().replace(/[^-a-z0-9_]/gm, "_");
+  },
   procNone: function(value: string | null, key?: string){
     if(value == null || value === "null"){
       if(key && [ "last_accessed", "last_downloaded", "created", "updated" ].includes(key)){
