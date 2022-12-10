@@ -1,6 +1,6 @@
 
 import * as child from "child_process";
-import { abortLock, acquireLock, LockAbortToken, releaseLock, UN_INSTALL_LOCK } from "../tools/locks";
+import { acquireLock, LockAbortToken, releaseLock, UN_INSTALL_LOCK } from "../tools/locks";
 import { loadFromVersionCache, removeFromVersionCache } from "../cache";
 import { notify, win } from "..";
 import { ensureRemote } from "../game_loader";
@@ -33,7 +33,6 @@ export function sendUninstallEnd(game: GOG.GameInfo, title?: string){
 }
 
 export function cancelUninstall(game: GOG.GameInfo){
-  abortLock(UN_INSTALL_LOCK);
   if(active_uns !== undefined && active_uns.pid){
     win()?.webContents.send("game-ins-end", game, false);
     tk(active_uns.pid, "SIGKILL", function(err){

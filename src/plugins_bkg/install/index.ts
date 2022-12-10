@@ -1,7 +1,7 @@
 
 
 import * as child from "child_process";
-import { abortLock, acquireLock, LockAbortToken, releaseLock, UN_INSTALL_LOCK } from "../tools/locks";
+import { acquireLock, LockAbortToken, releaseLock, UN_INSTALL_LOCK } from "../tools/locks";
 import { ensureDir, normalizeFolder } from "../tools/files";
 import { game_iter_id, game_name_file, game_version } from "@/json/files.json";
 import { notify, win } from "..";
@@ -36,7 +36,6 @@ export function sendInstallError(game: GOG.GameInfo){
 }
 
 export function cancelInstall(game: GOG.GameInfo){
-  abortLock(UN_INSTALL_LOCK);
   if(active_ins !== undefined && active_ins.pid){
     win()?.webContents.send("game-ins-end", game, false);
     tk(active_ins.pid, "SIGKILL", function(err){
@@ -100,7 +99,7 @@ async function installGameZip(game: GOG.GameInfo, dl_files: string[], zip_f: str
         console.log("Extracted:" + count);
         archive.close().then(() => {
         // Write game name to file
-          fs.writeFileSync(ins_dir + "/" + game_name_file, game.name);
+          fs.writeFileSync(ins_dir + "/" + game_name_file, game.remote_name);
           fs.writeFileSync(ins_dir + "/" + game_version, game.remote?.version ? game.remote?.version : "0");
           fs.writeFileSync(ins_dir + "/" + game_iter_id, (game.remote?.iter_id ? game.remote?.iter_id : 0) + "");
           sendInstallEnd(game);
@@ -151,7 +150,7 @@ function installGameExe(game: GOG.GameInfo, dl_files: string[], exe: string, tok
       active_ins = undefined;
       console.log("Game installed with code: " + code);
       // Write game name to file
-      fs.writeFileSync(ins_dir + "/" + game_name_file, game.name);
+      fs.writeFileSync(ins_dir + "/" + game_name_file, game.remote_name);
       if(code === 3221226525){
         sendInstallEnd(game);
         resolve(game);

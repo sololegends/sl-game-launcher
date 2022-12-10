@@ -183,19 +183,23 @@ function readGameInfo(game_directory){
   }
 }
 
-async function uninstallFromFileList(folder, output_dir = ""){
+async function uninstallFromFileList(folder, output_dir = "", note = ""){
   const game_id = readGameInfo(folder).gameId;
 
   // Get the full file list, relative path to the output
   const final_files = getFileList(folder);
 
-  const fsw = fs.createWriteStream(output_dir + "/dlc-" + game_id + "-uninstall.json");
+  const file_name = "dlc-" + game_id + "-" + note + "-uninstall.json";
+  const fsw = fs.createWriteStream(output_dir + "/" + file_name);
   fsw.write(JSON.stringify({files: final_files}, null, 2));
   fsw.close();
-  return game_id;
+  return {
+    game_id,
+    file_name
+  };
 }
 
-async function dlcUninstallFromInnoScript(inno_script, output_dir = "", PREFIX = "Type: files; Name: \"{app}/"){
+async function dlcUninstallFromInnoScript(inno_script, output_dir = "", note = "", PREFIX = "Type: files; Name: \"{app}/"){
   const files = await readInsScript(inno_script);
   const final_files = [];
   let game_id = "nnnnnnnnnnnn";
@@ -209,10 +213,14 @@ async function dlcUninstallFromInnoScript(inno_script, output_dir = "", PREFIX =
       }
     }
   }
-  const fsw = fs.createWriteStream(output_dir + "dlc-" + game_id + "-uninstall.json");
+  const file_name = "dlc-" + game_id + "-" + note + "-uninstall.json";
+  const fsw = fs.createWriteStream(output_dir + "/" + file_name);
   fsw.write(JSON.stringify({files: final_files}, null, 2));
   fsw.close();
-  return game_id;
+  return {
+    game_id,
+    file_name
+  };
 }
 
 async function compressFolder(input, zip_output, level = 9){
@@ -263,12 +271,12 @@ async function processInnoInstallFiles(inno_script, unpacked_folder, output){
   return aggrigate;
 }
 
-async function getDlcUninstall(props, format = "game-info"){
+async function getDlcUninstall(props, note, format = "game-info"){
   if(format === "inno-script"){
-    return await dlcUninstallFromInnoScript(props.inno_script, props.unpack_folder);
+    return await dlcUninstallFromInnoScript(props.inno_script, props.unpack_folder, note);
   }
   if(format === "game-info"){
-    return await uninstallFromFileList(props.output_folder, props.pack_root);
+    return await uninstallFromFileList(props.output_folder, props.pack_root, note);
   }
   return undefined;
 }
@@ -276,10 +284,10 @@ async function getDlcUninstall(props, format = "game-info"){
 async function processGameFiles(data, format = "game-info"){
   if(format === "game-info"){
     // Remove the tmp folder and commonappdata folders
-    if(fs.existsSync("/tmp")){
+    if(fs.existsSync(data.output_folder + "/tmp")){
       fs.rmSync(data.output_folder + "/tmp", {recursive: true});
     }
-    if(fs.existsSync("/commonappdata")){
+    if(fs.existsSync(data.output_folder + "/commonappdata")){
       fs.rmSync(data.output_folder + "/commonappdata", {recursive: true});
     }
     // Move the app contents to the main game folder
@@ -297,7 +305,7 @@ async function processGameFiles(data, format = "game-info"){
         fs.rmSync(data.output_folder + "/webcache.zip");
       }
       if(fs.existsSync(data.output_folder + "/__redist/ISI/scriptinterpreter.exe")){
-        fs.rmSync(data.output_folder + "/__redist/ISI/scriptinterpreter.exe");
+        fs.rmSync(data.output_folder + "/__redist/ISI", {recursive: true});
       }
     }else if(fs.existsSync(data.output_folder + "/webcache.zip")){
       const webcache = new zip.async({file: data.output_folder + "/webcache.zip"});
@@ -332,11 +340,83 @@ async function getSlug(props, format = "game-info"){
   }else if (format === "game-info"){
     slug = readGameInfo(props.output_folder)?.name.toLowerCase();
   }
-  slug = slug.replaceAll(/[^a-z0-9_]/g, "_");
+  slug = slug.replaceAll(/[^-a-z0-9_]/g, "_");
   while(slug.includes("__")){
     slug = slug.replaceAll("__", "_");
   }
   return slug;
+}
+
+async function getVersion(game_exe, props, format = "game-info"){
+  if(props.version && props.iter_id){
+    return {
+      version: props.version,
+      iter_id: props.iter_id
+    };
+  }
+  const slug = await getSlug(props, format);
+  console.log(game_exe, slug, props);
+  const regex = new RegExp("setup_(" + slug + ")_(.*?)_(\\((64|32)bit\\)_){0,1}\\(([0-9]+)\\).exe", "g");
+  let m;
+  let version = undefined;
+  let iter_id = undefined;
+  while ((m = regex.exec(game_exe)) !== null){
+    // This is necessary to avoid infinite loops with zero-width matches
+    if (m.index === regex.lastIndex){
+      regex.lastIndex++;
+    }
+
+    // The result can be accessed through the `m`-variable.
+    m.forEach((match, groupIndex) => {
+      if(groupIndex === 2){
+        version = match;
+      }
+      if(groupIndex === 5){
+        iter_id = match;
+      }
+      console.log(`Found match, group ${groupIndex}: ${match}`);
+    });
+  }
+  return {
+    version,
+    iter_id: parseInt(iter_id)
+  };
+}
+
+async function mergeGameInfo(new_info){
+  // Load old game info
+  // Check if it exists
+  if(!fs.existsSync("game-data.json")){
+    console.error("Failed to fine game-data.json file in script dir");
+    return new_info;
+  }
+  // Load the old info
+  const old_info = JSON.parse(fs.readFileSync("game-data.json").toString());
+  console.log("Old data loaded for merge...");
+  // Add version block if not present
+  if(old_info.versions === undefined){
+    old_info.versions = {};
+  }
+  // Make new version block
+  const version_block = {
+    dl_size: old_info.dl_size,
+    install_size: old_info.install_size,
+    version: old_info.version,
+    iter_id: old_info.iter_id,
+    download: old_info.download,
+    dlc: old_info.dlc
+  };
+  // Ad the version block to the old info
+  old_info.versions[old_info.version] = version_block;
+  // Inject the new data
+  old_info.dl_size = new_info.dl_size;
+  old_info.install_size = new_info.install_size;
+  old_info.version = new_info.version;
+  old_info.iter_id = new_info.iter_id;
+  old_info.download = new_info.download;
+  old_info.dlc = new_info.dlc;
+  console.log("Data merged!", old_info);
+  return old_info;
 }
 
 async function repackGame(game_exe, output_dir, options){
@@ -367,7 +447,7 @@ async function repackGame(game_exe, output_dir, options){
   }
   const dl_size = await getFileSize(zip_output);
   const slug = await getSlug(props, FORMAT);
-
+  const version_data = await getVersion(game_exe, props, FORMAT);
   // Clean up left overs
   if(!options.nocleanup){
     removeDir(unpack_folder);
@@ -377,6 +457,8 @@ async function repackGame(game_exe, output_dir, options){
   return {
     logo: "logo.jpg",
     logo_format: "image/jpg",
+    version: version_data.version,
+    iter_id: version_data.iter_id,
     slug,
     dl_size,
     install_size,
@@ -415,9 +497,10 @@ async function repackDLC(dlc_exe, output_dir, options){
   const dl_size = await getFileSize(zip_output);
 
   // Make uninstall script
-  const game_id = await getDlcUninstall(props, FORMAT);
+  const version_data = await getVersion(dlc_exe, props, FORMAT);
+  const {game_id, file_name} = await getDlcUninstall(props, version_data.iter_id, FORMAT);
   console.log("game_id: ", game_id);
-  const uninstall_json = "dlc-" + game_id + "-uninstall.json";
+  const uninstall_json = file_name;
   const slug = await getSlug(props, FORMAT);
 
   // Clean up left overs
@@ -429,6 +512,8 @@ async function repackDLC(dlc_exe, output_dir, options){
   return {
     slug,
     gameId: game_id,
+    version: version_data.version,
+    iter_id: version_data.iter_id,
     dl_size,
     install_size,
     download: [
@@ -489,7 +574,7 @@ async function main(game_exe, dlc_folder, options_arr){
   }
 
   // Process the main game
-  const game = game_exe === "NONE" ? {} : await repackGame(game_exe, output_dir, options);
+  let game = game_exe === "NONE" ? {} : await repackGame(game_exe, output_dir, options);
   game.dlc = [];
   if(dlc_folder !== "NONE"){
     const dlc_files = fs.readdirSync(dlc_folder);
@@ -499,6 +584,10 @@ async function main(game_exe, dlc_folder, options_arr){
         game.dlc.push(await repackDLC(dlc_folder + "/" + dlc_file, output_dir, options));
       }
     }
+  }
+  // Do we merge data
+  if(options.merge_data || options.merge_info){
+    game = await mergeGameInfo(game);
   }
   if(game_exe !== "NONE" || dlc_folder !== "NONE"){
     // Write game file

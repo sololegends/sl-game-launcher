@@ -62,6 +62,9 @@ function initToken(empty = false): LockAbortToken{
     }
   } as LockAbortToken;
   obj.abort = function(){
+    if(aborted){
+      return;
+    }
     obj.fire("abort");
     aborted = true;
   };
@@ -83,7 +86,7 @@ export async function acquireLock(lock: string, cancelable = true){
 export function abortLock(lock: string){
   const token = LOCKS[lock];
   if(token !== undefined){
-    console.log("Aborting lock: " + token);
+    console.log("Aborting lock: " + lock);
     token.abort();
   }
 }
