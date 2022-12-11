@@ -1,9 +1,9 @@
 declare module "base_modal"{
 	export namespace BaseModalN{
 		export type ActionItem = {
-			action: (item?: ActionItem, e?: Event) => void;
+			action: (item: ActionItem, e: Event) => void;
 			text: string | (() => string);
-			name: string | (() => string);
+			name?: string | (() => string);
 			loading?: boolean | (() => boolean);
 			disabled?: boolean | (() => boolean);
 			enabled?: boolean | (() => boolean);

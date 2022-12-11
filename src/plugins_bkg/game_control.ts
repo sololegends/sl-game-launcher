@@ -1,5 +1,6 @@
 
 import * as child from "child_process";
+import { acquireLock, LAUNCH_GAME_LOCK } from "./tools/locks";
 import { BrowserWindow, IpcMain } from "electron";
 import { syncGameSave, uploadGameSave } from "./cloud_saves";
 import { checkForUpdates } from "./update_check";
@@ -54,6 +55,15 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   }
 
   async function launchGame(e: unknown, game: GOG.GameInfo){
+    const lock = acquireLock(LAUNCH_GAME_LOCK, true, false);
+    if(lock === undefined){
+      globals.notify({
+        type: "warning",
+        title: "Cannot launch game!",
+        text: "Another game is already running"
+      });
+      return;
+    }
     if(running_game !== undefined && running_game.process !== undefined){
       quitGame();
       runningGameChanged();
@@ -78,15 +88,24 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     win?.webContents.send("save-game-sync-state", game, "Syncing Remote Data");
     game.remote = await ensureRemote(game, false);
     win?.webContents.send("save-game-stopped", game);
+    if(halt){
+      win?.webContents.send("progress-banner-hide");
+      return false;
+    }
     // Check for new cloud sync
     const cloud_sync = new Promise<boolean>((resolver)=>{
       syncGameSave(game, resolver);
     });
     await cloud_sync;
+    if(halt){
+      win?.webContents.send("progress-banner-hide");
+      return false;
+    }
     await checkForUpdates(game);
     win?.webContents.send("progress-banner-hide");
     ipcMain.off(cancel_launch_evt, haltfn);
     if(halt){
+      win?.webContents.send("progress-banner-hide");
       return false;
     }
     const start = new Date().getTime();

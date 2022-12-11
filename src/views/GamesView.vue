@@ -203,8 +203,6 @@ export default mixin(gamepad).extend({
     window.addEventListener("keydown", this.keyHandler);
 
     this.registerControllerHandlers();
-    // Run the update check
-    ipc.send("check-for-updates");
   },
   beforeDestroy(){
     if(this.store_subscription){
@@ -345,6 +343,8 @@ export default mixin(gamepad).extend({
     async updateGames(){
       await ipc.invoke("read-games", true).then(async(res: GOG.GameInfo[]) => {
         this.games = res;
+        // Run the update check
+        ipc.send("check-for-updates", this.games);
         await ipc.invoke("read-remote-games").then((remote_games: GOG.GameInfo[]) => {
           this.remote_games = remote_games;
           this.filterGames();

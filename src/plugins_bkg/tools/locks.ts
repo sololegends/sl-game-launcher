@@ -3,6 +3,7 @@ export const UN_INSTALL_LOCK = "unins_ins";
 export const DOWNLOAD = "download";
 export const DOWNLOAD_SEQUENCE = "download_seq";
 export const ACTION_LOCK = "action_lock";
+export const LAUNCH_GAME_LOCK = "launch_game_lock";
 
 export type LockAbortEvents = "abort";
 
@@ -71,9 +72,12 @@ function initToken(empty = false): LockAbortToken{
   return obj;
 }
 
-export async function acquireLock(lock: string, cancelable = true){
+export async function acquireLock(lock: string, cancelable = true, wait_for = true){
+  if(!wait_for && LOCKS[lock] !== undefined){
+    return undefined;
+  }
   while(LOCKS[lock] !== undefined){
-    await sleep(100);
+    await sleep(1000);
   }
   LOCKS[lock] = initToken(true);
   console.log("Acquired lock: " + lock);

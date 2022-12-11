@@ -5,6 +5,7 @@
     <MessageModal />
     <GeneralConfirm ref="confirm_modal" />
     <GeneralPrompt ref="prompt_modal" />
+    <GeneralQuestion ref="question_modal" />
     <SideNotify
       :show="show_side_notify"
       @count="notification_count=$event"
@@ -13,7 +14,7 @@
     <SettingsPanel :show="show_side_settings" @click:outside="show_side_settings=false" />
 
     <v-app>
-      <NotificationsPanel :position="{left:10,bottom:0}" style="z-index:9999;" />
+      <NotificationsPanel :position="{left:10,bottom:10}" style="z-index:9999;" />
       <v-app-bar app color="primary elevation-3" dense>
         <h2 class="does-window-drag no-sel white--text">{{$properties.app}}</h2>
         <v-spacer class="does-window-drag h100" />
@@ -83,6 +84,7 @@ import GameBanner from "@inserts/gog/GameBanner.vue";
 import GeneralConfirm from "@modals/GeneralConfirm.vue";
 import { GeneralPopup } from "confirmation_modal";
 import GeneralPrompt from "@modals/GeneralPrompt.vue";
+import GeneralQuestion from "@modals/GeneralQuestion.vue";
 import { GOG } from "./types/gog/game_info";
 import { ipcRenderer as ipc } from "electron";
 import MessageModal from "@modals/MessageModal.vue";
@@ -100,6 +102,7 @@ export default defineComponent({
     GameBanner,
     GeneralConfirm,
     GeneralPrompt,
+    GeneralQuestion,
     SettingsPanel
   },
   name: "App",
@@ -120,6 +123,7 @@ export default defineComponent({
   mounted(){
     window.confirm_modal = this.$refs.confirm_modal as GeneralPopup.ConfirmModal;
     window.prompt_modal = this.$refs.prompt_modal as GeneralPopup.PromptModal;
+    window.question_modal = this.$refs.question_modal as GeneralPopup.QuestionModal;
     tool_tips.init();
     ipc.on("game-running-changed", (e, game: GOG.GameInfo) => {
       this.running_game = game;
@@ -127,6 +131,15 @@ export default defineComponent({
 
     ipc.on("notify", (e, notify, group) => {
       this.$notify(notify, group);
+    });
+
+    ipc.on("question", async(e, message, title, options) => {
+      const response = await this.question(message, title, options);
+      if(response === "CLOSED" || response === "CANCELED"){
+        ipc.send("question_canceled");
+        return;
+      }
+      ipc.send(response);
     });
 
     ipc.on("win-maximize", () => {

@@ -3,12 +3,12 @@
     :id="id" :title="options.header" persistent
     :light_header="true" :action="action" :closeable='false'
     :modal_width='450' @before-open="beforeOpen" @closed="closed"
-    :show_cancel="options.show_cancel"
+    :show_cancel="false"
   >
-    <div class="confirm-title">{{title}}</div>
-    <br  v-if="options.header">
+    <div class="question-title">{{title}}</div>
+    <br v-if="title">
     <div class="message">
-      <span class="text-subtitle-2">{{message}} </span>
+      <span class="text-subtitle-2 text-pre-wrap">{{message}} </span>
     </div>
   </base-modal>
 </template>
@@ -17,48 +17,49 @@
 import BaseModal from "@modals/BaseModal.vue";
 import {BaseModalN} from "base_modal";
 import { defineComponent } from "@vue/composition-api";
-import filters from "@/js/filters";
 import { GeneralPopup } from "confirmation_modal";
 
 export default defineComponent({
-  name: "GeneralConfirm",
+  name: "GeneralQuestion",
   components: { BaseModal },
   props: {
     id: {
       type: String,
       required: false,
-      default: "general_confirm"
+      default: "general_question"
     }
   },
   data(){
     return {
-      resolve: function(){ return "nothing"; } as (value: string | boolean) => void,
-      reject: function(){ return "nothing"; } as (value: string | boolean) => void,
+      resolve: function(){ return "nothing"; } as (value: string) => void,
+      reject: function(){ return "nothing"; } as (value: string) => void,
       message: undefined as string | undefined,
       title: undefined as string | undefined,
       options: {
-        show_cancel: true,
-        header: "Confirmation Required"
-      } as GeneralPopup.ConfirmOptionsInternal
+        buttons: [],
+        header: "Attention!"
+      } as GeneralPopup.QuestionOptionsInternal
     };
   },
   computed: {
     action(): BaseModalN.ActionItem[]{
-      return [
-        {
-          text: "Confirm",
-          name: "confirm",
-          action: this.confirm
+      const actions = [] as BaseModalN.ActionItem[];
+      for(const i in this.options.buttons){
+        let id = this.options.buttons[i].id;
+        if(id === undefined){
+          id = this.options.buttons[i].text;
         }
-      ] as BaseModalN.ActionItem[];
+        actions.push({
+          text: this.options.buttons[i].text,
+          name: id,
+          action: this.question
+        });
+      }
+      return actions;
     }
   },
   methods: {
-    showCancel(): boolean{
-      return this.options.show_cancel;
-    },
-
-    open(message: string, title: string, options: GeneralPopup.ConfirmOptions): Promise<string | boolean>{
+    open(message: string, title: string, options: GeneralPopup.QuestionOptions): Promise<string>{
       this.title = title;
       this.message = message;
       this.options = Object.assign(this.options, options);
@@ -68,8 +69,8 @@ export default defineComponent({
         this.reject = reject;
       });
     },
-    confirm(): void{
-      this.resolve(true);
+    question(item: BaseModalN.ActionItem): void{
+      this.resolve(this.dynamicString(item.name ? item.name : "ERROR"));
       this.$modal.hide(this.id);
     },
     cancel(): void{
@@ -85,10 +86,10 @@ export default defineComponent({
       this.message = undefined;
       this.options = {
         show_cancel: true,
-        header: "Confirmation Required"
-      } as GeneralPopup.ConfirmOptionsInternal;
-    },
-    capitalize: filters.capitalize
+        header: "Attention!",
+        buttons: []
+      } as GeneralPopup.QuestionOptionsInternal;
+    }
   }
 });
 </script>
@@ -96,7 +97,10 @@ export default defineComponent({
   .message{
     white-space: pre-wrap;
   }
-  .confirm-title{
+  .text-pre-wrap{
+    white-space:pre-wrap;
+  }
+  .question-title{
     font-size: 18px;
     font-weight: 500;
     line-height: 2rem;

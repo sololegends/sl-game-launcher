@@ -47,7 +47,7 @@
     </div>
 
     <div v-if="!isRemote && updateAvailable">
-      <div class="package-btn" tip-title="Update Game" @click="checkForUpdates">
+      <div class="package-btn" tip-title="Update Game" @click="executeUpdates">
         <v-progress-circular v-if="loading_update" indeterminate size="20"></v-progress-circular>
         <fa-icon v-else size="lg" icon="cloud" class="success--text" />
       </div>
@@ -246,6 +246,11 @@ export default defineComponent({
     async checkForUpdates(){
       this.loading_update = true;
       await ipc.invoke("check-update-game", this.game, true);
+      this.loading_update = false;
+    },
+    async executeUpdates(){
+      this.loading_update = true;
+      await ipc.invoke("update-game", this.game);
       this.loading_update = false;
     },
     uploadSaveFiles(){

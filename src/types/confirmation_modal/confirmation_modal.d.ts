@@ -35,14 +35,32 @@ declare module "confirmation_modal"{
 			header: string
 		}
 
+		export interface QuestionButton {
+			text: string,
+			id?: string,
+			hover?: string
+		}
+		export interface QuestionOptions {
+			buttons?: QuestionButton[],
+			header?: string
+		}
+		export interface QuestionOptionsInternal extends QuestionOptions {
+			buttons: QuestionButton[],
+			header: string
+		}
+
 		export interface ConfirmModal extends Vue{
 			open: GeneralPopup.ConfirmFn
 		}
 		export interface PromptModal extends Vue{
 			open: GeneralPopup.PromptFn
 		}
+		export interface QuestionModal extends Vue{
+			open: GeneralPopup.QuestionFn
+		}
 
 		export type ConfirmFn = (message: string, title: string, options?: GeneralPopup.ConfirmOptions) => Promise<boolean | string>
 		export type PromptFn = (message: string, title: string, options?: GeneralPopup.PromptOptions) => Promise<string>
+		export type QuestionFn = (message: string, title: string, options?: GeneralPopup.QuestionOptions) => Promise<string>
 	}
 }

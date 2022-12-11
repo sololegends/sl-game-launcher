@@ -82,11 +82,16 @@ export async function getRemoteGameData(game: GOG.GameInfo, use_cache = true): P
       return "{}";
     });
     if(file_data instanceof Buffer){
-      const game_data = loadPresentDLC(game, JSON.parse(file_data.toString()));
-      game_data.folder = remote_folder;
-      saveToDataCache("game-data.json", file_data, cache_name);
-      _win?.webContents.send("game-remote-updated", game, game_data);
-      return game_data as GOG.RemoteGameData;
+      try{
+        const game_data = loadPresentDLC(game, JSON.parse(file_data.toString()));
+        game_data.folder = remote_folder;
+        saveToDataCache("game-data.json", file_data, cache_name);
+        _win?.webContents.send("game-remote-updated", game, game_data);
+        return game_data as GOG.RemoteGameData;
+      }catch(e){
+        console.error("Failed to parse game-data.json from server:", e, file_data.toString());
+      }
+      return undefined;
     }
   }
   return undefined;

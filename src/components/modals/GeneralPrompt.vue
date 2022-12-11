@@ -70,6 +70,7 @@ export default defineComponent({
       return [
         {
           text: "Cancel",
+          name: "cancel",
           action: this.cancel,
           color: "undefined",
           enabled: this.showCancel
@@ -78,6 +79,7 @@ export default defineComponent({
           text: (): string => {
             return this.options.submit_text || "Submit";
           },
+          name: "submit",
           action: this.submitted,
           disabled: (): boolean => {
             return !this.form_valid;

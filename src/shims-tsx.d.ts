@@ -22,5 +22,8 @@ declare global {
 		prompt_modal: {
       open: GeneralPopup.PromptFn
     }
+		question_modal: {
+      open: GeneralPopup.QuestionFn
+    }
   }
 }

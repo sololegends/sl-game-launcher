@@ -50,18 +50,21 @@ export default defineComponent({
       this.show = true;
       this.game = game.name;
       this.processing = false;
+      this.downloading = false;
       this.state = "Initializing cloud";
     });
     ipc.on("save-game-sync-search", (e, game: GOG.GameInfo) => {
       this.show = true;
       this.game = game.name;
       this.processing = true;
+      this.downloading = false;
       this.state = "Checking for cloud save";
     });
     ipc.on("save-game-sync-state", (e, game: GOG.GameInfo, state: string) => {
       this.show = true;
       this.game = game.name;
       this.processing = false;
+      this.downloading = false;
       this.state = state;
     });
     ipc.on("save-game-dl-progress", (e, game: GOG.GameInfo, state: string, p: Stats) => {
@@ -76,11 +79,13 @@ export default defineComponent({
     ipc.on("save-game-stopped", () => {
       this.show = false;
       this.processing = false;
+      this.downloading = false;
       this.game = "";
     });
     ipc.on("save-game-dl-error", (e, game: GOG.GameInfo, err: ErrorStats) => {
       this.show = true;
       this.processing = false;
+      this.downloading = false;
       this.game = err.message;
     });
   },

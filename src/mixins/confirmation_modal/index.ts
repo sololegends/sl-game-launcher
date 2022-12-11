@@ -2,19 +2,22 @@
 import GeneralConfirm from "@modals/GeneralConfirm.vue";
 import { GeneralPopup } from "confirmation_modal";
 import GeneralPrompt from "@modals/GeneralPrompt.vue";
+import GeneralQuestion from "@modals/GeneralQuestion.vue";
 import Vue from "vue";
 
 declare module "vue/types/vue" {
   interface Vue {
 		confirm: GeneralPopup.ConfirmFn
 		prompt: GeneralPopup.PromptFn
+		question: GeneralPopup.QuestionFn
   }
 }
 
 export default Vue.extend({
   components: {
     GeneralConfirm,
-    GeneralPrompt
+    GeneralPrompt,
+    GeneralQuestion
   },
   methods: {
     async confirm(message: string, title: string, options: GeneralPopup.ConfirmOptions){
@@ -48,7 +51,24 @@ export default Vue.extend({
         return window.prompt_modal.open(message, title, options);
       }
       return new Promise((resolve, reject) => {
-        reject("Failed to open confirm");
+        reject("Failed to open prompt");
+      });
+    },
+    async question(message: string, title: string, options: GeneralPopup.QuestionOptions){
+      let result = "CLOSED";
+      await this.$doQuestion(message, title, options).then((e: string) => {
+        result = e;
+      }).catch((e: string) => {
+        result = e;
+      });
+      return result;
+    },
+    $doQuestion(message: string, title: string, options: GeneralPopup.QuestionOptions): Promise<string>{
+      if(window.question_modal){
+        return window.question_modal.open(message, title, options);
+      }
+      return new Promise((resolve, reject) => {
+        reject("Failed to open question");
       });
     }
   }

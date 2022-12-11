@@ -76,6 +76,14 @@ export default defineComponent({
   computed: {
     action(): BaseModalN.ActionItem[]{
       return [
+        {
+          text: "Uninstall All",
+          action: this.uninstallAll
+        },
+        {
+          text: "Install All",
+          action: this.downloadAll
+        }
       ];
     },
     gameSlug(): string | number{
@@ -83,13 +91,25 @@ export default defineComponent({
     }
   },
   methods: {
-    installDLC(dlc: GOG.RemoteGameDLC, e: MouseEvent){
+    downloadAll(){
+      for(const i in this.dlc){
+        this.installDLC(this.dlc[i], undefined);
+      }
+    },
+    uninstallAll(){
+      for(const i in this.dlc){
+        if(this.dlc[i].present){
+          this.installDLC(this.dlc[i], undefined);
+        }
+      }
+    },
+    installDLC(dlc: GOG.RemoteGameDLC, e?: MouseEvent){
       if(dlc.present){
         ipc.send("uninstall-dlc", this.game, dlc);
         this.$modal.hide(this.id);
         return;
       }
-      if(e.shiftKey){
+      if(e?.shiftKey){
         ipc.send("download-dlc", this.game, dlc.slug);
         this.$modal.hide(this.id);
         return;

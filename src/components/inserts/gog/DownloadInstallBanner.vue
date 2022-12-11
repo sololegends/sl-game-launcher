@@ -73,6 +73,7 @@ export default defineComponent({
       options.indeterminate = options.indeterminate || false;
       this.options = options;
       this.show = true;
+      this.dl_speed = undefined;
       this.progress_percent = 0;
     },
     bannerProgress(e: unknown, progress: App.ProgressBannerProgress){

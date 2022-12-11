@@ -81,13 +81,13 @@ async function packGameSave(game: GOG.GameInfo, saves: GOG.GameSave): Promise<st
     if(isGlob(saves[save])){
       await compressGlob(saves[save], save_tmp + save + ".zip", (p: CompressProgress) =>{
         win?.webContents.send("save-game-dl-progress", game, "Compressing save: " + save, p);
-      });
+      }, 6);
       found++;
     }
     if(fs.existsSync(saves[save])){
       await compressFolder(saves[save], save_tmp + save + ".zip", (p: CompressProgress) =>{
         win?.webContents.send("save-game-dl-progress", game, "Compressing save: " + save, p);
-      });
+      }, 6);
       found++;
     }
   }
@@ -110,7 +110,7 @@ async function packGameSave(game: GOG.GameInfo, saves: GOG.GameSave): Promise<st
   const output = tmp_dir + new Date().getTime() + "-save.zip";
   await compressFolder(save_tmp, output, (p: CompressProgress) =>{
     win?.webContents.send("save-game-dl-progress", game, "Compressing save: bundle", p);
-  }, 4);
+  }, 0);
   fs.rmSync(save_tmp, { recursive: true });
   return output;
 }
@@ -131,6 +131,9 @@ async function unpackGameSave(game: GOG.GameInfo, saves: GOG.GameSave, save_pack
       let folder = saves[save];
       if(isGlob(saves[save])){
         folder = saves[save].substring(0, saves[save].replace("\\", "/").lastIndexOf("/"));
+      }
+      if(!fs.existsSync(folder)){
+        fs.mkdirSync(folder, {recursive: true});
       }
       await decompressFolder(save_tmp + save + ".zip", folder, (p: CompressProgress) =>{
         win?.webContents.send("save-game-dl-progress", game, "Unpacking save: " + save, p);
@@ -340,24 +343,19 @@ export async function syncGameSave(game: GOG.GameInfo, resolver: (cloud: boolean
     // Proceed to user request
     const evt = "use-cloud-save-" + new Date().getTime();
     const evtl = "use-local-save-" + new Date().getTime();
-    globals?.notify({
-      title: "Cloud Save",
-      text: "Newer saves for game " + game.remote_name + " in cloud",
-      type: "info",
-      actions: [
-        {
-          name: "Use cloud save",
-          event: evt,
-          clear: true
-        },
-        {
-          name: "Use local save",
-          event: evtl,
-          clear: true
-        }
-      ],
-      sticky: true
-    });
+    win?.webContents.send(
+      "question",
+      "Do you want to keep the local saves or use the cloud save?"
+      + "\n\nWARNING: If you use the cloud, all the local saves will be overwritten.",
+      "Newer saves for " + game.remote_name + " in cloud",
+      {
+        header: "Cloud Save Synchronization",
+        buttons: [
+          { text: "Use Cloud", id: evt },
+          { text: "Use Local", id: evtl }
+        ]
+      }
+    );
     win?.webContents.send("save-game-stopped", game);
     const fn = {
       deploy: ()=> {
@@ -377,13 +375,13 @@ export async function syncGameSave(game: GOG.GameInfo, resolver: (cloud: boolean
       ipcMain.off(evt, fn.deploy);
     };
     fn.cancel = cancel;
-    ipcMain.once(evt, deploy);
-    ipcMain.once(evtl, cancel);
+    ipcMain.once(evt, fn.deploy);
+    ipcMain.once(evtl, fn.cancel);
     return;
   }else{
     console.error("Failed to get web dav connection for save sync!");
   }
-  resolver(false);
+  return resolver(false);
 }
 
 export default function init(ipcMain: IpcMain, _win: BrowserWindow, _globals: Globals){
