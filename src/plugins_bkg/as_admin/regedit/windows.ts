@@ -1,9 +1,14 @@
 
-import { Add, RedEditResponse, Type } from "regedit";
 import elevate from "../elevate";
+import { Regedit } from "regedit";
 
 const DEFAULT_TYPE = "REG_SZ";
 const NEEDS_SEPARATOR = "REG_MULTI_SZ";
+export const HKLM = "HKEY_LOCAL_MACHINE" as Regedit.Machine;
+export const HKCU = "HKEY_CURRENT_USER" as Regedit.Machine;
+export const HKCC = "HKEY_CURRENT_CONFIG" as Regedit.Machine;
+export const HKU = "HKEY_USERS" as Regedit.Machine;
+export const HKCR = "HKEY_CLASSES_ROOT" as Regedit.Machine;
 
 /**
  * Actually executes registry command, requesting elevation
@@ -11,8 +16,8 @@ const NEEDS_SEPARATOR = "REG_MULTI_SZ";
  * @param command - REG command to execute
  * @returns RedEditResponse - the response resulting form the command's execution
  */
-async function exec(command: string): Promise<RedEditResponse>{
-  return new Promise<RedEditResponse>((resolve, reject) => {
+async function exec(command: string): Promise<Regedit.RedEditResponse>{
+  return new Promise<Regedit.RedEditResponse>((resolve, reject) => {
     // Something
     elevate("reg " + command, (error, stdout, stderr) => {
       if(error){
@@ -31,22 +36,80 @@ async function exec(command: string): Promise<RedEditResponse>{
   });
 }
 
-export async function Query(){
-  // TODO: implement this
-  return "NYI";
-}
-
-export async function Add(key: string, value: string, type: Type, data: string,
-  separator?: string, force?: boolean, bit_64?: boolean){
-  let command = "add \"" + key.replaceAll("\"", "\\\"") + "\"";
-  // Value
+function valueCheck(value?: string){
+  let command = "";
   if(value){
     if(value === ""){
       command += " /ve";
     }else{
-      command +=  " /ValueName \"" + value.replaceAll("\"", "\\\"") + "\"";
+      command +=  " /v \"" + value.replaceAll("\"", "\\\"") + "\"";
     }
   }
+  return command;
+}
+
+function separatorCheck(separator?: string, type?: Regedit.Type){
+  let command = "";
+  if(separator && type === NEEDS_SEPARATOR && separator.length === 1){
+    command += " /s " + separator;
+  }else if(type === NEEDS_SEPARATOR){
+    command += " /s \0";
+  }
+  return command;
+}
+
+function b64Check(bit_64?: boolean){
+  return bit_64 ? (" /reg:" + bit_64 ? "64" : "32") : "";
+}
+
+export async function Query(key: string, value?: string, query_subkeys?: boolean,
+  data?: string, target?: "key_names" | "data", case_sensitive?: boolean, exact?: boolean,
+  type?: Regedit.Type, separator?: string, bit_64?: boolean): Promise<Regedit.RedEditResponse>{
+
+  let command = "query \"" + key.replaceAll("\"", "\\\"") + "\"";
+  // Value
+  command += valueCheck(value);
+
+  // Query SunKeys
+  if(query_subkeys){
+    command += " /s";
+  }
+
+  // Data
+  if(data){
+    command += " /f " + data;
+    if(target === "key_names"){
+      command += " /k";
+    }
+    if(target === "data"){
+      command += " /d";
+    }
+    if(case_sensitive){
+      command += " /c";
+    }
+    if(exact){
+      command += " /e";
+    }
+  }
+
+  // Type
+  if(type){
+    command += " /t " + type;
+  }
+
+  // Separator
+  command += separatorCheck(separator, type);
+
+  command += b64Check(bit_64);
+  return exec(command);
+}
+
+export async function Add(key: string, value: string, type: Regedit.Type, data: string,
+  separator?: string, force?: boolean, bit_64?: boolean): Promise<Regedit.RedEditResponse>{
+  let command = "add \"" + key.replaceAll("\"", "\\\"") + "\"";
+  // Value
+  command += valueCheck(value);
+
   // Type
   if(type){
     command += " /t " + type;
@@ -54,11 +117,8 @@ export async function Add(key: string, value: string, type: Type, data: string,
     command += " /t " + DEFAULT_TYPE;
   }
   // Separator
-  if(separator && type === NEEDS_SEPARATOR && separator.length === 1){
-    command += " /s " + separator;
-  }else if(type === NEEDS_SEPARATOR){
-    command += " /s \0";
-  }
+  command += separatorCheck(separator, type);
+
   // Data
   if(data){
     command += " /d \"" + data.replaceAll("\"", "\\\"") + "\"";
@@ -67,9 +127,8 @@ export async function Add(key: string, value: string, type: Type, data: string,
   if(force){
     command += " /f";
   }
-  if(bit_64 !== undefined){
-    command += " /reg:" + bit_64 ? "64" : "32";
-  }
+  command += b64Check(bit_64);
+
   return exec(command);
 }
 
@@ -122,3 +181,29 @@ export async function Flags(){
   // TODO: implement this
   return "NYI";
 }
+
+
+const export_data = {
+  // Variables
+  HKLM,
+  HKCU,
+  HKCC,
+  HKU,
+  HKCR,
+
+  // Functions
+  Query,
+  Add,
+  Delete,
+  Copy,
+  Save,
+  Load,
+  Unload,
+  Restore,
+  Compare,
+  Export,
+  Import,
+  Flags
+};
+
+export default export_data;

@@ -2,8 +2,8 @@
 
 import * as child from "child_process";
 import { acquireLock, LockAbortToken, releaseLock, UN_INSTALL_LOCK } from "../tools/locks";
-import { ensureDir, normalizeFolder } from "../tools/files";
-import { game_iter_id, game_name_file, game_version } from "@/json/files.json";
+import { ensureDir, getFolderSize, normalizeFolder } from "../tools/files";
+import { game_folder_size, game_iter_id, game_name_file, game_version } from "@/json/files.json";
 import { notify, win } from "..";
 import zip, { ZipEntry } from "node-stream-zip";
 import fs from "fs";
@@ -98,10 +98,12 @@ async function installGameZip(game: GOG.GameInfo, dl_files: string[], zip_f: str
       archive.extract(null, ins_dir).then((count) => {
         console.log("Extracted:" + count);
         archive.close().then(() => {
-        // Write game name to file
+          // Write game name to file
+          game.root_dir = ins_dir;
           fs.writeFileSync(ins_dir + "/" + game_name_file, game.remote_name);
           fs.writeFileSync(ins_dir + "/" + game_version, game.remote?.version ? game.remote?.version : "0");
           fs.writeFileSync(ins_dir + "/" + game_iter_id, (game.remote?.iter_id ? game.remote?.iter_id : 0) + "");
+          fs.writeFileSync(ins_dir + "/" + game_folder_size, getFolderSize(ins_dir) + "");
           sendInstallEnd(game);
           resolve(game);
         });
@@ -152,6 +154,10 @@ function installGameExe(game: GOG.GameInfo, dl_files: string[], exe: string, tok
       // Write game name to file
       fs.writeFileSync(ins_dir + "/" + game_name_file, game.remote_name);
       if(code === 3221226525){
+        fs.writeFileSync(ins_dir + "/" + game_name_file, game.remote_name);
+        fs.writeFileSync(ins_dir + "/" + game_version, game.remote?.version ? game.remote?.version : "0");
+        fs.writeFileSync(ins_dir + "/" + game_iter_id, (game.remote?.iter_id ? game.remote?.iter_id : 0) + "");
+        fs.writeFileSync(ins_dir + "/" + game_folder_size, getFolderSize(ins_dir) + "");
         sendInstallEnd(game);
         resolve(game);
         return;

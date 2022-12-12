@@ -1,5 +1,9 @@
+
+
 export namespace GOG {
+
 	import {ChildProcess} from "child_process";
+	import { Machine } from "regedit";
 
 	export type ImageType = "background" | "logo" | "logo2x" | "icon" |
 		"sidebarIcon" | "sidebarIcon2x" | "menuNotificationAv" | "menuNotificationAv2"
@@ -94,5 +98,38 @@ export namespace GOG {
 	export type ImageResponse = {
 		icon: string
 		remote: RemoteGameData | undefined
+	}
+
+	export namespace ScriptInstall {
+		export interface savePath {
+			action: "savePath"
+			arguments: {
+				savePath: string,
+				type: "folder" | "file"
+			}
+		}
+
+		export interface setRegistry {
+			action: "setRegistry"
+			arguments: {
+				root: Machine
+				subkey: string
+				valueData: string
+				valueName: string
+				valueType: string
+			}
+		}
+	}
+
+	export type ScriptInstallAction = ScriptInstall.savePath | ScriptInstall.setRegistry
+
+	export type ScriptAction = {
+		install: ScriptInstallAction
+		languages: string[]
+		name: string
+	}
+
+	export type Script = {
+		actions: ScriptAction[]
 	}
 }

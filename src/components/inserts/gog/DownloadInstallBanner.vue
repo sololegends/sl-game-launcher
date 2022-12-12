@@ -11,7 +11,7 @@
       <span class="game-name no-sel">{{options.title}}</span>
       <v-spacer />
       <span class="dl-speed" v-if="dl_speed">{{speed}}</span>
-      <v-btn icon @click="cancel" tip-title="Cancel">
+      <v-btn v-if="options.cancel_event" icon @click="cancel" tip-title="Cancel">
         <fa-icon icon="times" size="xl" />
       </v-btn>
     </template>

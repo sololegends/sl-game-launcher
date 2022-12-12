@@ -11,7 +11,7 @@
     <ScrollablePanel :max_height="maxScrollable" @scroll="onScroll" v-else>
       <div class="games-container" id="game_flex">
         <GogGame
-          v-for="val, i in filtered_games" :key="i" :game="val"
+          v-for="val, i in filtered_games" :key="val.gameId" :game="val"
           class="flex"
           :ref="'game' + i"
           :running="val.name === active"
@@ -213,7 +213,13 @@ export default mixin(gamepad).extend({
   methods: {
     async awaitLoad(){
       while(this.games.length <= 0){
-        await this.updateGames();
+        console.log("Awaiting load: calling read-games");
+        const games = await this.updateGames();
+        console.log("Games read attempt: ", games);
+        if(games.length > 0){
+          break;
+        }
+        console.log("Await start sleeping...");
         await this.sleep(5000);
       }
     },
@@ -331,7 +337,6 @@ export default mixin(gamepad).extend({
         }
         // If the filter is populated
         if(actual_filter && actual_filter.trim() !== ""){
-          console.log("filter filter");
           return game.name.toLowerCase().includes(actual_filter.trim().toLowerCase());
         }
         return true;
@@ -341,13 +346,21 @@ export default mixin(gamepad).extend({
       this.$context_int.closeAll();
     },
     async updateGames(){
-      await ipc.invoke("read-games", true).then(async(res: GOG.GameInfo[]) => {
-        this.games = res;
-        // Run the update check
-        ipc.send("check-for-updates", this.games);
-        await ipc.invoke("read-remote-games").then((remote_games: GOG.GameInfo[]) => {
-          this.remote_games = remote_games;
-          this.filterGames();
+      return new Promise<GOG.GameInfo[]>((resolve, reject) => {
+        ipc.invoke("read-games", true).then(async(res: GOG.GameInfo[]) => {
+          this.games = res;
+          if(this.games.length > 0){
+            resolve(this.games);
+            // Run the update check
+            ipc.send("check-for-updates", this.games);
+            this.filterGames();
+            ipc.invoke("read-remote-games").then((remote_games: GOG.GameInfo[]) => {
+              this.remote_games = remote_games;
+              this.filterGames();
+            });
+            return;
+          }
+          reject(this.games);
         });
       });
     },

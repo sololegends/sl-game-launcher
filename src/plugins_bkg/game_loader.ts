@@ -1,6 +1,6 @@
 
 import { BrowserWindow, IpcMain } from "electron";
-import { game_iter_id, game_name_file, game_version } from "@/json/files.json";
+import { game_folder_size, game_iter_id, game_name_file, game_version } from "@/json/files.json";
 import { initWebDav, mutateFolder, webDavConfig } from "./nc_webdav";
 import {
   loadFromDataCache,
@@ -146,10 +146,16 @@ export async function getLocalGames(heavy = true): Promise<GOG.GameInfo[]>{
           if(fs.existsSync(game_dir + "/" + game_version)){
             l_info.c_version = fs.readFileSync(game_dir + "/" + game_version).toString();
           }
+          // Install size
+          if(fs.existsSync(game_dir + "/" + game_folder_size)){
+            l_info.install_size = parseInt(fs.readFileSync(game_dir + "/" + game_folder_size).toString());
+          }else{
+            l_info.install_size = getFolderSize(game_dir);
+            fs.writeFileSync(game_dir + "/" + game_folder_size, l_info.install_size + "");
+          }
           l_info.webcache = game_dir + "\\webcache.zip";
           l_info.root_dir = game_dir;
           if(heavy){
-            l_info.install_size = getFolderSize(game_dir);
             l_info.play_time = getPlaytime(l_info);
             l_info.current_version = loadFromVersionCache(flattenName(l_info.name));
             // Load remote data
@@ -164,6 +170,7 @@ export async function getLocalGames(heavy = true): Promise<GOG.GameInfo[]>{
         } else{
           dlc_found.push(flattenName(l_info.name.substring(l_info.name.indexOf(" - ") + 3)));
         }
+        break;
       }
     }
     if(info){
@@ -221,24 +228,24 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
   _win = win;
 
   async function getRemoteGameIcon(game: GOG.GameInfo): Promise<GOG.ImageResponse>{
-    const web_dav = await initWebDav();
-    const nc_cfg = webDavConfig();
     try{
       game.remote = await ensureRemote(game);
     }catch(e){
       console.log("Failed to get remote for game [" + game.name + " -- " + game.remote_name + "]");
       return { icon: "404", remote: undefined };
     }
+    // Check for cached data
+    const image = loadFromImageCache(game.remote.logo, game.remote.slug);
+    if(image instanceof Buffer){
+      return {
+        icon: "data:" + game.remote.logo_format + ";base64," + image.toString("base64"),
+        remote: game.remote
+      };
+    }
+    const web_dav = await initWebDav();
+    const nc_cfg = webDavConfig();
     if(nc_cfg !== undefined && web_dav !== undefined && game.remote?.logo){
       const logo_path = game.gameId + "/.data/" + game.remote.logo;
-      // Check for cached data
-      const image = loadFromImageCache(game.remote.logo, game.remote.slug);
-      if(image instanceof Buffer){
-        return {
-          icon: "data:" + game.remote.logo_format + ";base64," + image.toString("base64"),
-          remote: game.remote
-        };
-      }
       const file_data = await web_dav.getFileContents(logo_path).catch((err) => {
         console.log(err);
         return "nothing";
@@ -255,15 +262,26 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
   }
 
   async function getGameImage(type: GOG.ImageType, game: GOG.GameInfo){
-    const cache_zip = game.webcache;
+    // Load the remote data
     try{
       game.remote = await ensureRemote(game);
     }catch(e){
       // Nothing here
       console.log("Failed to get remote for game [" + game.name + "]");
     }
+    const cache_zip = game.webcache;
     if(cache_zip === "remote"){
       return getRemoteGameIcon(game);
+    }
+    // Check for the local icon file
+    if(game.root_dir !== "remote" && fs.existsSync(game.root_dir + "/logo.jpg")){
+      const image = fs.readFileSync(game.root_dir + "/logo.jpg");
+      if(image instanceof Buffer){
+        return {
+          icon: "data:image/jpg;base64," + image.toString("base64"),
+          remote: game.remote
+        };
+      }
     }
     if(game.remote){
       const image = loadFromImageCache(game.remote.logo, game.remote.slug);
@@ -292,25 +310,49 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
 
   // Init
   ipcMain.handle("read-remote-games", async() => {
-    return getRemoteGamesList();
+    return new Promise<GOG.GameInfo[]>((resolve) => {
+      getRemoteGamesList().then((games: GOG.GameInfo[]) => {
+        resolve(games);
+      });
+    });
   });
 
   ipcMain.handle("reload-cache-data", async(e, game: GOG.GameInfo): Promise<GOG.ImageResponse> => {
-    removeFromDataCache("game-data.json", flattenName(game.name));
-    if(game.remote){
-      removeFromImageCache(game.remote.logo, game.remote.slug);
-    }
-    game.remote = undefined;
-    return await getGameImage("logo2x", game);
+    return new Promise<GOG.ImageResponse>((resolve, reject) => {
+      removeFromDataCache("game-data.json", flattenName(game.name));
+      if(game.remote){
+        removeFromImageCache(game.remote.logo, game.remote.slug);
+      }
+      game.remote = undefined;
+      getGameImage("logo2x", game).then((image: GOG.ImageResponse) => {
+        if(image.icon === "404"){
+          reject(image);
+          return;
+        }
+        resolve(image);
+      });
+    });
   });
 
   // GAMES BITS
   ipcMain.handle("read-games", async(e, remote = true) => {
-    return await getLocalGames(remote);
+    return new Promise<GOG.GameInfo[]>((resolve) => {
+      getLocalGames(remote).then((games: GOG.GameInfo[]) => {
+        resolve(games);
+      });
+    });
   });
 
   ipcMain.handle("get-image", async(e, type: GOG.ImageType, game: GOG.GameInfo) => {
-    return getGameImage(type, game);
+    return new Promise<GOG.ImageResponse>((resolve, reject) => {
+      getGameImage("logo2x", game).then((image: GOG.ImageResponse) => {
+        if(image.icon === "404"){
+          reject(image);
+          return;
+        }
+        resolve(image);
+      });
+    });
   });
 
 }
