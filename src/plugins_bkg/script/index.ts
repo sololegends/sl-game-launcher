@@ -17,7 +17,15 @@ async function action_setRegistry(game: GOG.GameInfo, action: GOG.ScriptInstall.
   data = data.replace("{app}", game.root_dir);
   // Run the registry add fn
   return {
-    result: await Reg.Add(args.root + "\\" + args.subkey, args.valueName, REG_TYPE_MUTATE[args.valueType], data)
+    result: await Reg.Add(
+      args.root + "\\" + args.subkey,
+      args.valueName,
+      REG_TYPE_MUTATE[args.valueType],
+      data,
+      undefined,
+      true,
+      game.osBitness?.includes("64") ? true : false
+    )
   };
 }
 
@@ -40,16 +48,18 @@ async function execAction(game: GOG.GameInfo, action: GOG.ScriptAction){
 }
 
 export async function processScript(game: GOG.GameInfo){
-  if(game.root_dir === undefined || game.root_dir === "remote" || existsSync(game.root_dir)){
+  if(game.root_dir === undefined || game.root_dir === "remote" || !existsSync(game.root_dir)){
     return;
   }
 
   // Check for script file
   const script_file = game.root_dir + "/goggame-" + game.gameId + ".script";
+  console.log("Looking for script file: ", script_file);
   if(existsSync(script_file)){
     // Load the script
     try{
       const script = JSON.parse(readFileSync(script_file).toString()) as GOG.Script;
+      console.log("script file data: ", script);
       // If there are no actions
       if(!script.actions){
         return;

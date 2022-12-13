@@ -6,7 +6,7 @@ v1.x.x Todo:
     ✔ Baisc Navigation @done(22-09-12 20:57)
     ✔ Launching and closng games @done(22-09-12 20:57)
   ✔ Added support for different OSs in the save file location data @done(22-10-05 16:42)
-  ☐ Verify game names can be anything now.. 
+  ✔ Verify game names can be anything now.. @done(22-12-12 21:42)
   ☐ Sync play time stats to cloud
   ☐ Add rating locks / parental controls (local storage)
 
@@ -15,7 +15,7 @@ v2.x.x Todo:
     ☐ Wine installation
     ☐ Adding as non-steam game
     ☐ Launching using steam + proton
-  ☐ Add support for detecting and deploying game updates
+  ✔ Add support for detecting and deploying game updates @done(22-12-12 21:42)
   ☐ GamePad Support
     ☐ Manage DLC
     ☐ Change Versions
@@ -25,5 +25,5 @@ v3.x.x Todo:
   ✔ Cloud sav syncing @done(22-10-05 17:12)
   ✔ Better support for non-GOG games @done(22-10-05 17:12)
   ✔ Custom info files for data when using the zip packaging @done(22-10-05 17:12)
-  ☐ Support for regestry entries during install
-  ☐ Support for installing dependencies / required libraries
+  ✔ Support for regestry entries during install @done(22-12-12 21:42)
+  ✔ Support for installing dependencies / required libraries @done(22-12-12 21:42)

@@ -37,6 +37,11 @@ export namespace GOG {
 		folders: string[]
 	}
 
+	export type GameRedist = {
+		exe_path: string
+		arguments: string[]
+	}
+
 	export type RemoteGameDLC = {
 		slug: string
 		dl_size: number
@@ -44,6 +49,7 @@ export namespace GOG {
 		present: boolean
 		download: string[]
 		uninstall?: DLCUninstall | string
+		redist?: GameRedist[]
 	}
 
 	export type GamePlatform = "aix" | "darwin" | "freebsd" | "linux" | "openbsd" | "sunos" | "windows" | "deck"
@@ -71,6 +77,7 @@ export namespace GOG {
 		saves?: GameSavesLocation
 		version?: string
 		iter_id?: number
+		redist?: GameRedist[]
 	}
 
 	export type GameInfo = {

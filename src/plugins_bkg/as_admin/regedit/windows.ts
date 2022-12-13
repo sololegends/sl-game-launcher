@@ -59,7 +59,7 @@ function separatorCheck(separator?: string, type?: Regedit.Type){
 }
 
 function b64Check(bit_64?: boolean){
-  return bit_64 ? (" /reg:" + bit_64 ? "64" : "32") : "";
+  return bit_64 !== undefined ? " /reg:" + (bit_64 ? "64" : "32") : "";
 }
 
 export async function Query(key: string, value?: string, query_subkeys?: boolean,
@@ -121,6 +121,9 @@ export async function Add(key: string, value: string, type: Regedit.Type, data: 
 
   // Data
   if(data){
+    if(data.endsWith("\\")){
+      data += "\\";
+    }
     command += " /d \"" + data.replaceAll("\"", "\\\"") + "\"";
   }
   // Flags

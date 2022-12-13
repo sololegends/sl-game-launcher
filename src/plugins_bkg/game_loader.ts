@@ -117,6 +117,56 @@ export async function ensureRemote(game: GOG.GameInfo, use_cache = true): Promis
   return game.remote;
 }
 
+export async function getLocalGameData(game_dir: string, heavy = true): Promise<GOG.GameInfo | undefined>{
+  const files = fs.readdirSync(game_dir);
+  let info = undefined as GOG.GameInfo | undefined;
+  const dlc_found = [];
+  for(const i in files){
+    const file = files[i];
+    if(file.endsWith(".info") && (file.startsWith("goggame") || file.startsWith("game-data"))){
+      const data = fs.readFileSync(game_dir + "\\" + file, "utf8");
+      const l_info = JSON.parse(data) as GOG.GameInfo;
+      if(l_info.gameId === l_info.rootGameId){
+        l_info.remote_name = l_info.name;
+        if(fs.existsSync(game_dir + "/" + game_name_file)){
+          l_info.remote_name = fs.readFileSync(game_dir + "/" + game_name_file).toString();
+        }
+        if(fs.existsSync(game_dir + "/" + game_iter_id)){
+          l_info.iter_id = parseInt(fs.readFileSync(game_dir + "/" + game_iter_id).toString());
+        }
+        if(fs.existsSync(game_dir + "/" + game_version)){
+          l_info.c_version = fs.readFileSync(game_dir + "/" + game_version).toString();
+        }
+        // Install size
+        if(fs.existsSync(game_dir + "/" + game_folder_size)){
+          l_info.install_size = parseInt(fs.readFileSync(game_dir + "/" + game_folder_size).toString());
+        }else{
+          l_info.install_size = getFolderSize(game_dir);
+          fs.writeFileSync(game_dir + "/" + game_folder_size, l_info.install_size + "");
+        }
+        l_info.webcache = game_dir + "\\webcache.zip";
+        l_info.root_dir = game_dir;
+        if(heavy){
+          l_info.play_time = getPlaytime(l_info);
+          l_info.current_version = loadFromVersionCache(flattenName(l_info.name));
+          // Load remote data
+          try{
+            l_info.remote = await ensureRemote(l_info);
+          } catch(e){
+            console.log("Failed to get remote game data" + e);
+          }
+        }
+        // Finally have the info
+        info = l_info;
+      } else{
+        dlc_found.push(flattenName(l_info.name.substring(l_info.name.indexOf(" - ") + 3)));
+      }
+      break;
+    }
+  }
+  return info;
+}
+
 export async function getLocalGames(heavy = true): Promise<GOG.GameInfo[]>{
   const folder = getConfig("gog_path") as string;
   const game_list = [] as GOG.GameInfo[];
@@ -127,52 +177,7 @@ export async function getLocalGames(heavy = true): Promise<GOG.GameInfo[]>{
     if(fs.statSync(game_dir).isFile()){
       continue;
     }
-    const files = fs.readdirSync(game_dir);
-    let info = undefined as GOG.GameInfo | undefined;
-    const dlc_found = [];
-    for(const i in files){
-      const file = files[i];
-      if(file.endsWith(".info") && (file.startsWith("goggame") || file.startsWith("game-data"))){
-        const data = fs.readFileSync(game_dir + "\\" + file, "utf8");
-        const l_info = JSON.parse(data) as GOG.GameInfo;
-        if(l_info.gameId === l_info.rootGameId){
-          l_info.remote_name = l_info.name;
-          if(fs.existsSync(game_dir + "/" + game_name_file)){
-            l_info.remote_name = fs.readFileSync(game_dir + "/" + game_name_file).toString();
-          }
-          if(fs.existsSync(game_dir + "/" + game_iter_id)){
-            l_info.iter_id = parseInt(fs.readFileSync(game_dir + "/" + game_iter_id).toString());
-          }
-          if(fs.existsSync(game_dir + "/" + game_version)){
-            l_info.c_version = fs.readFileSync(game_dir + "/" + game_version).toString();
-          }
-          // Install size
-          if(fs.existsSync(game_dir + "/" + game_folder_size)){
-            l_info.install_size = parseInt(fs.readFileSync(game_dir + "/" + game_folder_size).toString());
-          }else{
-            l_info.install_size = getFolderSize(game_dir);
-            fs.writeFileSync(game_dir + "/" + game_folder_size, l_info.install_size + "");
-          }
-          l_info.webcache = game_dir + "\\webcache.zip";
-          l_info.root_dir = game_dir;
-          if(heavy){
-            l_info.play_time = getPlaytime(l_info);
-            l_info.current_version = loadFromVersionCache(flattenName(l_info.name));
-            // Load remote data
-            try{
-              l_info.remote = await ensureRemote(l_info);
-            } catch(e){
-              console.log("Failed to get remote game data" + e);
-            }
-          }
-          // Finally have the info
-          info = l_info;
-        } else{
-          dlc_found.push(flattenName(l_info.name.substring(l_info.name.indexOf(" - ") + 3)));
-        }
-        break;
-      }
-    }
+    const info = await getLocalGameData(game_dir, heavy);
     if(info){
       game_list.push(info);
     }

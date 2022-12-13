@@ -8,7 +8,10 @@ import { notify, win } from "..";
 import zip, { ZipEntry } from "node-stream-zip";
 import fs from "fs";
 import { getConfig } from "../config";
+import { getLocalGameData } from "../game_loader";
 import { GOG } from "@/types/gog/game_info";
+import { processScript } from "../script";
+import { scanAndInstallRedist } from "../as_admin/redist/redist";
 import tk from "tree-kill";
 
 let active_ins = undefined as undefined | child.ChildProcess;
@@ -48,6 +51,23 @@ export function cancelInstall(game: GOG.GameInfo){
       }
     });
     active_ins = undefined;
+  }
+}
+
+async function zipPostInstall(game: GOG.GameInfo){
+  const game_reloaded = await getLocalGameData(game.root_dir, false);
+  if(game_reloaded){
+    // Execute script check and execution
+    try{
+      await processScript(game_reloaded);
+      await scanAndInstallRedist(game_reloaded);
+    }catch(e){
+      console.log("Error when installing dependencies and running post script", e);
+      notify({
+        title: "Error while installing Dependencies",
+        type: "error"
+      });
+    }
   }
 }
 
@@ -105,7 +125,9 @@ async function installGameZip(game: GOG.GameInfo, dl_files: string[], zip_f: str
           fs.writeFileSync(ins_dir + "/" + game_iter_id, (game.remote?.iter_id ? game.remote?.iter_id : 0) + "");
           fs.writeFileSync(ins_dir + "/" + game_folder_size, getFolderSize(ins_dir) + "");
           sendInstallEnd(game);
-          resolve(game);
+          zipPostInstall(game).then(() => {
+            resolve(game);
+          });
         });
       }).catch((e) => {
         console.error("Failed to extract game: ", e, game);
@@ -149,6 +171,7 @@ function installGameExe(game: GOG.GameInfo, dl_files: string[], exe: string, tok
     });
     active_ins.addListener("close", (code: number) => {
       token.off("abort");
+      game.root_dir = ins_dir;
       active_ins = undefined;
       console.log("Game installed with code: " + code);
       // Write game name to file

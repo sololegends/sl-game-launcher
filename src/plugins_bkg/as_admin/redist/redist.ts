@@ -1,88 +1,58 @@
 
-import * as child from "child_process";
 import { existsSync, readdirSync } from "fs";
-import { notify, win } from "@/plugins_bkg";
+import elevate from "../elevate";
+import { ensureRemote } from "@/plugins_bkg/game_loader";
 import { GOG } from "@/types/gog/game_info";
-import { ipcMain } from "electron";
-import tk from "tree-kill";
-
-const SILENT_ARGS = {
-  "vcredist_x64.exe": [ "/quiet", "/install", "/norestart" ],
-  "vcredist_x86.exe": [ "/quiet", "/install", "/norestart" ],
-  "DXSETUP.exe": [ "/quiet", "/norestart" ],
-  "dotNet.*": [ "/quiet", "/norestart" ],
-
-  // Just every general one ¯\_(ツ)_/¯
-  "default": [ "/quiet", "/q", "/silent", "/verysilent", "/s", "/S", "/norestart" ]
-} as Record<string, string[]>;
-
+import { win } from "@/plugins_bkg";
 
 type RedistInstallResult = {
-	exe: string
-	code: number
+  error: Error | undefined
+  stdout: string | undefined
+  stderr: string | undefined
 }
 
-function getSilentArgs(exe_file: string){
-  if(SILENT_ARGS[exe_file]){
-    return SILENT_ARGS[exe_file];
-  }
-  for(const match in SILENT_ARGS){
-    if(exe_file.match(match)){
-      return SILENT_ARGS[match];
-    }
-  }
-  return SILENT_ARGS.default;
-}
-
-async function installRedist(exe_path: string, exe_file: string): Promise<RedistInstallResult>{
-  // TODO: Get the system and install accordingly
-  // Get the solent args, or default
-  const args = getSilentArgs(exe_file);
+async function installRedist(redist_exes: string[]): Promise<RedistInstallResult>{
   return new Promise<RedistInstallResult>((resolve, reject) => {
     win()?.webContents.send("progress-banner-init", {
-      title: "Installing Dependency: " + exe_file,
-      indeterminate: true,
-      cancel_event: "redist-ins-cancel"
+      title: "Please Wait, Installing Dependencies...",
+      indeterminate: true
     });
     // Run the exe, should ask for elevation on run
-    const active_ins = child.execFile(
-      exe_path,
-      args,
-      function(err, data){
-        if(err){
-          console.error(err);
+    elevate(
+      redist_exes.join(" & "),
+      function(error?: Error, stdout?: string | Buffer, stderr?: string | Buffer){
+        win()?.webContents.send("progress-banner-hide");
+        if(error){
+          console.error("Failed to install redistributables: ", error);
+          reject({
+            error,
+            stdout: stdout && stdout instanceof Buffer ? stdout.toString() : stdout,
+            stderr: stderr && stderr instanceof Buffer ? stderr.toString() : stderr
+          });
           return;
         }
-        console.log(data.toString());
-      });
-    ipcMain.on("redist-ins-cancel", () => {
-      if(active_ins.pid){
-        tk(active_ins.pid, "SIGKILL", function(err){
-          if(err){
-            console.log(err);
-            notify({
-              type: "error",
-              title: "Failed to kill install!"
-            });
-          }
+        resolve({
+          error,
+          stdout: stdout && stdout instanceof Buffer ? stdout.toString() : stdout,
+          stderr: stderr && stderr instanceof Buffer ? stderr.toString() : stderr
         });
-      }
-    });
-    active_ins.addListener("error", (code: number) => {
-      console.log("Redist error installed with code: " + code);
-    });
-    active_ins.addListener("close", (code: number) => {
-      win()?.webContents.send("progress-banner-hide");
-      if(code === 0 || code === 3010 || code === 5100){
-        resolve({exe: exe_file, code});
-        return;
-      }
-      reject({exe: exe_file, code});
-    });
+      });
   });
 }
 
 export async function scanAndInstallRedist(game: GOG.GameInfo){
+  // Use the remote defined with silent args, if possible
+  game.remote = await ensureRemote(game);
+  if(game.remote?.redist){
+    // Build install set
+    const redist_set = [];
+    for(const redist of game.remote.redist){
+      redist_set.push(game.root_dir + "/" + redist.exe_path + redist.arguments.join(" "));
+    }
+    await installRedist(redist_set);
+    return;
+  }
+  // Fallback to installing, but with guis..
   const redist_folder = game.root_dir + "/" + "__redist";
   // Check if the redist folder even exists
   if(!existsSync(redist_folder)){
@@ -92,6 +62,7 @@ export async function scanAndInstallRedist(game: GOG.GameInfo){
   const redist = readdirSync(redist_folder);
 
   // Iterate through and identify / execute in quiet mode where possible
+  const redist_set = [];
   for(const folder of redist){
     if(folder === "ISI"){
       continue;
@@ -100,7 +71,10 @@ export async function scanAndInstallRedist(game: GOG.GameInfo){
     const exe_folder = redist_folder + "/" + folder;
     const exes = readdirSync(exe_folder);
     for(const exe of exes){
-      await installRedist(exe_folder + "/" + exe, exe);
+      if(exe.endsWith(".exe")){
+        redist_set.push("\"" + exe_folder + "/" + exe + "\"");
+      }
     }
   }
+  await installRedist(redist_set);
 }

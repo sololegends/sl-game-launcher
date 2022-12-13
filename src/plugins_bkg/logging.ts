@@ -9,10 +9,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   const log_file = logging_dir + "console.log";
   globals.ensureDir(logging_dir);
   if(fs.existsSync(log_file)){
-    const stat = fs.statSync(log_file);
-    const date = stat.mtime.getFullYear() + "-" + stat.mtime.getMonth() + "-" + stat.mtime.getDate() + "."
-      + stat.mtime.getHours() + "-" + stat.mtime.getMinutes() + "-" + stat.mtime.getSeconds();
-    fs.renameSync(log_file, log_file.replace("log", date + ".log"));
+    fs.renameSync(log_file, log_file.replace("log", "last.log"));
   }
   const output = fs.createWriteStream(log_file);
 

@@ -50,6 +50,28 @@ function extractPathComponents(path){
 
 }
 
+async function extractInstallerScript(target, game_data){
+  const bin = "bin/innounp.exe";
+  const args = [ "-v", "-d" + game_data.unpack_folder, "-x", target, "install_script.iss" ];
+  console.log("Extracting installer script");
+  const active_exe = child.execFile(
+    bin,
+    args,
+    function(err, data){
+      if(err){
+        console.error(err);
+        return;
+      }
+      console.log(data.toString());
+    });
+
+  return new Promise((resolver) => {
+    active_exe.on("close", () => {
+      resolver();
+    });
+  });
+}
+
 async function unpackExe(target, game_data, format){
   let bin = "bin/innounp.exe";
   let args = [ "-v", "-a",  "-d" + game_data.unpack_folder, "-e", target ];
@@ -102,6 +124,9 @@ function getFileList(root, current_folder){
 function getFolderSize(folder){
   if(folder.endsWith("\\") || folder.endsWith("/")){
     folder = folder.substring(0, folder.length - 1);
+  }
+  if(!fs.existsSync(folder)){
+    return 0;
   }
   const dir_stat = fs.statSync(folder);
   let accumulator = 0;
@@ -197,6 +222,32 @@ async function uninstallFromFileList(folder, output_dir = "", note = ""){
     game_id,
     file_name
   };
+}
+
+async function redistFromInnoScript(inno_script){
+  const FILENAME = "Filename: \"{app}/";
+  const PARAMS = "Parameters: \"";
+  const redists = await readInsScript(inno_script, "Run");
+  const final_redist = [];
+  for(const redist of redists){
+    if(redist.startsWith(FILENAME)){
+      const fn_split = redist.split(FILENAME);
+      if(fn_split.length < 2){
+        continue;
+      }
+      const exe = fn_split[1].split("\";")[0].replaceAll("\\", "/").trim();
+      const param_split = redist.split(PARAMS);
+      if(param_split.length < 2){
+        continue;
+      }
+      const params = param_split[1].split("\";")[0].replaceAll("\\", "/").trim().split(" ") ;
+      final_redist.push({
+        exe_path: exe,
+        arguments: params
+      });
+    }
+  }
+  return final_redist;
 }
 
 async function dlcUninstallFromInnoScript(inno_script, output_dir = "", note = "", PREFIX = "Type: files; Name: \"{app}/"){
@@ -304,7 +355,7 @@ async function processGameFiles(data, format = "game-info"){
       if(fs.existsSync(data.output_folder + "/webcache.zip")){
         fs.rmSync(data.output_folder + "/webcache.zip");
       }
-      if(fs.existsSync(data.output_folder + "/__redist/ISI/scriptinterpreter.exe")){
+      if(fs.existsSync(data.output_folder + "/__redist/ISI")){
         fs.rmSync(data.output_folder + "/__redist/ISI", {recursive: true});
       }
     }else if(fs.existsSync(data.output_folder + "/webcache.zip")){
@@ -404,7 +455,8 @@ async function mergeGameInfo(new_info){
     version: old_info.version,
     iter_id: old_info.iter_id,
     download: old_info.download,
-    dlc: old_info.dlc
+    dlc: old_info.dlc,
+    redist: old_info.redist
   };
   // Ad the version block to the old info
   old_info.versions[old_info.version] = version_block;
@@ -415,6 +467,7 @@ async function mergeGameInfo(new_info){
   old_info.iter_id = new_info.iter_id;
   old_info.download = new_info.download;
   old_info.dlc = new_info.dlc;
+  old_info.redist = new_info.redist;
   console.log("Data merged!", old_info);
   return old_info;
 }
@@ -435,15 +488,24 @@ async function repackGame(game_exe, output_dir, options){
   ensureEmptyDir(unpack_folder);
   ensureEmptyDir(game_folder);
   await unpackExe(path.full, props, FORMAT);
+  if(FORMAT === "game-info"){
+    await extractInstallerScript(game_exe, props);
+  }
   // Process the file list
   await processGameFiles(props, FORMAT);
+  // Build the redist block
+  // Check for install script and the redist within
+  let redist = [];
+  if(fs.existsSync(props.unpack_folder + "/install_script.iss")){
+    redist = await redistFromInnoScript(props.unpack_folder + "/install_script.iss");
+  }
   // Get the install size metric
   const install_size = await getFolderSize(game_folder);
   // Compress game data
   const zip_name = path.file.replace("setup_", "").replace(".exe", ".zip");
   const zip_output = output_dir + "/" + zip_name;
   if(!options.nopack){
-    await compressFolder(game_folder, zip_output);
+    await compressFolder(game_folder, zip_output, options.zip_level);
   }
   const dl_size = await getFileSize(zip_output);
   const slug = await getSlug(props, FORMAT);
@@ -464,7 +526,8 @@ async function repackGame(game_exe, output_dir, options){
     install_size,
     download: [
       zip_name
-    ]
+    ],
+    redist
   };
 }
 
@@ -492,7 +555,7 @@ async function repackDLC(dlc_exe, output_dir, options){
   const zip_name = path.file.replace("setup_", "").replace(".exe", ".zip");
   const zip_output = output_dir + "/" + zip_name;
   if(!options.nopack){
-    await compressFolder(dlc_folder, zip_output);
+    await compressFolder(dlc_folder, zip_output, options.zip_level);
   }
   const dl_size = await getFileSize(zip_output);
 
@@ -524,7 +587,9 @@ async function repackDLC(dlc_exe, output_dir, options){
 }
 
 async function main(game_exe, dlc_folder, options_arr){
-  const options = {};
+  const options = {
+    zip_level: 8
+  };
   if(options_arr){
     for(const part of options_arr){
       const key_val = part.split("=");
