@@ -104,7 +104,7 @@ export async function Query(key: string, value?: string, query_subkeys?: boolean
   return exec(command);
 }
 
-export async function Add(key: string, value: string, type: Regedit.Type, data: string,
+export async function Add(key: string, value: string | undefined, type: Regedit.Type, data: string,
   separator?: string, force?: boolean, bit_64?: boolean): Promise<Regedit.RedEditResponse>{
   let command = "add \"" + key.replaceAll("\"", "\\\"") + "\"";
   // Value
@@ -135,9 +135,22 @@ export async function Add(key: string, value: string, type: Regedit.Type, data: 
   return exec(command);
 }
 
-export async function Delete(){
-  // TODO: implement this
-  return "NYI";
+export async function Delete(key: string, value?: string, force?: boolean, bit_64?: boolean){
+  let command = "delete \"" + key.replaceAll("\"", "\\\"") + "\"";
+  // Value
+  if(value === undefined){
+    command += " /va";
+  }else{
+    command += valueCheck(value);
+  }
+
+  // Flags
+  if(force){
+    command += " /f";
+  }
+  command += b64Check(bit_64);
+
+  return exec(command);
 }
 
 export async function Copy(){

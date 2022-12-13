@@ -8,6 +8,7 @@ import filters from "@/js/filters";
 import fs from "fs";
 import { GOG } from "@/types/gog/game_info";
 import { initWebDav } from "../nc_webdav";
+import { processScriptReverse } from "../script";
 import tk from "tree-kill";
 
 let active_uns = undefined as undefined | child.ChildProcess;
@@ -137,6 +138,7 @@ async function uninstallGameZip(game: GOG.GameInfo, token: LockAbortToken): Prom
     fs.rm(game.root_dir, { recursive: true, force: true }, (e) => {
       if(e === null){
         sendUninstallEnd(game);
+        processScriptReverse(game);
         resolve(game);
         return;
       }
