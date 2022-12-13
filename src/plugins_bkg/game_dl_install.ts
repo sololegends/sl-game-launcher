@@ -28,7 +28,7 @@ export async function downloadAndReinstall(game: GOG.GameInfo){
     if(Array.isArray(dl_files) && dl_files.length >= 1){
     // Uninstall first
       await uninstallGame(game);
-      await installGame(game, dl_files, dl_files[0]);
+      await installGame(game, dl_files, dl_files[0], false);
       cleanupDownloaded(dl_files);
     }
     triggerReload(game);

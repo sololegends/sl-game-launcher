@@ -71,7 +71,9 @@ async function zipPostInstall(game: GOG.GameInfo){
   }
 }
 
-async function installGameZip(game: GOG.GameInfo, dl_files: string[], zip_f: string, token: LockAbortToken): Promise<GOG.GameInfo>{
+async function installGameZip(
+  game: GOG.GameInfo, dl_files: string[], zip_f: string,
+  token: LockAbortToken, do_post = true): Promise<GOG.GameInfo>{
   return new Promise<GOG.GameInfo>((resolve, reject) => {
     sendInstallStart(game, false);
     const gog_path = getConfig("gog_path");
@@ -125,9 +127,13 @@ async function installGameZip(game: GOG.GameInfo, dl_files: string[], zip_f: str
           fs.writeFileSync(ins_dir + "/" + game_iter_id, (game.remote?.iter_id ? game.remote?.iter_id : 0) + "");
           fs.writeFileSync(ins_dir + "/" + game_folder_size, getFolderSize(ins_dir) + "");
           sendInstallEnd(game);
-          zipPostInstall(game).then(() => {
-            resolve(game);
-          });
+          if(do_post){
+            zipPostInstall(game).then(() => {
+              resolve(game);
+            });
+            return;
+          }
+          resolve(game);
         });
       }).catch((e) => {
         console.error("Failed to extract game: ", e, game);
@@ -197,7 +203,7 @@ function installGameExe(game: GOG.GameInfo, dl_files: string[], exe: string, tok
   });
 }
 
-export async function installGame(game: GOG.GameInfo, dl_files: string[], exe: string): Promise<GOG.GameInfo>{
+export async function installGame(game: GOG.GameInfo, dl_files: string[], exe: string, do_post = true): Promise<GOG.GameInfo>{
   const lock = await acquireLock(UN_INSTALL_LOCK, true);
   if(lock === undefined){
     return game;
@@ -208,7 +214,7 @@ export async function installGame(game: GOG.GameInfo, dl_files: string[], exe: s
       releaseLock(UN_INSTALL_LOCK);
     });
   }else if(exe.endsWith(".zip")){
-    return installGameZip(game, dl_files, exe, lock).finally(() =>{
+    return installGameZip(game, dl_files, exe, lock, do_post).finally(() =>{
       releaseLock(UN_INSTALL_LOCK);
     });
   }
