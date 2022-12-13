@@ -47,7 +47,7 @@ export async function scanAndInstallRedist(game: GOG.GameInfo){
     // Build install set
     const redist_set = [];
     for(const redist of game.remote.redist){
-      redist_set.push(game.root_dir + "/" + redist.exe_path + redist.arguments.join(" "));
+      redist_set.push("\"" + game.root_dir + "/" + redist.exe_path + "\" " + redist.arguments.join(" "));
     }
     await installRedist(redist_set);
     return;

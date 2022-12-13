@@ -485,6 +485,9 @@ async function repackGame(game_exe, output_dir, options){
     inno_script
   };
 
+  // Make the repack dir empty
+  fs.rmSync(output_dir, {recursive: true});
+
   ensureEmptyDir(unpack_folder);
   ensureEmptyDir(game_folder);
   await unpackExe(path.full, props, FORMAT);
