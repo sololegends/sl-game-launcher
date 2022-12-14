@@ -161,7 +161,6 @@ export async function getLocalGameData(game_dir: string, heavy = true): Promise<
       } else{
         dlc_found.push(flattenName(l_info.name.substring(l_info.name.indexOf(" - ") + 3)));
       }
-      break;
     }
   }
   return info;
@@ -177,9 +176,13 @@ export async function getLocalGames(heavy = true): Promise<GOG.GameInfo[]>{
     if(fs.statSync(game_dir).isFile()){
       continue;
     }
-    const info = await getLocalGameData(game_dir, heavy);
-    if(info){
-      game_list.push(info);
+    try{
+      const info = await getLocalGameData(game_dir, heavy);
+      if(info){
+        game_list.push(info);
+      }
+    }catch(e){
+      console.log("Failed to load game", game, e);
     }
   }
   return game_list;
@@ -198,6 +201,7 @@ export async function getLocalGamesFlat(): Promise<string[]>{
 export async function getRemoteGamesList(): Promise<GOG.GameInfo[]>{
   const remote_games = [] as GOG.GameInfo[];
   const local_games = await getLocalGamesFlat();
+  console.log("Remote load stage, using local flat: ", local_games);
   const web_dav = await initWebDav();
   const nc_cfg = webDavConfig();
   if(nc_cfg !== undefined && web_dav !== undefined){
