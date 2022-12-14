@@ -88,7 +88,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
     try{
       const dl_files = await downloadDLC(game, dlc_slug);
       if(Array.isArray(dl_files) && dl_files.length >= 1){
-        await installGame(game, dl_files, dl_files[0]);
+        await installGame(game, dl_files, dl_files[0], false);
         cleanupDownloaded(dl_files);
       }
       triggerReload(game);
