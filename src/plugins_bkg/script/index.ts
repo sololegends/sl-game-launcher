@@ -20,6 +20,11 @@ function gogPath(path: string, game: GOG.GameInfo){
 
 async function action_setRegistry(game: GOG.GameInfo, action: GOG.ScriptInstall.setRegistry, undo: boolean){
   const args = action.arguments;
+  if(!args.root || !args.subkey || !args.valueData || !args.valueName || !args.valueType){
+    return {
+      result: "invalid"
+    };
+  }
   // Mutate the data
   const data = gogPath(args.valueData, game);
   if(undo){
