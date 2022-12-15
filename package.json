@@ -3,7 +3,7 @@
   "description": "View, run, install, and uninstall GOG games in the SL Cloud",
   "homepage": "https://sololegends.slgit.io/sl-game-launcher",
   "author": "Sololegends",
-  "version": "v0.9.32",
+  "version": "v0.9.33",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve --mode=development",
