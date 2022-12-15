@@ -22,20 +22,17 @@ async function installRedist(redist_exes: string[]): Promise<RedistInstallResult
       redist_exes.join(" & "),
       function(error?: Error, stdout?: string | Buffer, stderr?: string | Buffer){
         win()?.webContents.send("progress-banner-hide");
-        if(error){
-          console.error("Failed to install redistributables: ", error);
-          reject({
-            error,
-            stdout: stdout && stdout instanceof Buffer ? stdout.toString() : stdout,
-            stderr: stderr && stderr instanceof Buffer ? stderr.toString() : stderr
-          });
-          return;
-        }
-        resolve({
+        const obj = {
           error,
           stdout: stdout && stdout instanceof Buffer ? stdout.toString() : stdout,
           stderr: stderr && stderr instanceof Buffer ? stderr.toString() : stderr
-        });
+        };
+        if(error){
+          console.error("Failed to install redistributables: ", obj.error, obj.stdout, obj.stderr);
+          reject(obj);
+          return;
+        }
+        resolve(obj);
       });
   });
 }
@@ -49,7 +46,9 @@ export async function scanAndInstallRedist(game: GOG.GameInfo){
     for(const redist of game.remote.redist){
       redist_set.push("\"" + game.root_dir + "/" + redist.exe_path + "\" " + redist.arguments.join(" "));
     }
-    await installRedist(redist_set);
+    if(redist_set.length > 0){
+      await installRedist(redist_set);
+    }
     return;
   }
   // Fallback to installing, but with guis..
@@ -76,5 +75,7 @@ export async function scanAndInstallRedist(game: GOG.GameInfo){
       }
     }
   }
-  await installRedist(redist_set);
+  if(redist_set.length > 0){
+    await installRedist(redist_set);
+  }
 }

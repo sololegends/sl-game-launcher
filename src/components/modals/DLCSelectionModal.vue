@@ -7,7 +7,7 @@
     <v-list shaped>
       <v-list-item
         v-for="(item, index) in dlc" :key="index"
-        @click="installDLC(item, $event)"
+        @click="game && game.is_installed? installDLC(item, $event) : undefined"
         :class="'dlc-item' + (item.present?' present':'')"
       >
         <v-list-item-avatar width="50">
@@ -21,7 +21,7 @@
           <v-list-item-subtitle>{{gameSlug}}</v-list-item-subtitle>
         </v-list-item-content>
 
-        <v-list-item-action>
+        <v-list-item-action v-if="game && game.is_installed">
           <fa-icon
             :tip-title="item.present?'Uninstall DLC':'Install DLC'"
             :icon="item.present?'trash-alt':'download'"
@@ -75,6 +75,9 @@ export default defineComponent({
   },
   computed: {
     action(): BaseModalN.ActionItem[]{
+      if(this.game === undefined || !this.game.is_installed){
+        return [];
+      }
       return [
         {
           text: "Uninstall All",

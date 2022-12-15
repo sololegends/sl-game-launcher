@@ -99,7 +99,8 @@ export namespace GOG {
 		play_time?: number,
 		remote_name: string,
 		iter_id: number,
-		c_version?: string
+		c_version?: string,
+		is_installed: boolean
 	}
 
 	export type ImageResponse = {
@@ -116,6 +117,16 @@ export namespace GOG {
 			}
 		}
 
+		export interface supportData {
+			action: "supportData"
+			arguments: {
+				overwrite: true,
+				source: string,
+				target: string,
+				type: "folder" | "file"
+			}
+		}
+
 		export interface setRegistry {
 			action: "setRegistry"
 			arguments: {
@@ -128,7 +139,7 @@ export namespace GOG {
 		}
 	}
 
-	export type ScriptInstallAction = ScriptInstall.savePath | ScriptInstall.setRegistry
+	export type ScriptInstallAction = ScriptInstall.savePath | ScriptInstall.setRegistry | ScriptInstall.supportData
 
 	export type ScriptAction = {
 		install: ScriptInstallAction

@@ -179,6 +179,7 @@ export async function getLocalGames(heavy = true): Promise<GOG.GameInfo[]>{
     try{
       const info = await getLocalGameData(game_dir, heavy);
       if(info){
+        info.is_installed = true;
         game_list.push(info);
       }
     }catch(e){
@@ -223,7 +224,8 @@ export async function getRemoteGamesList(): Promise<GOG.GameInfo[]>{
           rootGameId: "remote",
           version: 0,
           webcache: "remote",
-          root_dir: "remote"
+          root_dir: "remote",
+          is_installed: false
         } as GOG.GameInfo;
         game.remote = await ensureRemote(game);
         remote_games.push(game);
@@ -270,7 +272,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
     return { icon: "404", remote: game.remote };
   }
 
-  async function getGameImage(type: GOG.ImageType, game: GOG.GameInfo){
+  async function getGameImage(game: GOG.GameInfo){
     // Load the remote data
     try{
       game.remote = await ensureRemote(game);
@@ -304,7 +306,10 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
     const webcache = new zip.async({file: cache_zip});
     const data = await webcache.entryData("resources.json");
     const resource = JSON.parse(data.toString());
-    const image = resource["images\\" + type];
+    let image = resource["images\\logo2x"];
+    if(image === undefined){
+      image = resource["images\\logo"];
+    }
     const img_data = await webcache.entryData(image);
     if(game.remote){
       saveToImageCache(game.remote.logo, img_data, game.remote.slug);
@@ -333,7 +338,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
         removeFromImageCache(game.remote.logo, game.remote.slug);
       }
       game.remote = undefined;
-      getGameImage("logo2x", game).then((image: GOG.ImageResponse) => {
+      getGameImage(game).then((image: GOG.ImageResponse) => {
         if(image.icon === "404"){
           reject(image);
           return;
@@ -354,7 +359,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
 
   ipcMain.handle("get-image", async(e, type: GOG.ImageType, game: GOG.GameInfo) => {
     return new Promise<GOG.ImageResponse>((resolve, reject) => {
-      getGameImage("logo2x", game).then((image: GOG.ImageResponse) => {
+      getGameImage(game).then((image: GOG.ImageResponse) => {
         if(image.icon === "404"){
           reject(image);
           return;

@@ -62,7 +62,7 @@ async function zipPostInstall(game: GOG.GameInfo){
       await processScript(game_reloaded);
       await scanAndInstallRedist(game_reloaded);
     }catch(e){
-      console.log("Error when installing dependencies and running post script", e);
+      console.log("Error when installing dependencies and running post script", JSON.stringify(e));
       notify({
         title: "Error while installing Dependencies",
         type: "error"

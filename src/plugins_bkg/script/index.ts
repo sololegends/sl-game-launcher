@@ -1,7 +1,8 @@
 
 
-import { existsSync, readFileSync } from "fs";
+import { constants, copyFileSync, existsSync, readdirSync, readFileSync } from "fs";
 import { GOG } from "@/types/gog/game_info";
+import os from "os";
 import Reg from "../as_admin/regedit/windows";
 import { Regedit } from "regedit";
 import { win } from "..";
@@ -10,11 +11,17 @@ const REG_TYPE_MUTATE = {
   string: "REG_SZ"
 } as Record<string, Regedit.Type>;
 
+function gogPath(path: string, game: GOG.GameInfo){
+  return path
+    .replace("{app}", game.root_dir)
+    .replace("{supportDir}", game.root_dir + "/__support")
+    .replace("{userdocs}", os.homedir() + "/Documents");
+}
+
 async function action_setRegistry(game: GOG.GameInfo, action: GOG.ScriptInstall.setRegistry, undo: boolean){
   const args = action.arguments;
   // Mutate the data
-  let data = args.valueData;
-  data = data.replace("{app}", game.root_dir);
+  const data = gogPath(args.valueData, game);
   if(undo){
     return {
       result: await Reg.Delete(
@@ -39,12 +46,44 @@ async function action_setRegistry(game: GOG.GameInfo, action: GOG.ScriptInstall.
   };
 }
 
+async function action_supportData(game: GOG.GameInfo, action: GOG.ScriptInstall.supportData, undo: boolean){
+  const args = action.arguments;
+
+  if(undo){
+
+
+    return;
+  }
+  switch(args.type){
+  case "folder": {
+    // Copy the whole folder
+    const src = gogPath(args.source, game);
+    const target = gogPath(args.target, game);
+    const files = readdirSync(src);
+    for(const file of files){
+      if(args.overwrite){
+        copyFileSync(src + "/" + file, target + "/" + file);
+        continue;
+      }
+      copyFileSync(src + "/" + file, target + "/" + file, constants.COPYFILE_EXCL);
+    }
+    break;
+  } case "file":
+    // Copy the file
+    // CopyFileSync(args.source, args.target);
+    break;
+  default: break;
+  }
+}
+
 async function installAction(game: GOG.GameInfo, action: GOG.ScriptInstallAction, undo: boolean){
   switch(action.action){
   // Skip this for now
   case "savePath": break;
   case "setRegistry":
     return await action_setRegistry(game, action, undo);
+  case "supportData":
+    return await action_supportData(game, action, undo);
   default:
     // Nothing by default
     break;

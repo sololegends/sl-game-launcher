@@ -129,8 +129,9 @@ export async function uninstallDLC(game: GOG.GameInfo, dlc: GOG.RemoteGameDLC): 
 }
 
 async function uninstallGameZip(game: GOG.GameInfo, token: LockAbortToken): Promise<GOG.GameInfo>{
+  sendUninstallStart(game, "game: " + game.name);
+  await processScriptReverse(game);
   return new Promise<GOG.GameInfo>((resolve, reject) => {
-    sendUninstallStart(game, "game: " + game.name);
     if(token.aborted()){
       reject(game);
       return;
@@ -138,7 +139,6 @@ async function uninstallGameZip(game: GOG.GameInfo, token: LockAbortToken): Prom
     fs.rm(game.root_dir, { recursive: true, force: true }, (e) => {
       if(e === null){
         sendUninstallEnd(game);
-        processScriptReverse(game);
         resolve(game);
         return;
       }

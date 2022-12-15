@@ -394,6 +394,8 @@ async function getSlug(props, format = "game-info"){
   slug = slug.replaceAll(/[^-a-z0-9_]/g, "_");
   while(slug.includes("__")){
     slug = slug.replaceAll("__", "_");
+  }while(slug.endsWith("_")){
+    slug = slug.substring(0, slug.length - 1);
   }
   return slug;
 }

@@ -9,7 +9,7 @@
       <div class="text-h6">Loading Games...</div>
     </div>
     <ScrollablePanel :max_height="maxScrollable" @scroll="onScroll" v-else>
-      <div class="games-container" id="game_flex">
+      <div class="games-container" id="game_flex" @mouseover="clearSelectedGame">
         <GogGame
           v-for="val, i in filtered_games" :key="val.gameId" :game="val"
           class="flex"
