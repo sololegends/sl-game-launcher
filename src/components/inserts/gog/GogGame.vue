@@ -78,6 +78,7 @@ export interface GogGameEle extends Vue {
   isRunning: boolean
   isRemote: boolean
   gameData: GOG.GameInfo
+  gamePos: number
 
   // Control Functions
   downloadAndInstall: () => void;
@@ -102,6 +103,10 @@ export default defineComponent({
       type: Boolean,
       required: false,
       default: false
+    },
+    game_pos: {
+      type: Number,
+      required: true
     }
   },
   data(){
@@ -146,6 +151,9 @@ export default defineComponent({
     },
     gameData(): GOG.GameInfo{
       return this.game;
+    },
+    gamePos(): number{
+      return this.game_pos;
     },
     items(): ContextMenu.MenuItem[]{
       const items = [];

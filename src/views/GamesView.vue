@@ -9,7 +9,7 @@
       <div class="text-h6">Loading Games...</div>
     </div>
     <ScrollablePanel :max_height="maxScrollable" @scroll="onScroll" v-else>
-      <div class="games-container" id="game_flex" @mouseover="clearSelectedGame">
+      <div class="games-container" id="game_flex" @mouseout="clearSelectedGame">
         <GogGame
           v-for="val, i in filtered_games" :key="val.gameId" :game="val"
           class="flex"
@@ -17,6 +17,7 @@
           :running="val.name === active"
           :active="active_game === i"
           :data-game="i"
+          :game_pos="i"
           @remote="setNewRemote(val, $event)"
           @mouseover="gameMouseOver(i)"
         />
@@ -79,12 +80,18 @@ export default mixin(gamepad).extend({
       disable_mouse_to: -1,
       game_running: false,
       window_blurred: false,
-      store_subscription: undefined as (() => void) | undefined
+      store_subscription: undefined as (() => void) | undefined,
+      select_on_reload: undefined  as string | undefined
     };
   },
   computed: {
     maxScrollable(): string{
       return this.banner_on ? "calc(100vh - 160px)" : "calc(100vh - 130px)";
+    }
+  },
+  updated(){
+    if(this.select_on_reload && this.selectGame(this.select_on_reload, "remote_name", false)){
+      this.select_on_reload = undefined;
     }
   },
   mounted(){
@@ -112,8 +119,8 @@ export default mixin(gamepad).extend({
     ipc.on("gog-path-change", () => {
       that.updateGames();
     });
-    ipc.on("gog-game-reload", () => {
-      that.updateGames();
+    ipc.on("gog-game-reload", async() => {
+      await that.updateGames();
     });
     ipc.on("game-running-changed", (e, game: GOG.GameInfo) => {
       this.active = undefined;
@@ -165,8 +172,11 @@ export default mixin(gamepad).extend({
         text: title || game.name
       });
     });
-
-    ipc.on("game-ins-end", (e, game: GOG.GameInfo, success: boolean, title?: string) => {
+    ipc.on("game-dlins-end", async(e, game: GOG.GameInfo) => {
+      // Select the game
+      this.select_on_reload = game.remote_name;
+    });
+    ipc.on("game-ins-end", async(e, game: GOG.GameInfo, success: boolean, title?: string) => {
       if(success){
         this.$notify({
           type: "success",
@@ -215,7 +225,6 @@ export default mixin(gamepad).extend({
       while(this.games.length <= 0){
         console.log("Awaiting load: calling read-games");
         const games = await this.updateGames();
-        console.log("Games read attempt: ", games);
         if(games.length > 0){
           break;
         }
@@ -227,7 +236,7 @@ export default mixin(gamepad).extend({
       if(this.disable_mouse_to !== -1){
         clearTimeout(this.disable_mouse_to);
       }
-      this.disable_mouse_to = setTimeout(() => { this.disable_mouse = false; }, 500) as unknown as number;
+      this.disable_mouse_to = setTimeout(() => { this.disable_mouse = false; }, 1000) as unknown as number;
     },
     registerControllerHandlers(): void{
       this.$g_on([ "d_up", "ls_up" ], () => {
@@ -244,11 +253,15 @@ export default mixin(gamepad).extend({
       });
       this.$g_on([ "d_right", "ls_right" ], () => {
         if(this.game_running || this.window_blurred){ return; }
+        this.disable_mouse = true;
         this.navigateGrid("ArrowRight");
+        this.enableMouseTO();
       });
       this.$g_on([ "d_left", "ls_left" ], () => {
+        this.disable_mouse = true;
         if(this.game_running || this.window_blurred){ return; }
         this.navigateGrid("ArrowLeft");
+        this.enableMouseTO();
       });
       this.$g_on("a", () => {
         if(this.game_running || this.window_blurred){ return; }
@@ -350,10 +363,10 @@ export default mixin(gamepad).extend({
         ipc.invoke("read-games", true).then(async(res: GOG.GameInfo[]) => {
           this.games = res;
           if(this.games.length > 0){
-            resolve(this.games);
             // Run the update check
             ipc.send("check-for-updates", this.games);
             this.filterGames();
+            resolve(this.games);
             ipc.invoke("read-remote-games").then((remote_games: GOG.GameInfo[]) => {
               this.remote_games = remote_games;
               this.filterGames();
@@ -376,6 +389,27 @@ export default mixin(gamepad).extend({
           ele.launchGame();
         }
       }
+    },
+    selectGame(game_id: string, selection: keyof GOG.GameInfo, all = true): boolean{
+      for(const g in this.$refs){
+        const ele_t = this.$refs[g] as GogGameEle | GogGameEle[];
+        const ele = Array.isArray(ele_t) ? ele_t[0] : ele_t;
+        if(!ele){
+          continue;
+        }
+        const gd = ele.gameData;
+        if(!gd){
+          continue;
+        }
+        if(gd && gd[selection] === game_id && (all || !ele.isRemote)){
+          console.log("Navigating to pos: ", ele.gamePos);
+          this.disable_mouse = true;
+          this.navigateGrid(ele.gamePos);
+          this.enableMouseTO();
+          return true;
+        }
+      }
+      return false;
     },
     triggerGameAction(){
       if(this.active_game === -1){

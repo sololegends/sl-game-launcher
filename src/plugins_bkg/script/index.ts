@@ -15,7 +15,8 @@ function gogPath(path: string, game: GOG.GameInfo){
   return path
     .replace("{app}", game.root_dir)
     .replace("{supportDir}", game.root_dir + "/__support")
-    .replace("{userdocs}", os.homedir() + "/Documents");
+    .replace("{userdocs}", os.homedir() + "/Documents")
+    .replace("{userappdata}", os.homedir() + "/ApData/Roaming");
 }
 
 async function action_setRegistry(game: GOG.GameInfo, action: GOG.ScriptInstall.setRegistry, undo: boolean){
@@ -56,11 +57,13 @@ async function action_supportData(game: GOG.GameInfo, action: GOG.ScriptInstall.
 
   if(undo){
 
-
     return;
   }
   switch(args.type){
   case "folder": {
+    if(!args.source || !args.target){
+      return;
+    }
     // Copy the whole folder
     const src = gogPath(args.source, game);
     const target = gogPath(args.target, game);
