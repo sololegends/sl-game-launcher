@@ -19,7 +19,7 @@ export const HKCR = "HKEY_CLASSES_ROOT" as Regedit.Machine;
 async function exec(command: string): Promise<Regedit.RedEditResponse>{
   return new Promise<Regedit.RedEditResponse>((resolve, reject) => {
     // Something
-    elevate("reg " + command, (error, stdout, stderr) => {
+    elevate(command, (error, stdout, stderr) => {
       if(error){
         return reject({
           success: false,
@@ -62,11 +62,11 @@ function b64Check(bit_64?: boolean){
   return bit_64 !== undefined ? " /reg:" + (bit_64 ? "64" : "32") : "";
 }
 
-export async function Query(key: string, value?: string, query_subkeys?: boolean,
+export function buildQuery(key: string, value?: string, query_subkeys?: boolean,
   data?: string, target?: "key_names" | "data", case_sensitive?: boolean, exact?: boolean,
-  type?: Regedit.Type, separator?: string, bit_64?: boolean): Promise<Regedit.RedEditResponse>{
+  type?: Regedit.Type, separator?: string, bit_64?: boolean): string{
 
-  let command = "query \"" + key.replaceAll("\"", "\\\"") + "\"";
+  let command = "reg query \"" + key.replaceAll("\"", "\\\"") + "\"";
   // Value
   command += valueCheck(value);
 
@@ -101,12 +101,19 @@ export async function Query(key: string, value?: string, query_subkeys?: boolean
   command += separatorCheck(separator, type);
 
   command += b64Check(bit_64);
-  return exec(command);
+  return command;
 }
 
-export async function Add(key: string, value: string | undefined, type: Regedit.Type, data: string,
-  separator?: string, force?: boolean, bit_64?: boolean): Promise<Regedit.RedEditResponse>{
-  let command = "add \"" + key.replaceAll("\"", "\\\"") + "\"";
+export async function Query(key: string, value?: string, query_subkeys?: boolean,
+  data?: string, target?: "key_names" | "data", case_sensitive?: boolean, exact?: boolean,
+  type?: Regedit.Type, separator?: string, bit_64?: boolean): Promise<Regedit.RedEditResponse>{
+
+  return exec(buildQuery(key, value, query_subkeys, data, target, case_sensitive, exact, type, separator, bit_64));
+}
+
+export function buildAdd(key: string, value: string | undefined, type: Regedit.Type, data: string,
+  separator?: string, force?: boolean, bit_64?: boolean): string{
+  let command = "reg add \"" + key.replaceAll("\"", "\\\"") + "\"";
   // Value
   command += valueCheck(value);
 
@@ -132,11 +139,16 @@ export async function Add(key: string, value: string | undefined, type: Regedit.
   }
   command += b64Check(bit_64);
 
-  return exec(command);
+  return command;
 }
 
-export async function Delete(key: string, value?: string, force?: boolean, bit_64?: boolean){
-  let command = "delete \"" + key.replaceAll("\"", "\\\"") + "\"";
+export async function Add(key: string, value: string | undefined, type: Regedit.Type, data: string,
+  separator?: string, force?: boolean, bit_64?: boolean): Promise<Regedit.RedEditResponse>{
+  return exec(buildAdd(key, value, type, data, separator, force, bit_64));
+}
+
+export function buildDelete(key: string, value?: string, force?: boolean, bit_64?: boolean): string{
+  let command = "reg delete \"" + key.replaceAll("\"", "\\\"") + "\"";
   // Value
   if(value === undefined){
     command += " /va";
@@ -150,7 +162,11 @@ export async function Delete(key: string, value?: string, force?: boolean, bit_6
   }
   command += b64Check(bit_64);
 
-  return exec(command);
+  return command;
+}
+
+export async function Delete(key: string, value?: string, force?: boolean, bit_64?: boolean){
+  return exec(buildDelete(key, value, force, bit_64));
 }
 
 export async function Copy(){
@@ -208,8 +224,11 @@ const export_data = {
   HKCR,
 
   // Functions
+  buildQuery,
   Query,
+  buildAdd,
   Add,
+  buildDelete,
   Delete,
   Copy,
   Save,

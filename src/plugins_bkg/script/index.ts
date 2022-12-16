@@ -1,6 +1,7 @@
 
 
 import { constants, copyFileSync, existsSync, readdirSync, readFileSync } from "fs";
+import elevate from "../as_admin/elevate";
 import { GOG } from "@/types/gog/game_info";
 import os from "os";
 import Reg from "../as_admin/regedit/windows";
@@ -20,7 +21,18 @@ function gogPath(path: string, game: GOG.GameInfo){
     .replace("{userappdata}", os.homedir() + "/ApData/Roaming");
 }
 
-async function action_setRegistry(game: GOG.GameInfo, action: GOG.ScriptInstall.setRegistry, undo: boolean){
+type ActionResult = {
+  command?: string
+  result?: string
+}
+
+type PostScriptResult = {
+  error?: string
+  stdout?: string
+  stderr?: string
+}
+
+async function action_setRegistry(game: GOG.GameInfo, action: GOG.ScriptInstall.setRegistry, undo: boolean): Promise<ActionResult>{
   const args = action.arguments;
   if(!args.root || !args.subkey || !args.valueData || !args.valueName || !args.valueType){
     console.warn("Invalid or unsupported setRegistry entry", action);
@@ -32,7 +44,7 @@ async function action_setRegistry(game: GOG.GameInfo, action: GOG.ScriptInstall.
   const data = gogPath(args.valueData, game);
   if(undo){
     return {
-      result: await Reg.Delete(
+      command: Reg.buildDelete(
         args.root + "\\" + args.subkey,
         args.valueName,
         true,
@@ -42,7 +54,7 @@ async function action_setRegistry(game: GOG.GameInfo, action: GOG.ScriptInstall.
   }
   // Run the registry add fn
   return {
-    result: await Reg.Add(
+    command: Reg.buildAdd(
       args.root + "\\" + args.subkey,
       args.valueName,
       REG_TYPE_MUTATE[args.valueType],
@@ -54,17 +66,16 @@ async function action_setRegistry(game: GOG.GameInfo, action: GOG.ScriptInstall.
   };
 }
 
-async function action_supportData(game: GOG.GameInfo, action: GOG.ScriptInstall.supportData, undo: boolean){
+async function action_supportData(game: GOG.GameInfo, action: GOG.ScriptInstall.supportData, undo: boolean): Promise<ActionResult>{
   const args = action.arguments;
 
   if(undo){
-
-    return;
+    return {};
   }
   switch(args.type){
   case "folder": {
     if(!args.source || !args.target){
-      return;
+      return {};
     }
     // Copy the whole folder
     const src = gogPath(args.source, game);
@@ -84,9 +95,10 @@ async function action_supportData(game: GOG.GameInfo, action: GOG.ScriptInstall.
     break;
   default: break;
   }
+  return {};
 }
 
-async function installAction(game: GOG.GameInfo, action: GOG.ScriptInstallAction, undo: boolean){
+async function installAction(game: GOG.GameInfo, action: GOG.ScriptInstallAction, undo: boolean): Promise<ActionResult>{
   switch(action.action){
   // Skip this for now
   case "savePath": break;
@@ -98,17 +110,19 @@ async function installAction(game: GOG.GameInfo, action: GOG.ScriptInstallAction
     // Nothing by default
     break;
   }
+  return {};
 }
 
-async function execAction(game: GOG.GameInfo, action: GOG.ScriptAction, undo: boolean){
+async function execAction(game: GOG.GameInfo, action: GOG.ScriptAction, undo: boolean): Promise<ActionResult>{
   if(action.install){
-    await installAction(game, action.install, undo);
+    return await installAction(game, action.install, undo);
   }
+  return {};
 }
 
-export async function processScript(game: GOG.GameInfo, undo = false){
+export async function processScript(game: GOG.GameInfo, undo = false): Promise<PostScriptResult>{
   if(game.root_dir === undefined || game.root_dir === "remote" || !existsSync(game.root_dir)){
-    return;
+    return {};
   }
 
   // Check for script file
@@ -121,21 +135,51 @@ export async function processScript(game: GOG.GameInfo, undo = false){
       console.log("script file data: ", script);
       // If there are no actions
       if(!script.actions){
-        return;
+        return { };
       }
+      const commands = [] as string[];
       for(const action of script.actions){
         win()?.webContents.send("progress-banner-init", {
-          title: "Executing " + (undo ? "un" : "") + "install script: " + action.name,
+          title: "Evaluating " + (undo ? "un" : "") + "install script: " + action.name,
           indeterminate: true
         });
-        await execAction(game, action, undo);
+        const result = await execAction(game, action, undo);
+        if(result.command){
+          commands.push(result.command);
+        }
         win()?.webContents.send("progress-banner-hide");
+      }
+      if(commands.length > 0){
+        win()?.webContents.send("progress-banner-init", {
+          title: "Please Wait, Executing post commands...",
+          indeterminate: true
+        });
+        // Run the exe, should ask for elevation on run
+        return new Promise<PostScriptResult>((resolve, reject) => {
+          elevate(
+            commands.join(" & "),
+            function(error?: Error, stdout?: string | Buffer, stderr?: string | Buffer){
+              win()?.webContents.send("progress-banner-hide");
+              const obj = {
+                error: JSON.stringify(error),
+                stdout: stdout && stdout instanceof Buffer ? stdout.toString() : stdout,
+                stderr: stderr && stderr instanceof Buffer ? stderr.toString() : stderr
+              };
+              if(error){
+                console.error("Failed to install redistributables: ", obj.error, obj.stdout, obj.stderr);
+                reject(obj);
+                return;
+              }
+              resolve(obj);
+            });
+        });
       }
     }catch(e){
       console.log("Failed to read script as json: ", e);
-      return;
+      return { error: "Failed to read script as json" };
     }
   }
+  return {};
 }
 
 // For uninstalling
