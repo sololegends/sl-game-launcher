@@ -116,6 +116,10 @@ function getFileList(root, current_folder){
       paths = [ ...paths, ...getFileList(root, current_folder + "/" + file) ];
       continue;
     }
+    if(current_folder === root){
+      paths.push(file);
+      continue;
+    }
     paths.push(current_folder.replace(root + "/", "") + "/" + file);
   }
   return paths;
@@ -209,7 +213,7 @@ function readGameInfo(game_directory){
 }
 
 async function uninstallFromFileList(folder, output_dir = "", note = ""){
-  const game_id = readGameInfo(folder).gameId;
+  const game_id = readGameInfo(folder)?.gameId;
 
   // Get the full file list, relative path to the output
   const final_files = getFileList(folder);
@@ -390,6 +394,9 @@ async function getSlug(props, format = "game-info"){
     slug = app_Data.AppName.toLowerCase();
   }else if (format === "game-info"){
     slug = readGameInfo(props.output_folder)?.name.toLowerCase();
+  }
+  if(slug === undefined){
+    return "unknown_slug";
   }
   slug = slug.replaceAll(/[^-a-z0-9_]/g, "_");
   while(slug.includes("__")){

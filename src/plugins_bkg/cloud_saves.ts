@@ -96,14 +96,18 @@ async function packGameSave(game: GOG.GameInfo, saves: GOG.GameSave): Promise<st
   }
   // Update folder time
   for(const save in saves){
-    if(isGlob(saves[save])){
-      const files = await globAsync(saves[save]);
-      for(const s of files){
-        fs.utimesSync(s, new Date(), new Date());
+    try{
+      if(isGlob(saves[save])){
+        const files = await globAsync(saves[save]);
+        for(const s of files){
+          fs.utimesSync(s, new Date(), new Date());
+        }
+        continue;
       }
-      continue;
+      fs.utimesSync(saves[save], new Date(), new Date());
+    }catch(e){
+      console.log("Saves folder [" + save + "] not found");
     }
-    fs.utimesSync(saves[save], new Date(), new Date());
   }
 
   // Compress final save folder

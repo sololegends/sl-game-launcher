@@ -8,7 +8,8 @@ import { Regedit } from "regedit";
 import { win } from "..";
 
 const REG_TYPE_MUTATE = {
-  string: "REG_SZ"
+  string: "REG_SZ",
+  dword: "REG_DWORD"
 } as Record<string, Regedit.Type>;
 
 function gogPath(path: string, game: GOG.GameInfo){
@@ -22,6 +23,7 @@ function gogPath(path: string, game: GOG.GameInfo){
 async function action_setRegistry(game: GOG.GameInfo, action: GOG.ScriptInstall.setRegistry, undo: boolean){
   const args = action.arguments;
   if(!args.root || !args.subkey || !args.valueData || !args.valueName || !args.valueType){
+    console.warn("Invalid or unsupported setRegistry entry", action);
     return {
       result: "invalid"
     };

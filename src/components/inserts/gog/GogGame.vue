@@ -235,6 +235,11 @@ export default defineComponent({
           click: this.showDataDev,
           icon: "eye"
         });
+        items.push({
+          title: "Run Setup Script",
+          click: this.runSetupScript,
+          icon: "gears"
+        });
       }
       items.push({
         title: "Close",
@@ -333,6 +338,9 @@ export default defineComponent({
         this.$emit("remote", remote);
         this.image = icon;
       });
+    },
+    runSetupScript(): void{
+      ipc.send("rerun-ins-script", this.game);
     },
     downloadAndInstall(e?: MouseEvent): void{
       this.loading = true;

@@ -5,6 +5,7 @@ import { cleanupDownloaded, downloadDLC, downloadGame, downloadVersion } from ".
 import { uninstallDLC, uninstallGame } from "./uninstall";
 import { GOG } from "@/types/gog/game_info";
 import { installGame } from "./install";
+import { processScript } from "./script";
 import { uploadGameSave } from "./cloud_saves";
 import { win } from "./index";
 
@@ -179,5 +180,9 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
       console.log("Game install errored or canceled");
     }
     releaseLock(ACTION_LOCK);
+  });
+
+  ipcMain.on("rerun-ins-script", (e, game: GOG.GameInfo) => {
+    processScript(game);
   });
 }
