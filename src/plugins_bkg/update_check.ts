@@ -14,7 +14,7 @@ export async function checkForUpdates(game: GOG.GameInfo, sticky = false, notify
       resolver(false);
       return;
     }
-    _win?.webContents.send("save-game-sync-state", game, "Checking for updates: " + game.name);
+    _win?.webContents.send("save-game-sync-state", game.name, "Checking for updates: " + game.name);
     const game_id = game.iter_id || 0;
     if(game.remote?.iter_id && game.remote.iter_id > game_id){
       if(no_prompt){

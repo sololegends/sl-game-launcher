@@ -7,7 +7,7 @@ v1.x.x Todo:
     ✔ Launching and closng games @done(22-09-12 20:57)
   ✔ Added support for different OSs in the save file location data @done(22-10-05 16:42)
   ✔ Verify game names can be anything now.. @done(22-12-12 21:42)
-  ☐ Sync play time stats to cloud
+  ✔ Sync play time stats to cloud @done(22-12-16 18:56)
   ☐ Add rating locks / parental controls (local storage)
 
 v2.x.x Todo: 

@@ -202,7 +202,7 @@ export async function getLocalGamesFlat(): Promise<string[]>{
 export async function getRemoteGamesList(): Promise<GOG.GameInfo[]>{
   const remote_games = [] as GOG.GameInfo[];
   const local_games = await getLocalGamesFlat();
-  console.log("Remote load stage, using local flat: ", local_games);
+  console.log("Remote load stage");
   const web_dav = await initWebDav();
   const nc_cfg = webDavConfig();
   if(nc_cfg !== undefined && web_dav !== undefined){
@@ -333,7 +333,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
 
   ipcMain.handle("reload-cache-data", async(e, game: GOG.GameInfo): Promise<GOG.ImageResponse> => {
     return new Promise<GOG.ImageResponse>((resolve, reject) => {
-      removeFromDataCache("game-data.json", flattenName(game.name));
+      removeFromDataCache("game-data.json", flattenName(game.remote_name));
       if(game.remote){
         removeFromImageCache(game.remote.logo, game.remote.slug);
       }

@@ -85,7 +85,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       color: "warning",
       cancel_event: cancel_launch_evt
     });
-    win?.webContents.send("save-game-sync-state", game, "Syncing Remote Data");
+    win?.webContents.send("save-game-sync-state", game.name, "Syncing Remote Data");
     game.remote = await ensureRemote(game, false);
     win?.webContents.send("save-game-stopped", game);
     if(halt){

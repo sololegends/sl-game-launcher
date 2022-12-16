@@ -26,7 +26,6 @@
 <script lang="ts">
 import { ErrorStats, Stats } from "node-downloader-helper";
 import { defineComponent } from "@vue/composition-api";
-import { GOG } from "@/types/gog/game_info";
 import {ipcRenderer as ipc} from "electron";
 
 export default defineComponent({
@@ -46,30 +45,30 @@ export default defineComponent({
   computed: {
   },
   mounted(){
-    ipc.on("save-game-sync-start", (e, game: GOG.GameInfo) => {
+    ipc.on("save-game-sync-start", (e, name: string) => {
       this.show = true;
-      this.game = game.name;
+      this.game = name;
       this.processing = false;
       this.downloading = false;
       this.state = "Initializing cloud";
     });
-    ipc.on("save-game-sync-search", (e, game: GOG.GameInfo) => {
+    ipc.on("save-game-sync-search", (e, name: string) => {
       this.show = true;
-      this.game = game.name;
+      this.game = name;
       this.processing = true;
       this.downloading = false;
       this.state = "Checking for cloud save";
     });
-    ipc.on("save-game-sync-state", (e, game: GOG.GameInfo, state: string) => {
+    ipc.on("save-game-sync-state", (e, name: string, state: string) => {
       this.show = true;
-      this.game = game.name;
+      this.game = name;
       this.processing = false;
       this.downloading = false;
       this.state = state;
     });
-    ipc.on("save-game-dl-progress", (e, game: GOG.GameInfo, state: string, p: Stats) => {
+    ipc.on("save-game-dl-progress", (e, name: string, state: string, p: Stats) => {
       this.show = true;
-      this.game = game.name;
+      this.game = name;
       this.downloading = true;
       this.downloading_val = (p.progress / p.total) * 100;
       this.downloading_indeter = p.progress === -1 || p.total === -1;
@@ -82,7 +81,7 @@ export default defineComponent({
       this.downloading = false;
       this.game = "";
     });
-    ipc.on("save-game-dl-error", (e, game: GOG.GameInfo, err: ErrorStats) => {
+    ipc.on("save-game-dl-error", (e, err: ErrorStats) => {
       this.show = true;
       this.processing = false;
       this.downloading = false;

@@ -26,10 +26,10 @@ export function procSaveFile(save_file_raw: string, game: GOG.GameInfo){
   return save_file_raw;
 }
 
-function getRemoteSaveDirectory(game: GOG.GameInfo){
+export function getRemoteSaveDirectory(name: string){
   const rf = getConfig("remote_save_folder") as string;
   const mutated_folder = mutateFolder( rf ? rf : REMOTE_FOLDER);
-  return mutated_folder + "/" + game.remote_name;
+  return mutated_folder + "/" + name;
 }
 
 export function getSavesLocation(game: GOG.GameInfo): undefined | GOG.GameSave{
@@ -80,13 +80,13 @@ async function packGameSave(game: GOG.GameInfo, saves: GOG.GameSave): Promise<st
   for(const save in saves){
     if(isGlob(saves[save])){
       await compressGlob(saves[save], save_tmp + save + ".zip", (p: CompressProgress) =>{
-        win?.webContents.send("save-game-dl-progress", game, "Compressing save: " + save, p);
+        win?.webContents.send("save-game-dl-progress", game.name, "Compressing save: " + save, p);
       }, 6);
       found++;
     }
     if(fs.existsSync(saves[save])){
       await compressFolder(saves[save], save_tmp + save + ".zip", (p: CompressProgress) =>{
-        win?.webContents.send("save-game-dl-progress", game, "Compressing save: " + save, p);
+        win?.webContents.send("save-game-dl-progress", game.name, "Compressing save: " + save, p);
       }, 6);
       found++;
     }
@@ -113,7 +113,7 @@ async function packGameSave(game: GOG.GameInfo, saves: GOG.GameSave): Promise<st
   // Compress final save folder
   const output = tmp_dir + new Date().getTime() + "-save.zip";
   await compressFolder(save_tmp, output, (p: CompressProgress) =>{
-    win?.webContents.send("save-game-dl-progress", game, "Compressing save: bundle", p);
+    win?.webContents.send("save-game-dl-progress", game.name, "Compressing save: bundle", p);
   }, 0);
   fs.rmSync(save_tmp, { recursive: true });
   return output;
@@ -126,7 +126,7 @@ async function unpackGameSave(game: GOG.GameInfo, saves: GOG.GameSave, save_pack
   // Decompress master package
   fs.mkdirSync(save_tmp, { recursive: true });
   await decompressFolder(save_package, save_tmp, (p: CompressProgress) =>{
-    win?.webContents.send("save-game-dl-progress", game, "Unpacking save: bundle", p);
+    win?.webContents.send("save-game-dl-progress", game.name, "Unpacking save: bundle", p);
   });
 
   // Decompress save packages
@@ -140,12 +140,49 @@ async function unpackGameSave(game: GOG.GameInfo, saves: GOG.GameSave, save_pack
         fs.mkdirSync(folder, {recursive: true});
       }
       await decompressFolder(save_tmp + save + ".zip", folder, (p: CompressProgress) =>{
-        win?.webContents.send("save-game-dl-progress", game, "Unpacking save: " + save, p);
+        win?.webContents.send("save-game-dl-progress", game.name, "Unpacking save: " + save, p);
       });
     }
   }
 
   fs.rmSync(save_tmp, { recursive: true });
+}
+
+export async function pushSaveToCloud(save_path: string, name: string, remote_folder: string, remote_file: string, loud = true){
+
+  const web_dav = await initWebDav({maxBodyLength: 536870912}, true);
+
+  if(web_dav !== undefined){
+    const remote_save_folder = getRemoteSaveDirectory(remote_folder);
+    const remove_save_file = remote_save_folder + "/" + remote_file;
+    // Make the game folder here
+    if(!await web_dav.exists(remote_save_folder)){
+      await web_dav.createDirectory(remote_save_folder, {recursive: true});
+    }
+
+    // Time to upload!!
+    if(loud){
+      win?.webContents.send("save-game-dl-progress", name, "Uploading save", {total: -1, progress: -1});
+    }
+    const read_stream = fs.createReadStream(save_path);
+    await web_dav.putFileContents(remove_save_file + ".new.zip", read_stream);
+    // Backup old save if present
+    if(await web_dav.exists(remove_save_file + ".new.zip")){
+      // Backup old save if present
+      if(await web_dav.exists(remove_save_file + ".zip")){
+        const d = new Date();
+        await web_dav.moveFile(
+          remove_save_file + ".zip",
+          remove_save_file
+            + "." + d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate()
+            + "." + d.getHours() + "-" + d.getMinutes()
+            + ".zip");
+      }
+      await web_dav.moveFile(remove_save_file + ".new.zip",  remove_save_file + ".zip");
+      win?.webContents.send("save-game-stopped");
+    }
+    read_stream.close();
+  }
 }
 
 export async function uploadGameSave(game: GOG.GameInfo){
@@ -164,18 +201,12 @@ export async function uploadGameSave(game: GOG.GameInfo){
     console.log("Failed to file local game save folder!");
     return;
   }
-  win?.webContents.send("save-game-sync-start", game);
+  win?.webContents.send("save-game-sync-start", game.name);
 
   const web_dav = await initWebDav({maxBodyLength: 536870912}, true);
   const nc_cfg = webDavConfig();
 
   if(nc_cfg !== undefined && web_dav !== undefined){
-    const remote_save_folder = getRemoteSaveDirectory(game);
-    const remove_save_file = remote_save_folder + "/" + REMOTE_FILE_BASE;
-    // Make the game folder here
-    if(!await web_dav.exists(remote_save_folder)){
-      await web_dav.createDirectory(remote_save_folder, {recursive: true});
-    }
 
     const save_zip = await packGameSave(game, save_files);
     if(save_zip === undefined){
@@ -188,25 +219,8 @@ export async function uploadGameSave(game: GOG.GameInfo){
       return;
     }
 
-    // Time to upload!!
-    win?.webContents.send("save-game-dl-progress", game, "Uploading save", {total: -1, progress: -1});
-    const read_stream = fs.createReadStream(save_zip);
-    await web_dav.putFileContents(remove_save_file + ".new.zip", read_stream);
-    // Backup old save if present
-    if(await web_dav.exists(remove_save_file + ".new.zip")){
-      // Backup old save if present
-      if(await web_dav.exists(remove_save_file + ".zip")){
-        const d = new Date();
-        await web_dav.moveFile(
-          remove_save_file + ".zip",
-          remove_save_file
-            + "." + d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate()
-            + "." + d.getHours() + "-" + d.getMinutes()
-            + ".zip");
-      }
-      await web_dav.moveFile(remove_save_file + ".new.zip",  remove_save_file + ".zip");
-    }
-    read_stream.close();
+    await pushSaveToCloud(save_zip, game.name, game.remote_name, REMOTE_FILE_BASE);
+
     // Delete tmp save file
     fs.rmSync(save_zip);
     globals?.notify({
@@ -216,6 +230,52 @@ export async function uploadGameSave(game: GOG.GameInfo){
     });
   }
   win?.webContents.send("save-game-stopped", game);
+}
+
+export async function pullSaveFromCloud(name: string, web_dav: WebDAVClient, remote_folder: string, remote_file: string, loud = true){
+  if(loud){
+    win?.webContents.send("save-game-dl-progress", name, "Downloading", {total: 100, progress: 0});
+  }
+  const gog_path = getConfig("gog_path");
+  const tmp_download = gog_path + "\\.temp\\";
+  const save_download = remote_folder + "-save.zip";
+  const remote_save_folder = getRemoteSaveDirectory(remote_folder);
+  const remove_save_file = remote_save_folder + "/" + remote_file;
+  if(fs.existsSync(tmp_download + "/" + save_download)){
+    fs.rmSync(tmp_download + "/" + save_download);
+  }
+  return new Promise<string>((resolve, reject) => {
+    const active_dl = downloadFile(web_dav.getFileDownloadLink(remove_save_file), save_download);
+    active_dl.on("end", async() => {
+      if(loud){
+        win?.webContents.send("save-game-sync-state", name, "Cloud save downloaded");
+      }
+      resolve(tmp_download + save_download);
+    });
+    active_dl.on("stop", () => {
+      if(loud){
+        win?.webContents.send("save-game-stopped", name);
+      }
+      reject(undefined);
+    });
+    if(loud){
+      active_dl.on("progress.throttled", (p: Stats) => {
+        const prog = {
+          total: p.total,
+          progress: p.downloaded,
+          speed: p.speed
+        };
+        win?.webContents.send("save-game-dl-progress", name, "Downloading", prog);
+      });
+    }
+    active_dl.on("error", (e: ErrorStats) => {
+      if(loud){
+        win?.webContents.send("save-game-dl-error", e);
+      }
+      reject(undefined);
+    });
+    active_dl.start();
+  });
 }
 
 async function deployCloudSave(
@@ -228,49 +288,26 @@ async function deployCloudSave(
   if(save_files === undefined){
     return;
   }
+  win?.webContents.send("save-game-dl-progress", game.name, "Downloading", {total: 100, progress: 0});
 
-  win?.webContents.send("save-game-dl-progress", game, "Downloading", {total: 100, progress: 0});
-  const gog_path = getConfig("gog_path");
-  const tmp_download = gog_path + "\\.temp\\";
-  const save_download = game.remote_name + "-save.zip";
-  if(fs.existsSync(tmp_download + "/" + save_download)){
-    fs.rmSync(tmp_download + "/" + save_download);
+  const save_file = await pullSaveFromCloud(game.name, web_dav, game.remote_name, REMOTE_FILE_BASE);
+  if(save_file === undefined){
+    return resolver(false);
   }
-  const active_dl = downloadFile(web_dav.getFileDownloadLink(remove_save_file), save_download);
-  active_dl.on("end", async() => {
-    win?.webContents.send("save-game-sync-state", game, "Cloud save downloaded");
-    globals?.notify({
-      title: "Cloud Save",
-      text: "Unpacking cloud saves for game " + game.remote_name + "...",
-      type: "info"
-    });
-    win?.webContents.send("save-game-sync-state", game, "Unpacking");
-    await unpackGameSave(game, save_files, tmp_download + save_download);
-    win?.webContents.send("save-game-stopped", game);
-    globals?.notify({
-      title: "Cloud Save",
-      text: "Saves for game " + game.remote_name + " synchronized locally",
-      type: "success"
-    });
-    resolver(true);
+  globals?.notify({
+    title: "Cloud Save",
+    text: "Unpacking cloud saves for game " + game.remote_name + "...",
+    type: "info"
   });
-  active_dl.on("stop", () => {
-    win?.webContents.send("save-game-stopped", game);
-    resolver(false);
+  win?.webContents.send("save-game-sync-state", game.name, "Unpacking");
+  await unpackGameSave(game, save_files, save_file);
+  win?.webContents.send("save-game-stopped", game);
+  globals?.notify({
+    title: "Cloud Save",
+    text: "Saves for game " + game.remote_name + " synchronized locally",
+    type: "success"
   });
-  active_dl.on("progress.throttled", (p: Stats) => {
-    const prog = {
-      total: p.total,
-      progress: p.downloaded,
-      speed: p.speed
-    };
-    win?.webContents.send("save-game-dl-progress", game, "Downloading", prog);
-  });
-  active_dl.on("error", (e: ErrorStats) => {
-    win?.webContents.send("save-game-dl-error", game, e);
-    resolver(false);
-  });
-  active_dl.start();
+  resolver(true);
 }
 
 async function newerInCloud(
@@ -331,11 +368,11 @@ export async function syncGameSave(game: GOG.GameInfo, resolver: (cloud: boolean
   const nc_cfg = webDavConfig();
 
   if(nc_cfg !== undefined && web_dav !== undefined){
-    win?.webContents.send("save-game-sync-start", game);
+    win?.webContents.send("save-game-sync-start", game.name);
     // Check if newer in cloud
-    win?.webContents.send("save-game-sync-search", game);
+    win?.webContents.send("save-game-sync-search", game.name);
     // Generate cloud location
-    const remote_save_folder = getRemoteSaveDirectory(game);
+    const remote_save_folder = getRemoteSaveDirectory(game.remote_name);
     const remote_save_file = remote_save_folder + "/" + REMOTE_FILE_BASE + ".zip";
     if(!(await newerInCloud(game, web_dav, remote_save_folder, remote_save_file))){
       win?.webContents.send("save-game-stopped", game);
