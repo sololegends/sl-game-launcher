@@ -4,7 +4,13 @@
     <div style="margin:0px 20px">
       <v-text-field v-model="filter" clearable placeholder="Search..." @input="resetSelectedGame" />
     </div>
-    <div v-if="filtered_games.length <= 0" class="flex h100" style="flex-direction: column;text-align: center;">
+    <div
+      v-if="filtered_games.length <= 0 && (games.length > 0 || remote_games)"
+      class="flex h100" style="flex-direction: column;text-align: center;"
+    >
+      <div class="text-h6">No Games <fa-icon icon="sad-tear" size="lg" /></div>
+    </div>
+    <div v-else-if="filtered_games.length <= 0" class="flex h100" style="flex-direction: column;text-align: center;">
       <v-progress-circular width="20" size="200" indeterminate style="margin:auto" />
       <div class="text-h6">Loading Games...</div>
     </div>
