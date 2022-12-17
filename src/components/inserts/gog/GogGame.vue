@@ -240,6 +240,11 @@ export default defineComponent({
           click: this.runSetupScript,
           icon: "gears"
         });
+        items.push({
+          title: "Reinstall",
+          click: this.reinstallGame,
+          icon: "recycle"
+        });
       }
       items.push({
         title: "Close",
@@ -265,6 +270,9 @@ export default defineComponent({
       this.loading_update = true;
       await ipc.invoke("update-game", this.game);
       this.loading_update = false;
+    },
+    reinstallGame(){
+      ipc.send("reinstall-game", this.game);
     },
     uploadSaveFiles(){
       ipc.send("upload-game-save", this.game);

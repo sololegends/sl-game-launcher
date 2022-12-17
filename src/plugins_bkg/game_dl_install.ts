@@ -2,11 +2,11 @@
 import { abortLock, acquireLock, ACTION_LOCK, DOWNLOAD, DOWNLOAD_SEQUENCE, releaseLock, UN_INSTALL_LOCK } from "./tools/locks";
 import { BrowserWindow, IpcMain } from "electron";
 import { cleanupDownloaded, downloadDLC, downloadGame, downloadVersion } from "./download";
+import { syncGameSave, uploadGameSave } from "./cloud_saves";
 import { uninstallDLC, uninstallGame } from "./uninstall";
 import { GOG } from "@/types/gog/game_info";
 import { installGame } from "./install";
 import { processScript } from "./script";
-import { uploadGameSave } from "./cloud_saves";
 import { win } from "./index";
 
 function insDlFinish(game?: GOG.GameInfo){
@@ -18,9 +18,34 @@ function triggerReload(game?: GOG.GameInfo){
   win()?.webContents.send("gog-game-reload", game);
 }
 
+export async function downloadAndInstallDLC(game: GOG.GameInfo, dlc_slug: string){
+  try{
+    const dl_files = await downloadDLC(game, dlc_slug);
+    if(Array.isArray(dl_files) && dl_files.length >= 1){
+      await installGame(game, dl_files, dl_files[0], false);
+      cleanupDownloaded(dl_files);
+    }
+    triggerReload(game);
+  }catch(e){
+    insDlFinish(game);
+    console.log("Game install errored or canceled");
+  }
+}
+
 export async function downloadAndReinstall(game: GOG.GameInfo){
   const token = await acquireLock(ACTION_LOCK, false);
   if(token === undefined){ return; }
+
+  // Find the presently installed DLC
+  const dlc_set = game.remote?.dlc;
+  const installed_dlc = [] as GOG.RemoteGameDLC[];
+  if(dlc_set){
+    for(const dlc of dlc_set){
+      if(dlc.present){
+        installed_dlc.push(dlc);
+      }
+    }
+  }
 
   try{
     await uploadGameSave(game);
@@ -30,6 +55,13 @@ export async function downloadAndReinstall(game: GOG.GameInfo){
     // Uninstall first
       await uninstallGame(game);
       await installGame(game, dl_files, dl_files[0], false);
+      // Reinstall the DLC, if any
+      for(const dlc of installed_dlc){
+        await downloadAndInstallDLC(game, dlc.slug);
+      }
+      await syncGameSave(game, (b: boolean ) => {
+        if(b){ console.log("Saves synchronized from the cloud"); }
+      });
       cleanupDownloaded(dl_files);
     }
     triggerReload(game);
@@ -48,6 +80,11 @@ export async function downloadAndInstall(game: GOG.GameInfo){
     const dl_files = await downloadGame(game);
     if(Array.isArray(dl_files) && dl_files.length >= 1){
       await installGame(game, dl_files, dl_files[0]);
+      await syncGameSave(game, (b: boolean ) => {
+        if(b){
+          console.log("Saves synchronized from the cloud");
+        }
+      });
       cleanupDownloaded(dl_files);
     }
     triggerReload(game);
@@ -59,7 +96,6 @@ export async function downloadAndInstall(game: GOG.GameInfo){
 }
 
 export default function init(ipcMain: IpcMain, win: BrowserWindow){
-
 
   // Init
   ipcMain.on("install-game", async(e, game: GOG.GameInfo) => {
@@ -85,18 +121,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
   ipcMain.on("install-dlc", async(e, game: GOG.GameInfo, dlc_slug: string) => {
     const token = await acquireLock(ACTION_LOCK, false);
     if(token === undefined){ return; }
-
-    try{
-      const dl_files = await downloadDLC(game, dlc_slug);
-      if(Array.isArray(dl_files) && dl_files.length >= 1){
-        await installGame(game, dl_files, dl_files[0], false);
-        cleanupDownloaded(dl_files);
-      }
-      triggerReload(game);
-    }catch(e){
-      insDlFinish(game);
-      console.log("Game install errored or canceled");
-    }
+    downloadAndInstallDLC(game, dlc_slug);
     releaseLock(ACTION_LOCK);
   });
 

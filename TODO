@@ -1,7 +1,7 @@
 
 v1.x.x Todo:
   ✔ DLC list respecting installed version @done(22-09-24 21:27)
-  ☐ Reinstall or switching versions installs the appropriate DLC
+  ✔ Reinstall or switching versions installs the appropriate DLC @done(22-12-16 22:50)
   ✔ GamePad Support @done(22-10-05 17:12)
     ✔ Baisc Navigation @done(22-09-12 20:57)
     ✔ Launching and closng games @done(22-09-12 20:57)
