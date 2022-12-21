@@ -245,6 +245,7 @@ export async function pullSaveFromCloud(name: string, web_dav: WebDAVClient, rem
     fs.rmSync(tmp_download + "/" + save_download);
   }
   return new Promise<string>((resolve, reject) => {
+    console.log("Looking for save file: ", remove_save_file);
     const active_dl = downloadFile(web_dav.getFileDownloadLink(remove_save_file), save_download);
     active_dl.on("end", async() => {
       if(loud){
@@ -274,6 +275,7 @@ export async function pullSaveFromCloud(name: string, web_dav: WebDAVClient, rem
       }
       reject(undefined);
     });
+    console.log("Downloading save file: ", remove_save_file, " => ", save_download);
     active_dl.start();
   });
 }
@@ -290,15 +292,10 @@ async function deployCloudSave(
   }
   win?.webContents.send("save-game-dl-progress", game.name, "Downloading", {total: 100, progress: 0});
 
-  const save_file = await pullSaveFromCloud(game.name, web_dav, game.remote_name, REMOTE_FILE_BASE);
+  const save_file = await pullSaveFromCloud(game.name, web_dav, game.remote_name, REMOTE_FILE_BASE + ".zip");
   if(save_file === undefined){
     return resolver(false);
   }
-  globals?.notify({
-    title: "Cloud Save",
-    text: "Unpacking cloud saves for game " + game.remote_name + "...",
-    type: "info"
-  });
   win?.webContents.send("save-game-sync-state", game.name, "Unpacking");
   await unpackGameSave(game, save_files, save_file);
   win?.webContents.send("save-game-stopped", game);
