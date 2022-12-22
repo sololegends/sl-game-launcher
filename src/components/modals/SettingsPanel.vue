@@ -15,6 +15,10 @@
           <v-switch dense v-model="show_repacked_only" label="Show Repacked Only" @click="toggleShowRepackedOnly"></v-switch>
         </v-list-item>
 
+        <v-list-item @click="toggleOffline">
+          <v-btn color="primary">Go {{ $store.getters.offline? "Online": "Offline" }}</v-btn>
+        </v-list-item>
+
         <v-card-title class="primary header" style="padding: 0px 12px;">
           <div class="subtitle-1 white--text">GOG Games Folder</div>
           <v-spacer />
@@ -206,6 +210,11 @@ export default defineComponent({
     }
   },
   methods: {
+    toggleOffline(){
+      this.$store.dispatch("set_offline", !this.$store.getters.offline);
+      // Relaunch app
+      ipc.send("relaunch");
+    },
     toggleShowUninstalled(){
       this.$store.dispatch("set_show_uninstalled", this.show_uninstalled);
     },

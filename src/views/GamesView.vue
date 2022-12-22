@@ -28,7 +28,7 @@
           @mouseover="gameMouseOver(i)"
         />
         <GenericCard
-          v-if="remote_games.length <= 0"
+          v-if="loading_remote_games"
           name="Loading Remote..."
         />
       </div>
@@ -74,6 +74,7 @@ export default mixin(gamepad).extend({
     return {
       games: [] as GOG.GameInfo[],
       remote_games: [] as GOG.GameInfo[],
+      loading_remote_games: true,
       filtered_games: [] as GOG.GameInfo[],
       active: undefined as undefined | string,
       timer: -1,
@@ -101,6 +102,7 @@ export default mixin(gamepad).extend({
     }
   },
   mounted(){
+    this.$store.dispatch("set_minimal_ui", false);
     this.store_subscription = this.$store.subscribe((mutation) => {
       if(mutation.type === "set_show_repacked_only" || mutation.type === "set_show_uninstalled"){
         this.filterGames();
@@ -373,7 +375,9 @@ export default mixin(gamepad).extend({
             ipc.send("check-for-updates", this.games);
             this.filterGames();
             resolve(this.games);
+            this.loading_remote_games = true;
             ipc.invoke("read-remote-games").then((remote_games: GOG.GameInfo[]) => {
+              this.loading_remote_games = false;
               this.remote_games = remote_games;
               this.filterGames();
             });

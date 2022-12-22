@@ -1,12 +1,12 @@
 
 import * as child from "child_process";
-import { app, BrowserWindow, dialog, IpcMain } from "electron";
+import { app_data_dir, cli_options} from "../background";
+import { BrowserWindow, dialog, IpcMain } from "electron";
 import { ensureDir, getFolderSize, normalizeFolder } from "./tools/files";
-import z_cfg_init, { getOS } from "./config";
 import fs from "fs";
+import { getOS } from "./config";
 import { GOG } from "@/types/gog/game_info";
 import { Notify } from "@/types/notification/notify";
-import z_autoupdate from "./auto_update";
 import z_cache from "./cache";
 import z_cloud_saves from "./cloud_saves";
 import z_game_dl_install from "./game_dl_install";
@@ -21,7 +21,6 @@ import z_webdav_init from "./nc_webdav";
 
 const fns = [
   z_logging,
-  z_cfg_init,
   z_sys_notifications,
   z_cache,
   z_play_time_tracker,
@@ -30,7 +29,6 @@ const fns = [
   z_game_loader,
   z_process_cloud,
   z_game_dl_install,
-  z_autoupdate,
   z_cloud_saves,
   z_update_check
 ];
@@ -44,9 +42,8 @@ export type Globals = {
   getFolderSize: (folder: string) => number
   log: (log: string) => void
 }
-
+console.log(cli_options);
 const globals = {
-  app_dir: app.getPath("appData") + "\\sololegends\\gog-viewer\\",
   ensureDir: ensureDir,
   normalizeFolder: normalizeFolder,
   getFolderSize: getFolderSize,
@@ -55,9 +52,6 @@ const globals = {
     // TODO: Do the file logging
   }
 } as Globals;
-
-globals.ensureDir(globals.app_dir);
-
 
 export function undefinedOrNull(_var: BrowserWindow | BrowserWindow[]){
   return typeof _var === "undefined" || _var === null;
@@ -86,7 +80,9 @@ export function notify(options: Notify.Alert){
 
 export default function init(ipcMain: IpcMain, win: BrowserWindow){
   globals.notify = notify;
-
+  globals.app_dir = app_data_dir;
+  globals.ensureDir(globals.app_dir);
+  console.log("globals.app_dir", globals.app_dir);
   // Init the different modules here
   for(const i in fns){
     fns[i](ipcMain, win, globals);

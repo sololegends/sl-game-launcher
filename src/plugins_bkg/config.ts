@@ -1,8 +1,7 @@
 
-import { BrowserWindow, IpcMain } from "electron";
 import fs from "fs";
-import { Globals } from ".";
 import { GOG } from "@/types/gog/game_info";
+import { IpcMain } from "electron";
 
 // GLOBAL CONFIGS ====>
 // App
@@ -48,6 +47,7 @@ export function getConfig(key: string){
 }
 export function setConfig(key: string, value: unknown, conf_file: string){
   getLock().then(() => {
+    console.log("Setting config: [" + key + "] = " + value);
     config[key] = value;
     fs.writeFile(conf_file, JSON.stringify(config), function(err){
       unlock();
@@ -59,11 +59,9 @@ export function setConfig(key: string, value: unknown, conf_file: string){
   });
 }
 
-export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Globals){
+export default function init(ipcMain: IpcMain, app_data_dir: string){
   // CONFIGS
-  const app_dir = globals.app_dir;
-
-  const conf_file = app_dir + "config.json";
+  const conf_file = app_data_dir + "config.json";
   fs.stat(conf_file, (error) => {
     if(error){
       console.log("No config found");

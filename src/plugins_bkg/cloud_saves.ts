@@ -228,8 +228,15 @@ export async function uploadGameSave(game: GOG.GameInfo){
       text: "Saves for game " + game.remote_name + " synchronized to cloud",
       type: "success"
     });
+    win?.webContents.send("save-game-stopped", game);
+    return;
   }
   win?.webContents.send("save-game-stopped", game);
+  globals?.notify({
+    title: "Cloud Save",
+    text: "Failed to connect to server",
+    type: "error"
+  });
 }
 
 export async function pullSaveFromCloud(name: string, web_dav: WebDAVClient, remote_folder: string, remote_file: string, loud = true){

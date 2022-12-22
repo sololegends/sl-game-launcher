@@ -145,25 +145,25 @@ async function downloadPrep(game: GOG.GameInfo, dl_link_set: string[]): Promise<
     });
 }
 
-export async function downloadGame(game: GOG.GameInfo): Promise<string[]>{
+export async function downloadGame(game: GOG.GameInfo): Promise<string[] | undefined>{
   try{
     game.remote = await ensureRemote(game);
   }catch(e){
     nrd(game);
     return new Promise<string[]>((resolve, reject) => {
-      reject([]);
+      reject(undefined);
     });
   }
   return downloadPrep(game, game.remote.download);
 }
 
-export async function downloadDLC(game: GOG.GameInfo, dlc_slug: string): Promise<string[]>{
+export async function downloadDLC(game: GOG.GameInfo, dlc_slug: string): Promise<string[] | undefined>{
   try{
     game.remote = await ensureRemote(game);
   }catch(e){
     nrd(game);
     return new Promise<string[]>((resolve, reject) => {
-      reject([]);
+      reject(undefined);
     });
   }
   // Find dlc install index

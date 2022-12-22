@@ -22,6 +22,9 @@ export function mutateFolder(folder: string){
 }
 
 export async function initWebDav(options: WebDAVClientOptions = {}, force = false): Promise<WebDAVClient | undefined>{
+  if(getConfig("offline") === true){
+    return undefined;
+  }
   if(nc_client !== undefined && !force){
     return nc_client;
   }

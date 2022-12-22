@@ -103,7 +103,10 @@ export async function ensureRemote(game: GOG.GameInfo, use_cache = true): Promis
   }
   game.remote = await getRemoteGameData(game, use_cache);
   if(game.remote === undefined){
-    console.error(new Error("Failed to retrieve remote data for game: [" + game.name + " -- " + game.remote_name + "]"));
+    // ONly alert if we are supposed to be able to get it
+    if(!getConfig("offline")){
+      console.error(new Error("Failed to retrieve remote data for game: [" + game.name + " -- " + game.remote_name + "]"));
+    }
     return {
       logo: "logo.jpg",
       folder: "localonly",

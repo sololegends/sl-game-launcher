@@ -2,12 +2,12 @@
 import { abortLock, acquireLock, ACTION_LOCK, DOWNLOAD, DOWNLOAD_SEQUENCE, releaseLock, UN_INSTALL_LOCK } from "./tools/locks";
 import { BrowserWindow, IpcMain } from "electron";
 import { cleanupDownloaded, downloadDLC, downloadGame, downloadVersion } from "./download";
+import { notify, win } from "./index";
 import { syncGameSave, uploadGameSave } from "./cloud_saves";
 import { uninstallDLC, uninstallGame } from "./uninstall";
 import { GOG } from "@/types/gog/game_info";
 import { installGame } from "./install";
 import { processScript } from "./script";
-import { win } from "./index";
 
 function insDlFinish(game?: GOG.GameInfo){
   win()?.webContents.send("game-dlins-end", game);
@@ -51,6 +51,14 @@ export async function downloadAndReinstall(game: GOG.GameInfo){
     await uploadGameSave(game);
     const dl_files = await downloadGame(game);
     console.log("dl_files", dl_files);
+    if(dl_files === undefined){
+      notify({
+        title: "Game download failed",
+        text: "Failed to connect to server",
+        type: "error"
+      });
+      return;
+    }
     if(Array.isArray(dl_files) && dl_files.length >= 1){
     // Uninstall first
       await uninstallGame(game);
@@ -78,6 +86,14 @@ export async function downloadAndInstall(game: GOG.GameInfo){
 
   try{
     const dl_files = await downloadGame(game);
+    if(dl_files === undefined){
+      notify({
+        title: "Game download failed",
+        text: "Failed to connect to server",
+        type: "error"
+      });
+      return;
+    }
     if(Array.isArray(dl_files) && dl_files.length >= 1){
       await installGame(game, dl_files, dl_files[0]);
       await syncGameSave(game, (b: boolean ) => {
@@ -110,7 +126,15 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
   // Init
   ipcMain.on("download-game", async(e, game: GOG.GameInfo) => {
     try{
-      await downloadGame(game);
+      const dl_files = await downloadGame(game);
+      if(dl_files === undefined){
+        notify({
+          title: "Game download failed",
+          text: "Failed to connect to server",
+          type: "error"
+        });
+        return;
+      }
     }catch(e){
       insDlFinish(game);
       console.log("Game install errored or canceled");

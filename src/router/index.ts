@@ -6,18 +6,17 @@ Vue.use(VueRouter);
 const routes: Array<RouteConfig> = [
   {
     path: "/",
-    name: "Root",
-    redirect: "/games"
+    name: "Root"
   },
-  // {
-  //   Path: "/home",
-  //   Name: "Home",
-  //   Component: () => import("../views/Home.vue")
-  // },
   {
     path: "/games",
     name: "Games",
     component: () => import("../views/GamesView.vue")
+  },
+  {
+    path: "/splash",
+    name: "splash",
+    component: () => import("../views/LoadingSplash.vue")
   },
   // Generic page catch all for 404 error
   {

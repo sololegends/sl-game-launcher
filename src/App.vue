@@ -7,15 +7,17 @@
     <GeneralPrompt ref="prompt_modal" />
     <GeneralQuestion ref="question_modal" />
     <SideNotify
+      v-if="isFull"
       :show="show_side_notify"
       @count="notification_count=$event"
       @click:outside="show_side_notify=false"
     />
-    <SettingsPanel :show="show_side_settings" @click:outside="show_side_settings=false" />
+    <SettingsPanel v-if="isFull" :show="show_side_settings" @click:outside="show_side_settings=false" />
 
     <v-app>
-      <NotificationsPanel :position="{left:10,bottom:10}" style="z-index:9999;" />
-      <v-app-bar app color="primary elevation-3" dense>
+      <NotificationsPanel v-if="isFull" :position="{left:10,bottom:10}" style="z-index:9999;" />
+      <span v-if="$store.getters.offline" class="text-centered">OFFLINE</span>
+      <v-app-bar v-if="isFull" app color="primary elevation-3" dense>
         <h2 class="does-window-drag no-sel white--text">{{$properties.app}}</h2>
         <v-spacer class="does-window-drag h100" />
         <v-btn id="open_alert_drawer" icon @click="show_side_notify=true">
@@ -44,32 +46,22 @@
           <fa-icon icon="times" size="2x" style="color:white" />
         </v-btn>
       </v-app-bar>
+      <v-app-bar v-else app color="primary elevation-3" height="30">
+        <h3 class="no-sel white--text">{{$properties.app}}</h3>
+        <v-spacer class="h100" />
+        <v-btn @click="exit" exact tip-title="Exit" icon>
+          <fa-icon icon="times" size="2x" style="color:white" />
+        </v-btn>
+      </v-app-bar>
 
-      <v-main class="main-view" style="padding: 0px;margin: 48px 0px 0px;top: 0px;position: fixed;width:100%">
-        <GameBanner :game="running_game"  v-if="running_game !== undefined" />
-        <div v-if="disconnected">
-          <div class="centered-container">
-            <v-card style="">
-              <v-toolbar class="primary" height="175px">
-                <div class="connection-failure">
-                  <img src="./assets/logo.png">
-                  <div class="title white--text">{{$properties.company}} {{$properties.app}}</div>
-                  <div class="text-subtitle-2 white--text" tip-title="Connection Failure">Connection Failure</div>
-                </div>
-              </v-toolbar>
-              <v-card-text>
-                <div class="body-slot center">
-                  Connection with the {{$properties.app}} server appears to be lost!
-                  <br>
-                  Please check your network connection.
-                  <br><br>
-                  When connection is restored this page should automatically re-load, otherwise refresh to try again.
-                </div>
-              </v-card-text>
-            </v-card>
+      <v-main :class="'main-view' + (isFull ? '' : ' minimal')">
+        <div v-if="isFull && isOffline" class="offline-notice">
+          <div class="text no-sel">
+            Offline Mode
           </div>
         </div>
-        <div class="app-view" v-else>
+        <GameBanner :game="running_game"  v-if="running_game !== undefined" />
+        <div :class="'app-view' + (isFull ? '' : ' minimal')">
           <router-view />
         </div>
       </v-main>
@@ -111,7 +103,6 @@ export default defineComponent({
       show_side_notify: false,
       show_side_settings: false,
       notification_count: 0,
-      disconnected: false,
       menu: {
         dev: true
       },
@@ -153,7 +144,12 @@ export default defineComponent({
     });
   },
   computed: {
-
+    isFull(){
+      return !this.$store.getters.minimal_ui;
+    },
+    isOffline(){
+      return this.$store.getters.offline;
+    }
   },
   methods: {
     exit(){
@@ -180,9 +176,14 @@ export default defineComponent({
     },
     toggleNotify(){
       this.show_side_notify = !this.show_side_notify;
+    },
+    async checkOffline(){
+      this.$store.dispatch("set_offline", await ipc.invoke("cfg-get", "offline") === true);
     }
   },
   beforeMount(): void{
+    this.$store.dispatch("set_minimal_ui", true);
+    this.checkOffline();
     this.$app._cont.$on("toggle_settings", this.toggleSettings);
     this.$app._cont.$on("toggle_notify", this.toggleNotify);
   },
@@ -194,6 +195,45 @@ export default defineComponent({
 </script>
 
 <style scoped>
+  .offline-notice{
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    height: 100%;
+    width: 100%;
+    border: 5px solid;
+    border-color: var(--v-warning-base);
+    border-radius: 5px;
+  }
+  .offline-notice .text{
+    background-color: var(--v-warning-base);
+    position: absolute;
+    bottom: 0px;
+    right: 0px;
+    border-top-left-radius: 5px;
+    padding:2px 5px 0px 5px;
+    z-index: 9999;
+  }
+  .main-view{
+    padding: 0px;
+    top: 0px;
+    position: fixed;
+    width:100%
+  }
+  .main-view.minimal{
+    margin: 0px;
+  }
+  .app-view{
+    overflow: hidden;
+    width:calc(100% - 5px);
+    height:calc(100vh - 45px);
+    padding-bottom: 5px;
+    z-index:1;
+  }
+  .app-view.minimal{
+    width:100vw;
+    height:100vh;
+  }
   .toolbar-section-end{
     justify-content: flex-end;
     display: flex;
@@ -230,13 +270,6 @@ export default defineComponent({
   }
   .v-main{
     max-height: 100vh;
-  }
-  .app-view{
-    overflow: hidden;
-    width:calc(100% - 5px);
-    height:calc(100vh - 45px);
-    padding-bottom: 5px;
-    z-index:1;
   }
   .error-message {
     color: var(--md-theme-default, #FF0000);

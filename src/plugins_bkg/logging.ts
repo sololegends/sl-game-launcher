@@ -15,19 +15,19 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
 
   const olog = console.log;
   console.log = function(message: string, ...optionalParams: any[]){ // eslint-disable-line @typescript-eslint/no-explicit-any
-    olog.apply(olog, [ message, (optionalParams ? optionalParams : "") ]);
+    olog.apply(olog, [ message, ...(optionalParams ? optionalParams : []) ]);
     output.write("\r\n[" + new Date() + "] >> LOG >> " + message + " " + (optionalParams ? optionalParams : ""));
   };
 
   const owarn = console.warn;
   console.warn = function(message: string, ...optionalParams: any[]){ // eslint-disable-line @typescript-eslint/no-explicit-any
-    owarn.apply(owarn, [ message, (optionalParams ? optionalParams : "") ]);
+    owarn.apply(owarn, [ message, ...(optionalParams ? optionalParams : []) ]);
     output.write("\r\n[" + new Date() + "] >> WARN >> " + message + " " + (optionalParams ? optionalParams : ""));
   };
 
   const oerror = console.error;
   console.error = function(message: string, ...optionalParams: any[]){ // eslint-disable-line @typescript-eslint/no-explicit-any
-    oerror.apply(oerror, [ message, (optionalParams ? optionalParams : "") ]);
+    oerror.apply(oerror, [ message, ...(optionalParams ? optionalParams : []) ]);
     output.write("\r\n[" + new Date() + "] >> ERROR >> " + message + " " + (optionalParams ? optionalParams : ""));
   };
 }

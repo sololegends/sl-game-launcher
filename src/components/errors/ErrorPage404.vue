@@ -1,6 +1,6 @@
 <template>
   <div class="centered-container">
-    <div class="text-h3">Page not Found</div>
+    <div class="text-h3">Page not Found {{ $router.currentRoute.fullPath }}</div>
     <router-link :to="{ name: 'Games' }" tag="v-btn" class="primary">Go to Games List</router-link>
   </div>
 </template>

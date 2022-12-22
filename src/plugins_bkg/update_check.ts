@@ -2,12 +2,26 @@
 import { BrowserWindow, IpcMain } from "electron";
 import { downloadAndReinstall } from "./game_dl_install";
 import { ensureRemote } from "./game_loader";
+import {getConfig} from "./config";
 import { GOG } from "@/types/gog/game_info";
+import { notify as notifyFn } from ".";
 
 let _win = undefined as BrowserWindow | undefined;
 let _ipcMain = undefined as IpcMain | undefined;
 
 export async function checkForUpdates(game: GOG.GameInfo, sticky = false, notify = true, no_prompt = false){
+  if(getConfig("offline")){
+    if(notify){
+      notifyFn({
+        title: "Game update failed",
+        text: "Failed to connect to server",
+        type: "error"
+      });
+    }
+    return new Promise<boolean>((resolver) => {
+      resolver(false);
+    });
+  }
   game.remote = await ensureRemote(game, false);
   return new Promise<boolean>((resolver) => {
     if(_win === undefined || _ipcMain === undefined){
@@ -26,7 +40,7 @@ export async function checkForUpdates(game: GOG.GameInfo, sticky = false, notify
       }
       if(notify){
         const evt_1 = "ignore-game-update-" + new Date().getTime();
-        _win?.webContents.send("notify", {
+        notifyFn({
           title: "Game update available!",
           text: game.name + " has a new version available. " + game.remote.version,
           type: "info",
@@ -80,7 +94,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
   });
 
   ipcMain.handle("update-game", (e, game: GOG.GameInfo) => {
-    return checkForUpdates(game, false, false, true);
+    return checkForUpdates(game, false, true, true);
   });
 
 }
