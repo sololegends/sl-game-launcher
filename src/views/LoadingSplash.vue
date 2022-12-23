@@ -82,8 +82,8 @@ export default defineComponent({
           this.downloadUpdate();
           return;
         }
-        this.message = "Update Check failed!";
-        this.showOptions();
+        this.message = "No Updates!";
+        this.toMainWindow(false);
       }).catch((e: unknown) => {
         this.message = "Update Check failed!";
         console.log(e);
