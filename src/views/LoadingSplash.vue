@@ -51,10 +51,14 @@ export default defineComponent({
     this.checkForUpdate();
     ipc.on("download-progress", this.dlProgress);
     ipc.on("update-downloaded", this.dlFinished);
+    ipc.on("update-available", this.downloadUpdate);
+    ipc.on("update-not-available", this.upToDate);
   },
   beforeDestroy(){
     ipc.off("download-progress", this.dlProgress);
     ipc.off("update-downloaded", this.dlFinished);
+    ipc.off("update-available", this.downloadUpdate);
+    ipc.off("update-not-available", this.upToDate);
   },
   methods: {
     dlProgress(e: unknown, progress: ProgressInfo){
@@ -76,14 +80,14 @@ export default defineComponent({
       this.dl_progress = "";
       this.indeterminate = true;
       ipc.invoke("check-for-update").then((result: UpdateCheckResult | null) => {
-        if(result !== null){
-          this.update_info = result.updateInfo;
-          this.message = "Version " + result.updateInfo.version + " available!";
-          this.downloadUpdate();
-          return;
+        if(result === null){
+          this.update_info = undefined;
+          this.message = "Update check failed!";
+          this.indeterminate = false;
+          this.dl_value = 0;
+          this.dl_progress = "";
+          this.showOptions();
         }
-        this.message = "No Updates!";
-        this.toMainWindow(false);
       }).catch((e: unknown) => {
         this.message = "Update Check failed!";
         console.log(e);
@@ -125,8 +129,8 @@ export default defineComponent({
       console.log("Go to main window");
       ipc.send("goto-main-window");
     },
-    toMainWindow(offline: boolean){
-      this.$store.dispatch("set_offline", offline);
+    upToDate(){
+      this.$store.dispatch("set_offline", false);
       console.log("Go to main window");
       ipc.send("goto-main-window");
     }

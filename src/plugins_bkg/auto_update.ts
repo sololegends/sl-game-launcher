@@ -22,9 +22,11 @@ export default function init(ipcMain: IpcMain, splash: BrowserWindow){
   });
   autoUpdater.on("update-available", (info: UpdateInfo) => {
     console.log("Update available: " + info);
+    splash.webContents.send("update-available", info);
   });
   autoUpdater.on("update-not-available", () => {
     console.log("Update not available");
+    splash.webContents.send("Update not available");
   });
   autoUpdater.on("error", (err) => {
     console.log("Update err: " + err);
