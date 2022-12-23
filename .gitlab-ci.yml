@@ -22,6 +22,9 @@ include:
 
 pages:
   stage: deploy
+  variables:
+    FF_USE_FASTZIP: "true"
+    ARTIFACT_COMPRESSION_LEVEL: "fastest"
   dependencies: 
     - build
   script:
