@@ -60,17 +60,7 @@ export function setConfig(key: string, value: unknown, conf_file: string){
 }
 
 export default function init(ipcMain: IpcMain, app_data_dir: string){
-  // CONFIGS
   const conf_file = app_data_dir + "config.json";
-  fs.stat(conf_file, (error) => {
-    if(error){
-      console.log("No config found");
-      return;
-    }
-    fs.readFile(conf_file, "utf8", function(err, data){
-      config = JSON.parse(data);
-    });
-  });
 
   ipcMain.handle("cfg-get", (e, key: string) => {
     return getConfig(key);
@@ -79,5 +69,18 @@ export default function init(ipcMain: IpcMain, app_data_dir: string){
     setConfig(key, value, conf_file);
   });
 
-
+  return new Promise<void>((resolve) => {
+    // CONFIGS
+    fs.stat(conf_file, (error) => {
+      if(error){
+        console.log("No config found");
+        resolve();
+        return;
+      }
+      fs.readFile(conf_file, "utf8", function(err, data){
+        config = JSON.parse(data);
+        resolve();
+      });
+    });
+  });
 }

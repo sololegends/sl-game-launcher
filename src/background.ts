@@ -186,7 +186,7 @@ app.on("ready", async() => {
   }
   // Load the config module
   logging();
-  initConfig(ipcMain, app_data_dir);
+  await initConfig(ipcMain, app_data_dir);
   if(cli_options.skip_update || getConfig("offline")){
     createWindow();
     return;
