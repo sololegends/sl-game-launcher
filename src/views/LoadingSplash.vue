@@ -64,7 +64,7 @@ export default defineComponent({
     },
     dlFinished(){
       this.update_info = undefined;
-      this.message = "Update downloaded! Restarting...";
+      this.message = "Update downloaded! Installing...";
       this.indeterminate = false;
       this.dl_progress = "";
       this.dl_value = 0;
@@ -95,19 +95,20 @@ export default defineComponent({
         this.message = "Download version " + this.update_info.version;
         this.indeterminate = false;
         ipc.invoke("download-update").then((result: UpdateCheckResult | null) => {
-          if(result !== null){
-            this.update_info = result.updateInfo;
-            this.message = "Download complete!";
+          if(result === null){
+            this.update_info = undefined;
+            this.message = "Download failed!";
             this.indeterminate = false;
             this.dl_value = 0;
             this.dl_progress = "";
-            this.toMainWindow(false);
+            this.showOptions();
           }
-        }).catch(() => {
+        }).catch((e) => {
           this.message = "Download failed!";
           this.indeterminate = false;
           this.dl_value = 0;
           this.dl_progress = "";
+          console.log(e);
           this.showOptions();
         });
       }
