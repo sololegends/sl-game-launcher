@@ -21,10 +21,12 @@ export type AppOptions = {
   alt_feed: boolean
   data_folder: string
   skip_update: boolean
+  version: boolean
 
   // Catch all
   [key: string]: string | boolean | number
 }
+
 export const cli_options = {
   fullscreen: false,
   maximize: false,
@@ -42,6 +44,10 @@ if(argsv.length > 0){
     }
     cli_options[key_val[0].replace("-", "_")] = key_val[1];
   }
+}
+if(cli_options.version){
+  console.log("Version: " + app.getVersion());
+  app.quit();
 }
 console.log("cli_options", cli_options);
 const is_fullscreen = cli_options.fullscreen;

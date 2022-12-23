@@ -22,7 +22,7 @@
 </template>
 
 <script lang="ts">
-import { ProgressInfo, UpdateCheckResult, UpdateInfo } from "electron-updater";
+import { ProgressInfo, UpdateInfo } from "electron-updater";
 import { defineComponent } from "@vue/composition-api";
 import filters from "@/js/filters";
 import {ipcRenderer as ipc} from "electron";
@@ -40,7 +40,6 @@ export default defineComponent({
       dl_progress: "",
       dl_value: 0,
       indeterminate: false,
-      update_info: undefined as undefined | UpdateInfo,
       show_options: false
     };
   },
@@ -48,11 +47,11 @@ export default defineComponent({
   },
   mounted(){
     this.$store.dispatch("set_minimal_ui", true);
-    this.checkForUpdate();
     ipc.on("download-progress", this.dlProgress);
     ipc.on("update-downloaded", this.dlFinished);
     ipc.on("update-available", this.downloadUpdate);
     ipc.on("update-not-available", this.upToDate);
+    this.checkForUpdate();
   },
   beforeDestroy(){
     ipc.off("download-progress", this.dlProgress);
@@ -67,7 +66,6 @@ export default defineComponent({
       this.dl_progress = filters.formatSize(progress.bytesPerSecond, "Bps");
     },
     dlFinished(){
-      this.update_info = undefined;
       this.message = "Update downloaded! Installing...";
       this.indeterminate = false;
       this.dl_progress = "";
@@ -75,48 +73,26 @@ export default defineComponent({
       ipc.send("install-update");
     },
     checkForUpdate(){
-      this.update_info = undefined;
       this.message = "Checking for updates...";
       this.dl_progress = "";
       this.indeterminate = true;
-      ipc.invoke("check-for-update").then((result: UpdateCheckResult | null) => {
-        if(result === null){
-          this.update_info = undefined;
-          this.message = "Update check failed!";
-          this.indeterminate = false;
-          this.dl_value = 0;
-          this.dl_progress = "";
-          this.showOptions();
-        }
-      }).catch((e: unknown) => {
+      ipc.invoke("check-for-update").catch((e: unknown) => {
         this.message = "Update Check failed!";
         console.log(e);
         this.showOptions();
       });
     },
-    downloadUpdate(){
-      if(this.update_info){
-        this.message = "Download version " + this.update_info.version;
+    downloadUpdate(e: unknown, update_info: UpdateInfo){
+      this.message = "Download version " + update_info.version;
+      this.indeterminate = false;
+      ipc.invoke("download-update").catch((e) => {
+        this.message = "Download failed!";
         this.indeterminate = false;
-        ipc.invoke("download-update").then((result: UpdateCheckResult | null) => {
-          if(result === null){
-            this.update_info = undefined;
-            this.message = "Download failed!";
-            this.indeterminate = false;
-            this.dl_value = 0;
-            this.dl_progress = "";
-            this.showOptions();
-          }
-        }).catch((e) => {
-          this.message = "Download failed!";
-          this.indeterminate = false;
-          this.dl_value = 0;
-          this.dl_progress = "";
-          console.log(e);
-          this.showOptions();
-        });
-      }
-
+        this.dl_value = 0;
+        this.dl_progress = "";
+        console.log(e);
+        this.showOptions();
+      });
     },
     showOptions(){
       this.show_options = true;
