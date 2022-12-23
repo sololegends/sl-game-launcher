@@ -6,6 +6,7 @@ import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import { createSplashWindow } from "./plugins_bkg/auto_update";
 import { ensureDir } from "./plugins_bkg/tools/files";
 import load from "./plugins_bkg";
+import logging from "./plugins_bkg/logging";
 const isDevelopment = process.env.NODE_ENV !== "production";
 
 app.setAsDefaultProtocolClient(APP_URL_HANDLER);
@@ -184,6 +185,7 @@ app.on("ready", async() => {
     }
   }
   // Load the config module
+  logging();
   initConfig(ipcMain, app_data_dir);
   if(cli_options.skip_update || getConfig("offline")){
     createWindow();

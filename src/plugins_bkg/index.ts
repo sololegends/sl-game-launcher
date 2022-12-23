@@ -12,7 +12,6 @@ import z_cloud_saves from "./cloud_saves";
 import z_game_dl_install from "./game_dl_install";
 import z_game_loader from "./game_loader";
 import z_gc_init from "./game_control";
-import z_logging from "./logging";
 import z_play_time_tracker from "./play_time_tracker";
 import z_process_cloud from "./process_cloud";
 import z_sys_notifications from "./sys_notifications";
@@ -20,7 +19,6 @@ import z_update_check from "./update_check";
 import z_webdav_init from "./nc_webdav";
 
 const fns = [
-  z_logging,
   z_sys_notifications,
   z_cache,
   z_play_time_tracker,

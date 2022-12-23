@@ -1,13 +1,13 @@
 
-import { BrowserWindow, IpcMain } from "electron";
+import { app_data_dir } from "../background";
+import { ensureDir } from "./tools/files";
 import fs from "fs";
-import { Globals } from ".";
 
-export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Globals){
+export default function init(){
 
-  const logging_dir = globals.app_dir;
+  const logging_dir = app_data_dir;
   const log_file = logging_dir + "console.log";
-  globals.ensureDir(logging_dir);
+  ensureDir(logging_dir);
   if(fs.existsSync(log_file)){
     fs.renameSync(log_file, log_file.replace("log", "last.log"));
   }

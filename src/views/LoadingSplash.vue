@@ -125,10 +125,9 @@ export default defineComponent({
       ipc.send("goto-main-window");
     },
     toMainWindow(offline: boolean){
-      this.showOptions();
       this.$store.dispatch("set_offline", offline);
       console.log("Go to main window");
-      // Ipc.send("goto-main-window");
+      ipc.send("goto-main-window");
     }
   }
 });
