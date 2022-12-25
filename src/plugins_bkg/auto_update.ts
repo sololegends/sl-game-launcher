@@ -3,6 +3,7 @@ import { autoUpdater, ProgressInfo, UpdateCheckResult, UpdateDownloadedEvent, Up
 import { BrowserWindow, ipcMain, IpcMain } from "electron";
 import { cli_options } from "../background";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
+import filters from "../js/filters";
 
 export default function init(ipcMain: IpcMain, splash: BrowserWindow){
 
@@ -10,17 +11,20 @@ export default function init(ipcMain: IpcMain, splash: BrowserWindow){
   if(cli_options.alt_feed){
     autoUpdater.setFeedURL({
       provider: "generic",
-      url: "https://test.sololegends.com/tools/public/updates/gamelauncher/"
+      url: cli_options.alt_feed
     });
   }
 
+  let start_time = 0;
   autoUpdater.autoDownload = false;
   autoUpdater.disableWebInstaller = true;
 
   autoUpdater.on("checking-for-update", () => {
+    start_time = new Date().getTime();
     console.log("Checking for update...");
   });
   autoUpdater.on("update-available", (info: UpdateInfo) => {
+    console.log("Update check took: " + filters.betterSeconds((new Date().getTime() - start_time) / 1000));
     console.log("Update available: " + info);
     splash.webContents.send("update-available", info);
   });

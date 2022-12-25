@@ -35,7 +35,7 @@ module.exports = {
         },
         publish: {
           provider: "generic",
-          url: "https://sololegends.slgit.io/sl-game-launcher/",
+          url: "https://updates.sololegends.com/electron/SL Game Launcher/win",
           channel: "latest"
         }
       }

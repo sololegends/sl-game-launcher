@@ -20,21 +20,17 @@ include:
 # DEPLOY
 # =================================================
 
-pages:
+deploy_to_update_server:
   stage: deploy
   variables:
-    FF_USE_FASTZIP: "true"
-    ARTIFACT_COMPRESSION_LEVEL: "fastest"
+    SERVER: https://updates.sololegends.com/electron/win/upload
+    APP_NAME: SL Game Launcher
   dependencies: 
     - build
   script:
-    - rm -rf public/*
-    - mv dist_electron/* public/
-  artifacts:
-    paths:
-      - public
+    - sh upload_dist.sh
   rules:
-    - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
+    - if: '$CI_COMMIT_TAG =~ /^[0-9]+\.[0-9]+\.[0-9]+$/'
       when: always
     - if: '$CI_COMMIT_BRANCH == "ci"'
       when: always

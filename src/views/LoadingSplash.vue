@@ -40,7 +40,8 @@ export default defineComponent({
       dl_progress: "",
       dl_value: 0,
       indeterminate: false,
-      show_options: false
+      show_options: false,
+      start_time: 0
     };
   },
   computed: {
@@ -48,15 +49,15 @@ export default defineComponent({
   mounted(){
     this.$store.dispatch("set_minimal_ui", true);
     ipc.on("download-progress", this.dlProgress);
-    ipc.on("update-downloaded", this.dlFinished);
-    ipc.on("update-available", this.downloadUpdate);
+    ipc.on("update-downloaded", this.dlFinishedDelayed);
+    ipc.on("update-available", this.downloadUpdateDelayed);
     ipc.on("update-not-available", this.upToDate);
     this.checkForUpdate();
   },
   beforeDestroy(){
     ipc.off("download-progress", this.dlProgress);
-    ipc.off("update-downloaded", this.dlFinished);
-    ipc.off("update-available", this.downloadUpdate);
+    ipc.off("update-downloaded", this.dlFinishedDelayed);
+    ipc.off("update-available", this.downloadUpdateDelayed);
     ipc.off("update-not-available", this.upToDate);
   },
   methods: {
@@ -65,12 +66,18 @@ export default defineComponent({
       this.dl_value = progress.percent;
       this.dl_progress = filters.formatSize(progress.bytesPerSecond, "Bps");
     },
+    dlFinishedDelayed(){
+      setTimeout(this.dlFinished, 1000);
+    },
     dlFinished(){
       this.message = "Update downloaded! Installing...";
       this.indeterminate = false;
       this.dl_progress = "";
       this.dl_value = 0;
       ipc.send("install-update");
+    },
+    downloadUpdateDelayed(){
+      setTimeout(this.downloadUpdate, 2000);
     },
     checkForUpdate(){
       this.message = "Checking for updates...";

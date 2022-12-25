@@ -18,7 +18,7 @@ const got_lock = app.requestSingleInstanceLock(argsv);
 export type AppOptions = {
   fullscreen: boolean
   maximize: boolean
-  alt_feed: boolean
+  alt_feed: string
   data_folder: string
   skip_update: boolean
   version: boolean
@@ -30,7 +30,6 @@ export type AppOptions = {
 export const cli_options = {
   fullscreen: false,
   maximize: false,
-  alt_feed: false,
   data_folder: "gog-viewer",
   skip_update: false
 } as AppOptions;
@@ -46,7 +45,7 @@ if(argsv.length > 0){
   }
 }
 if(cli_options.version){
-  console.log("Version: " + app.getVersion());
+  console.log("Version: v" + app.getVersion());
   app.quit();
 }
 console.log("cli_options", cli_options);
