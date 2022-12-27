@@ -3,6 +3,10 @@
     <SideDrawer name="Settings" :show="show" @click:outside="$emit('click:outside')">
       <v-list slot="body">
 
+        <v-list-item @click="toggleAutoDLC">
+          <v-switch dense v-model="auto_dlc" label="Auth download DLC on install" @click="toggleAutoDLC"></v-switch>
+        </v-list-item>
+
         <v-list-item @click="toggleTheme">
           <v-switch dense v-model="theme.dark_mode" label="Dark Mode" @click="toggleTheme"></v-switch>
         </v-list-item>
@@ -183,7 +187,8 @@ export default defineComponent({
         loading: true
       },
       show_uninstalled: true,
-      show_repacked_only: true
+      show_repacked_only: true,
+      auto_dlc: true
     };
   },
   mounted(){
@@ -199,6 +204,9 @@ export default defineComponent({
       if(res !== undefined){
         this.webdav = res;
       }
+    });
+    ipc.invoke("cfg-get", "auto_dlc").then((res) => {
+      this.auto_dlc = res || false;
     });
     this.reloadCacheData();
     this.show_uninstalled = this.$store.getters.showUninstalled;
@@ -217,6 +225,9 @@ export default defineComponent({
     },
     toggleShowUninstalled(){
       this.$store.dispatch("set_show_uninstalled", this.show_uninstalled);
+    },
+    toggleAutoDLC(){
+      this.$store.dispatch("set_auto_dlc", this.auto_dlc);
     },
     toggleShowRepackedOnly(){
       this.$store.dispatch("set_show_repacked_only", this.show_repacked_only);

@@ -219,6 +219,14 @@ async function uninstallFromFileList(folder, output_dir = "", note = ""){
   const final_files = getFileList(folder);
 
   const file_name = "dlc-" + game_id + "-" + note + "-uninstall.json";
+  // If there are fewer than 5 files, just return the object itself
+  if(final_files.length < 5){
+    return {
+      game_id,
+      file_name,
+      content: {files: final_files}
+    };
+  }
   const fsw = fs.createWriteStream(output_dir + "/" + file_name);
   fsw.write(JSON.stringify({files: final_files}, null, 2));
   fsw.close();
@@ -573,9 +581,9 @@ async function repackDLC(dlc_exe, output_dir, options){
 
   // Make uninstall script
   const version_data = await getVersion(dlc_exe, props, FORMAT);
-  const {game_id, file_name} = await getDlcUninstall(props, version_data.iter_id, FORMAT);
+  const {game_id, file_name, content} = await getDlcUninstall(props, version_data.iter_id, FORMAT);
   console.log("game_id: ", game_id);
-  const uninstall_json = file_name;
+  const uninstall_json = content ? content : file_name;
   const slug = await getSlug(props, FORMAT);
 
   // Clean up left overs

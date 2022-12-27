@@ -96,7 +96,9 @@ export default defineComponent({
   methods: {
     downloadAll(){
       for(const i in this.dlc){
-        this.installDLC(this.dlc[i], undefined);
+        if(!this.dlc[i].present){
+          this.installDLC(this.dlc[i], undefined);
+        }
       }
     },
     uninstallAll(){

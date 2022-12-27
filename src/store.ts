@@ -11,8 +11,9 @@ export default new Vuex.Store({
     minimal_ui_title: "",
     dev_mode: localStorage.getItem("dev_mode") === "true",
     offline: false,
-    show_uninstalled: localStorage.getItem("show_uninstalled") === "true",
-    show_repacked_only: localStorage.getItem("show_repacked_only") === "true"
+    show_uninstalled: localStorage.getItem("show_uninstalled") !== "false",
+    show_repacked_only: localStorage.getItem("show_repacked_only") === "true",
+    auto_dlc: false
   },
   mutations: {
     set_minimal_ui(state, minimal_ui){
@@ -32,6 +33,10 @@ export default new Vuex.Store({
     set_show_uninstalled(state, show_uninstalled){
       state.show_uninstalled = show_uninstalled;
       localStorage.setItem("show_uninstalled", show_uninstalled);
+    },
+    set_auto_dlc(state, auto_dlc){
+      state.auto_dlc = auto_dlc;
+      ipcRenderer.send("cfg-set", "auto_dlc", auto_dlc);
     },
     set_show_repacked_only(state, show_repacked_only){
       state.show_repacked_only = show_repacked_only;
@@ -54,6 +59,9 @@ export default new Vuex.Store({
     set_show_uninstalled({ commit }, show_uninstalled: string){
       commit("set_show_uninstalled", show_uninstalled);
     },
+    set_auto_dlc({ commit }, auto_dlc: string){
+      commit("set_auto_dlc", auto_dlc);
+    },
     set_show_repacked_only({ commit }, show_repacked_only: string){
       commit("set_show_repacked_only", show_repacked_only);
     }
@@ -64,7 +72,8 @@ export default new Vuex.Store({
     dev_mode: (state): boolean  => state.dev_mode,
     offline: (state): boolean  => state.offline,
     showUninstalled: (state): boolean => state.show_uninstalled,
-    showRepackedOnly: (state): boolean => state.show_repacked_only
+    showRepackedOnly: (state): boolean => state.show_repacked_only,
+    autoDownloadDLC: (state): boolean => state.auto_dlc
   }
 });
 

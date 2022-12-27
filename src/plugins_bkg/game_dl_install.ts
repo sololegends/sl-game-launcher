@@ -5,6 +5,8 @@ import { cleanupDownloaded, downloadDLC, downloadGame, downloadVersion } from ".
 import { notify, win } from "./index";
 import { syncGameSave, uploadGameSave } from "./cloud_saves";
 import { uninstallDLC, uninstallGame } from "./uninstall";
+import { ensureRemote } from "./game_loader";
+import { getConfig } from "./config";
 import { GOG } from "@/types/gog/game_info";
 import { installGame } from "./install";
 import { processScript } from "./script";
@@ -29,6 +31,16 @@ export async function downloadAndInstallDLC(game: GOG.GameInfo, dlc_slug: string
   }catch(e){
     insDlFinish(game);
     console.log("Game install errored or canceled");
+  }
+}
+
+export async function downloadAndInstallAllDLC(game: GOG.GameInfo){
+  await ensureRemote(game);
+  if(game.remote === undefined){
+    return false;
+  }
+  for(const dlc of game.remote.dlc){
+    downloadAndInstallDLC(game, dlc.slug);
   }
 }
 
@@ -80,9 +92,9 @@ export async function downloadAndReinstall(game: GOG.GameInfo){
   releaseLock(ACTION_LOCK);
 }
 
-export async function downloadAndInstall(game: GOG.GameInfo){
+export async function downloadAndInstall(game: GOG.GameInfo): Promise<boolean>{
   const token = await acquireLock(ACTION_LOCK, false);
-  if(token === undefined){ return; }
+  if(token === undefined){ return false; }
 
   try{
     const dl_files = await downloadGame(game);
@@ -92,7 +104,8 @@ export async function downloadAndInstall(game: GOG.GameInfo){
         text: "Failed to connect to server",
         type: "error"
       });
-      return;
+      releaseLock(ACTION_LOCK);
+      return false;
     }
     if(Array.isArray(dl_files) && dl_files.length >= 1){
       await installGame(game, dl_files, dl_files[0]);
@@ -107,15 +120,22 @@ export async function downloadAndInstall(game: GOG.GameInfo){
   }catch(e){
     insDlFinish(game);
     console.log("Game install errored or canceled");
+    releaseLock(ACTION_LOCK);
+    return false;
   }
   releaseLock(ACTION_LOCK);
+  return true;
 }
 
 export default function init(ipcMain: IpcMain, win: BrowserWindow){
 
   // Init
-  ipcMain.on("install-game", async(e, game: GOG.GameInfo) => {
-    downloadAndInstall(game);
+  ipcMain.handle("install-game", async(e, game: GOG.GameInfo) => {
+    await downloadAndInstall(game);
+    if(getConfig("auto_dlc")){
+      console.log("Triggering install all DLC");
+      downloadAndInstallAllDLC(game);
+    }
   });
 
   // Init

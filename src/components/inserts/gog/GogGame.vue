@@ -350,7 +350,7 @@ export default defineComponent({
     runSetupScript(): void{
       ipc.send("rerun-ins-script", this.game);
     },
-    downloadAndInstall(e?: MouseEvent): void{
+    async downloadAndInstall(e?: MouseEvent){
       this.loading = true;
       ipc.on("game-dlins-end", this.loadingOff);
       ipc.on("game-dl-error", this.loadingOff);
@@ -358,7 +358,7 @@ export default defineComponent({
         this.download();
         return;
       }
-      ipc.send("install-game", this.game);
+      await ipc.invoke("install-game", this.game);
     },
     download(): void{
       ipc.send("download-game", this.game);
