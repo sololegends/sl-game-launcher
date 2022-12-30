@@ -25,7 +25,7 @@ export default function init(ipcMain: IpcMain, splash: BrowserWindow){
   });
   autoUpdater.on("update-available", (info: UpdateInfo) => {
     console.log("Update check took: " + filters.betterSeconds((new Date().getTime() - start_time) / 1000));
-    console.log("Update available: " + info);
+    console.log("Update available: " + JSON.stringify(info));
     splash.webContents.send("update-available", info);
   });
   autoUpdater.on("update-not-available", () => {

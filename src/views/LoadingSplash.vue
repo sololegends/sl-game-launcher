@@ -76,8 +76,10 @@ export default defineComponent({
       this.dl_value = 0;
       ipc.send("install-update");
     },
-    downloadUpdateDelayed(){
-      setTimeout(this.downloadUpdate, 2000);
+    downloadUpdateDelayed(e: unknown, update_info: UpdateInfo){
+      setTimeout(() => {
+        this.downloadUpdate(e, update_info);
+      }, 2000);
     },
     checkForUpdate(){
       this.message = "Checking for updates...";
