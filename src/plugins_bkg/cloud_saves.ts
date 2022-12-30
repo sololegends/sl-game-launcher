@@ -1,6 +1,6 @@
 
 import { BrowserWindow, ipcMain, IpcMain } from "electron";
-import { compressFolder, compressGlob, CompressProgress, decompressFolder } from "./tools/compression";
+import { compressFile, compressFolder, compressGlob, CompressProgress, decompressFile, decompressFolder } from "./tools/compression";
 import { downloadFile, initWebDav, mutateFolder, webDavConfig } from "./nc_webdav";
 import { ErrorStats, Stats } from "node-downloader-helper";
 import { FileStat, WebDAVClient } from "webdav";
@@ -85,7 +85,14 @@ async function packGameSave(game: GOG.GameInfo, saves: GOG.GameSave): Promise<st
       found++;
     }
     if(fs.existsSync(saves[save])){
-      await compressFolder(saves[save], save_tmp + save + ".zip", (p: CompressProgress) =>{
+      if(fs.statSync(saves[save]).isDirectory()){
+        await compressFolder(saves[save], save_tmp + save + ".zip", (p: CompressProgress) =>{
+          win?.webContents.send("save-game-dl-progress", game.name, "Compressing save: " + save, p);
+        }, 6);
+        found++;
+        continue;
+      }
+      await compressFile(saves[save], save_tmp + save + ".zip", (p: CompressProgress) =>{
         win?.webContents.send("save-game-dl-progress", game.name, "Compressing save: " + save, p);
       }, 6);
       found++;
@@ -136,16 +143,27 @@ async function unpackGameSave(game: GOG.GameInfo, saves: GOG.GameSave, save_pack
       if(isGlob(saves[save])){
         folder = saves[save].substring(0, saves[save].replace("\\", "/").lastIndexOf("/"));
       }
-      if(!fs.existsSync(folder)){
-        fs.mkdirSync(folder, {recursive: true});
+      const is_dir = isNaN(save as unknown as number);
+      if(is_dir){
+        if(!fs.existsSync(folder)){
+          fs.mkdirSync(folder, {recursive: true});
+        }
+        await decompressFolder(save_tmp + save + ".zip", folder, (p: CompressProgress) =>{
+          win?.webContents.send("save-game-dl-progress", game.name, "Unpacking save: " + save, p);
+        });
+        continue;
       }
-      await decompressFolder(save_tmp + save + ".zip", folder, (p: CompressProgress) =>{
+      await decompressFile(save_tmp + save + ".zip", folder, (p: CompressProgress) =>{
         win?.webContents.send("save-game-dl-progress", game.name, "Unpacking save: " + save, p);
       });
     }
   }
 
   fs.rmSync(save_tmp, { recursive: true });
+  const save_download = game.remote_name + "-save.zip";
+  if(fs.existsSync(tmp_dir + "/" + save_download)){
+    fs.rmSync(tmp_dir + "/" + save_download);
+  }
 }
 
 export async function pushSaveToCloud(save_path: string, name: string, remote_folder: string, remote_file: string, loud = true){
@@ -319,7 +337,7 @@ async function newerInCloud(
   web_dav: WebDAVClient,
   remote_save_folder: string,
   remote_save_file: string
-): Promise<boolean>{
+): Promise<boolean | -1>{
   const save_files = getSavesLocation(game);
   if(save_files === undefined){
     return false;
@@ -358,7 +376,7 @@ async function newerInCloud(
   // Get save age in cloud
   const stat = await web_dav.stat(remote_save_file) as FileStat;
   console.log("oldest:", oldest, "Date.parse(stat.lastmod):", Date.parse(stat.lastmod));
-  return oldest + 15000 < Date.parse(stat.lastmod);
+  return oldest === 0 ? -1 : oldest + 15000 < Date.parse(stat.lastmod);
 }
 
 export async function syncGameSave(game: GOG.GameInfo, resolver: (cloud: boolean) => void){
@@ -378,14 +396,19 @@ export async function syncGameSave(game: GOG.GameInfo, resolver: (cloud: boolean
     // Generate cloud location
     const remote_save_folder = getRemoteSaveDirectory(game.remote_name);
     const remote_save_file = remote_save_folder + "/" + REMOTE_FILE_BASE + ".zip";
-    if(!(await newerInCloud(game, web_dav, remote_save_folder, remote_save_file))){
+    const newer_in_cloud = await newerInCloud(game, web_dav, remote_save_folder, remote_save_file);
+    if(!newer_in_cloud){
       win?.webContents.send("save-game-stopped", game);
       return resolver(false);
     }
 
     // At this point we know the file exists, and is newer than local saves
 
-    // Proceed to user request
+    // Proceed to user request IF the saves existed (newer_in_cloud !== -1)
+    if(newer_in_cloud === -1){
+      deployCloudSave(game, web_dav, remote_save_file, resolver);
+      return;
+    }
     const evt = "use-cloud-save-" + new Date().getTime();
     const evtl = "use-local-save-" + new Date().getTime();
     win?.webContents.send(
