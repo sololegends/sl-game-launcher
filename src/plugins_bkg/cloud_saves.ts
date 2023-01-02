@@ -15,7 +15,31 @@ import os from "os";
 let win = undefined as undefined | BrowserWindow;
 let globals = undefined as undefined | Globals;
 
-export function procSaveFile(save_file_raw: string, game: GOG.GameInfo){
+// The folder for saves or the folder container the save files
+export function procSaveFolder(save_file_raw: string, game: GOG.GameInfo): string | undefined{
+  let folder = save_file_raw;
+  if(save_file_raw.startsWith("~")){
+    folder = os.homedir()  + save_file_raw.substring(1);
+  }else if(save_file_raw.startsWith("./")){
+    folder = game.root_dir  + save_file_raw.substring(1);
+  }else if(save_file_raw.startsWith("<steam>/")){
+    folder = game.root_dir  + save_file_raw.substring(1);
+  }
+  if(save_file_raw.includes("*")){
+    folder = save_file_raw.substring(0, save_file_raw.lastIndexOf("*"));
+  }
+  folder = folder.replaceAll("\\", "/");
+  // Find closest folder to the saves
+  if(!fs.existsSync(folder)){
+    folder = folder.substring(0, folder.lastIndexOf("/"));
+  }
+  if(!fs.existsSync(folder)){
+    return folder;
+  }
+  return folder;
+}
+
+export function procSaveFile(save_file_raw: string, game: GOG.GameInfo): string{
   if(save_file_raw.startsWith("~")){
     return os.homedir()  + save_file_raw.substring(1);
   }else if(save_file_raw.startsWith("./")){
@@ -26,7 +50,7 @@ export function procSaveFile(save_file_raw: string, game: GOG.GameInfo){
   return save_file_raw;
 }
 
-export function getRemoteSaveDirectory(name: string){
+export function getRemoteSaveDirectory(name: string): string{
   const rf = getConfig("remote_save_folder") as string;
   const mutated_folder = mutateFolder( rf ? rf : REMOTE_FOLDER);
   return mutated_folder + "/" + name;

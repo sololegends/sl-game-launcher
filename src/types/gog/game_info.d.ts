@@ -40,6 +40,8 @@ export namespace GOG {
 	export type GameRedist = {
 		exe_path: string
 		arguments: string[]
+		name?: string
+		version?: string
 	}
 
 	export type RemoteGameDLC = {

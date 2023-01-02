@@ -10,6 +10,10 @@ import { getConfig } from "../config";
 import { GOG } from "@/types/gog/game_info";
 import { Stats } from "node-downloader-helper";
 
+export type DownloadResult = {
+  status: "success" | "webdav_error" | "canceled" | "token_failed" | "remote_failed" | "unknown",
+  links?: string[]
+};
 
 function nrd(game: GOG.GameInfo){
   notify({
@@ -34,15 +38,15 @@ export function cleanupDownloaded(dl_link_set: string[]){
   }
 }
 
-export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: string[], token: LockAbortToken): Promise<string[]>{
-  const promise_array = [] as Promise<string>[];
+export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: string[], token: LockAbortToken): Promise<DownloadResult>{
+  const promise_array = [] as Promise<DownloadResult>[];
   // General init
   const game_remote = await ensureRemote(game);
 
   const webdav = await initWebDav();
   if(!webdav){
-    return new Promise<string[]>((r, reject) => {
-      reject(dl_link_set);
+    return new Promise<DownloadResult>((r, reject) => {
+      reject({status: "webdav_error"});
     });
   }
   const gog_path = getConfig("gog_path");
@@ -50,7 +54,7 @@ export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: str
   ensureDir(tmp_download);
 
   for(const dl_link of dl_link_set){
-    promise_array.push(new Promise<string>((resolve, reject) => {
+    promise_array.push(new Promise<DownloadResult>((resolve, reject) => {
       // Acquire lock
       acquireLock(DOWNLOAD_SEQUENCE);
       // Initialize download
@@ -65,20 +69,13 @@ export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: str
         // Release lock
         token.off("abort");
         releaseLock(DOWNLOAD_SEQUENCE);
-        resolve(dl_link);
+        resolve({status: "success", links: [dl_link]});
       }
 
       const save_loc = tmp_download + "/" + dl_link;
+      // Remove on start if left over
       if(fs.existsSync(save_loc)){
-        const fs_stat = fs.statSync(save_loc);
-        if(fs_stat.size === total){
-          win()?.webContents.send("game-dl-progress", game, {
-            total: total,
-            progress: total
-          });
-          done();
-          return;
-        }
+        fs.rmSync(save_loc);
       }
       // Perform download
       const active_dl = downloadFile(webdav.getFileDownloadLink(game_remote.folder + "/" + dl_link), dl_link);
@@ -105,35 +102,49 @@ export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: str
         console.log("Aborting download");
         active_dl.stop();
         releaseLock(DOWNLOAD_SEQUENCE);
-        reject(dl_link);
+        reject("canceled");
       });
-      if(fs.existsSync(save_loc)){
-        active_dl.resumeFromFile(save_loc);
-      }else{
-        active_dl.start();
+      if(token.aborted()){
+        console.log("Aborting download");
+        releaseLock(DOWNLOAD_SEQUENCE);
+        reject("canceled");
+        return;
       }
+      active_dl.start();
     }));
   }
 
-  return Promise.all(promise_array).finally(() => {
+  const results = await Promise.all(promise_array).finally(() => {
     releaseLock(DOWNLOAD_SEQUENCE);
     win()?.webContents.send("progress-banner-hide");
   });
+  // Compile the rsults
+  const final_results = {
+    status: "success",
+    links: dl_link_set
+  } as DownloadResult;
+  for(const result of results){
+    if(result.status !== "success"){
+      final_results.status = result.status;
+      return final_results;
+    }
+  }
+  return final_results;
 }
 
-async function downloadPrep(game: GOG.GameInfo, dl_link_set: string[]): Promise<string[]>{
+async function downloadPrep(game: GOG.GameInfo, dl_link_set: string[]): Promise<DownloadResult>{
   const token = await acquireLock(DOWNLOAD);
   if(!token){
-    return new Promise<string[]>((resolve, reject) => {
+    return new Promise<DownloadResult>((resolve, reject) => {
       releaseLock(DOWNLOAD);
-      reject(dl_link_set);
+      reject({status: "token_failed"});
     });
   }
   if(game.remote === undefined){
     win()?.webContents.send("progress-banner-error", "Failed to start download: No Remote Data");
-    return new Promise<string[]>((resolve, reject) => {
+    return new Promise<DownloadResult>((resolve, reject) => {
       releaseLock(DOWNLOAD);
-      reject(dl_link_set);
+      reject({status: "remote_failed"});
     });
   }
   const gog_path = getConfig("gog_path");
@@ -145,25 +156,25 @@ async function downloadPrep(game: GOG.GameInfo, dl_link_set: string[]): Promise<
     });
 }
 
-export async function downloadGame(game: GOG.GameInfo): Promise<string[] | undefined>{
+export async function downloadGame(game: GOG.GameInfo): Promise<DownloadResult>{
   try{
     game.remote = await ensureRemote(game);
   }catch(e){
     nrd(game);
-    return new Promise<string[]>((resolve, reject) => {
-      reject(undefined);
+    return new Promise<DownloadResult>((resolve, reject) => {
+      reject({status: "remote_failed"});
     });
   }
   return downloadPrep(game, game.remote.download);
 }
 
-export async function downloadDLC(game: GOG.GameInfo, dlc_slug: string): Promise<string[] | undefined>{
+export async function downloadDLC(game: GOG.GameInfo, dlc_slug: string): Promise<DownloadResult>{
   try{
     game.remote = await ensureRemote(game);
   }catch(e){
     nrd(game);
-    return new Promise<string[]>((resolve, reject) => {
-      reject(undefined);
+    return new Promise<DownloadResult>((resolve, reject) => {
+      reject({status: "remote_failed"});
     });
   }
   // Find dlc install index
@@ -178,13 +189,13 @@ export async function downloadDLC(game: GOG.GameInfo, dlc_slug: string): Promise
   return downloadPrep(game, game.remote.dlc[idx].download);
 }
 
-export async function downloadVersion(game: GOG.GameInfo, version_id: string, version: GOG.RemoteGameDLC): Promise<string[]>{
+export async function downloadVersion(game: GOG.GameInfo, version_id: string, version: GOG.RemoteGameDLC): Promise<DownloadResult>{
   try{
     game.remote = await ensureRemote(game);
   }catch(e){
     nrd(game);
-    return new Promise<string[]>((resolve, reject) => {
-      reject([]);
+    return new Promise<DownloadResult>((resolve, reject) => {
+      reject({status: "remote_failed"});
     });
   }
   return downloadPrep(game, version.download);

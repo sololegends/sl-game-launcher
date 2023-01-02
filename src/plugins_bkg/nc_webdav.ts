@@ -71,17 +71,15 @@ export function downloadFile(_dl_link: string, file_name: string): DownloaderHel
   const tmp_download = gog_path + "\\.temp\\";
   globals?.ensureDir(tmp_download);
 
-  const active_dl = new DownloaderHelper(dl_link.url, tmp_download, {
+  return new DownloaderHelper(dl_link.url, tmp_download, {
     headers: {
       "Authorization": dl_link.auth
     },
     fileName: file_name,
-    resumeIfFileExists: true,
-    removeOnStop: false,
+    resumeIfFileExists: false,
+    removeOnStop: true,
     removeOnFail: true
   });
-
-  return active_dl;
 }
 
 export default function init(ipcMain: IpcMain, _win: BrowserWindow, _globals: Globals){

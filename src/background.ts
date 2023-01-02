@@ -5,6 +5,7 @@ import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import { createSplashWindow } from "./plugins_bkg/auto_update";
 import { ensureDir } from "./plugins_bkg/tools/files";
+import exeInfo from "win-version-info";
 import load from "./plugins_bkg";
 import logging from "./plugins_bkg/logging";
 const isDevelopment = process.env.NODE_ENV !== "production";
@@ -22,6 +23,9 @@ export type AppOptions = {
   data_folder: string
   skip_update: boolean
   version: boolean
+
+  // Single Processes
+  read_exe: string
 
   // Catch all
   [key: string]: string | boolean | number
@@ -43,6 +47,10 @@ if(argsv.length > 0){
     }
     cli_options[key_val[0].replace("-", "_")] = key_val[1];
   }
+}
+if(cli_options.read_exe){
+  console.log(exeInfo(cli_options.read_exe));
+  app.quit();
 }
 if(cli_options.version){
   console.log("Version: v" + app.getVersion());

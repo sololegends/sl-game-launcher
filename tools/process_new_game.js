@@ -3,6 +3,7 @@ const child = require("child_process");
 const fs = require("fs");
 const archiver = require("archiver");
 const zip = require("node-stream-zip");
+const exeInfo = require("win-version-info");
 
 // My stuffs
 const FORMAT = "game-info";
@@ -236,7 +237,7 @@ async function uninstallFromFileList(folder, output_dir = "", note = ""){
   };
 }
 
-async function redistFromInnoScript(inno_script){
+async function redistFromInnoScript(inno_script, game_folder){
   const FILENAME = "Filename: \"{app}/";
   const PARAMS = "Parameters: \"";
   const redists = await readInsScript(inno_script, "Run");
@@ -252,8 +253,12 @@ async function redistFromInnoScript(inno_script){
       if(param_split.length < 2){
         continue;
       }
-      const params = param_split[1].split("\";")[0].replaceAll("\\", "/").trim().split(" ") ;
+      const params = param_split[1].split("\";")[0].replaceAll("\\", "/").trim().split(" ");
+      // Get the file versions
+      const exe_data = exeInfo(game_folder + "/" + exe);
       final_redist.push({
+        name: exe_data.ProductName,
+        version: exe_data.ProductVersion,
         exe_path: exe,
         arguments: params
       });
@@ -363,12 +368,12 @@ async function processGameFiles(data, format = "game-info"){
     }
     // Clean up the app dir
     fs.rmSync(data.output_folder + "/app", {recursive: true});
+    if(fs.existsSync(data.output_folder + "/__redist/ISI")){
+      fs.rmSync(data.output_folder + "/__redist/ISI", {recursive: true});
+    }
     if(data.is_dlc){
       if(fs.existsSync(data.output_folder + "/webcache.zip")){
         fs.rmSync(data.output_folder + "/webcache.zip");
-      }
-      if(fs.existsSync(data.output_folder + "/__redist/ISI")){
-        fs.rmSync(data.output_folder + "/__redist/ISI", {recursive: true});
       }
     }else if(fs.existsSync(data.output_folder + "/webcache.zip")){
       const webcache = new zip.async({file: data.output_folder + "/webcache.zip"});
@@ -517,7 +522,7 @@ async function repackGame(game_exe, output_dir, options){
   // Check for install script and the redist within
   let redist = [];
   if(fs.existsSync(props.unpack_folder + "/install_script.iss")){
-    redist = await redistFromInnoScript(props.unpack_folder + "/install_script.iss");
+    redist = await redistFromInnoScript(props.unpack_folder + "/install_script.iss", game_folder);
   }
   // Get the install size metric
   const install_size = await getFolderSize(game_folder);

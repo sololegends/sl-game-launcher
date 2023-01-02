@@ -16,6 +16,8 @@ import tk from "tree-kill";
 
 let active_ins = undefined as undefined | child.ChildProcess;
 
+export type InstallResult = "success" | "canceled" | "extract_failed" | "install_failed" | "lock_failed" | "invalid_install" | "unknown";
+
 export function sendInstallStart(game: GOG.GameInfo, indeterminate = true){
   console.log("Starting Install");
   win()?.webContents.send("game-ins-start", game);
@@ -73,8 +75,8 @@ async function zipPostInstall(game: GOG.GameInfo){
 
 async function installGameZip(
   game: GOG.GameInfo, dl_files: string[], zip_f: string,
-  token: LockAbortToken, do_post = true): Promise<GOG.GameInfo>{
-  return new Promise<GOG.GameInfo>((resolve, reject) => {
+  token: LockAbortToken, do_post = true): Promise<InstallResult>{
+  return new Promise<InstallResult>((resolve, reject) => {
     sendInstallStart(game, false);
     const gog_path = getConfig("gog_path");
     const tmp_download = gog_path + "\\.temp\\";
@@ -85,13 +87,13 @@ async function installGameZip(
     console.log("Installing " + game.name + " into: ", ins_dir);
     ensureDir(ins_dir);
     if(token.aborted()){
-      reject(game); return;
+      reject("canceled"); return;
     }
     const archive = new zip.async({file: tmp_download + zip_f});
     token.on("abort", ()=>{
       if(archive){
         archive.close();
-        reject(game);
+        reject("canceled");
       }
     });
     archive.entriesCount.then((total_count) => {
@@ -115,7 +117,7 @@ async function installGameZip(
       });
       if(token.aborted()){
         archive.close();
-        reject(game); return;
+        reject("canceled"); return;
       }
       archive.extract(null, ins_dir).then((count) => {
         console.log("Extracted:" + count);
@@ -129,22 +131,22 @@ async function installGameZip(
           sendInstallEnd(game);
           if(do_post){
             zipPostInstall(game).then(() => {
-              resolve(game);
+              resolve("success");
             });
             return;
           }
-          resolve(game);
+          resolve("success");
         });
       }).catch((e) => {
         console.error("Failed to extract game: ", e, game);
-        reject(game);
+        reject("extract_failed");
       });
     });
   });
 }
 
-function installGameExe(game: GOG.GameInfo, dl_files: string[], exe: string, token: LockAbortToken): Promise<GOG.GameInfo>{
-  return new Promise<GOG.GameInfo>((resolve, reject) => {
+function installGameExe(game: GOG.GameInfo, dl_files: string[], exe: string, token: LockAbortToken): Promise<InstallResult>{
+  return new Promise<InstallResult>((resolve, reject) => {
     sendInstallStart(game);
     const gog_path = getConfig("gog_path");
     const tmp_download = gog_path + "\\.temp\\";
@@ -153,7 +155,7 @@ function installGameExe(game: GOG.GameInfo, dl_files: string[], exe: string, tok
       ins_dir = gog_path + "\\" + normalizeFolder(game.name);
     }
     if(token.aborted()){
-      reject(game); return;
+      reject("canceled"); return;
     }
     console.log("Installing " + game.name + " into: ", ins_dir);
     active_ins = child.execFile(
@@ -173,7 +175,7 @@ function installGameExe(game: GOG.GameInfo, dl_files: string[], exe: string, tok
       active_ins = undefined;
       console.log("Game error installed with code: " + code);
       sendInstallError(game);
-      reject(game);
+      reject("install_failed");
     });
     active_ins.addListener("close", (code: number) => {
       token.off("abort");
@@ -188,7 +190,7 @@ function installGameExe(game: GOG.GameInfo, dl_files: string[], exe: string, tok
         fs.writeFileSync(ins_dir + "/" + game_iter_id, (game.remote?.iter_id ? game.remote?.iter_id : 0) + "");
         fs.writeFileSync(ins_dir + "/" + game_folder_size, getFolderSize(ins_dir) + "");
         sendInstallEnd(game);
-        resolve(game);
+        resolve("success");
         return;
       }
       if(code === 2){
@@ -198,15 +200,17 @@ function installGameExe(game: GOG.GameInfo, dl_files: string[], exe: string, tok
       if(code === 2){
         sendInstallError(game);
       }
-      reject(game);
+      reject("install_failed");
     });
   });
 }
 
-export async function installGame(game: GOG.GameInfo, dl_files: string[], exe: string, do_post = true): Promise<GOG.GameInfo>{
+export async function installGame(game: GOG.GameInfo, dl_files: string[], exe: string, do_post = true): Promise<InstallResult>{
   const lock = await acquireLock(UN_INSTALL_LOCK, true);
   if(lock === undefined){
-    return game;
+    return new Promise<InstallResult>((r, reject) => {
+      reject("lock_failed");
+    });
   }
   console.log("Install init: ", exe);
   if(exe.endsWith(".exe")){
@@ -218,8 +222,8 @@ export async function installGame(game: GOG.GameInfo, dl_files: string[], exe: s
       releaseLock(UN_INSTALL_LOCK);
     });
   }
-  return new Promise<GOG.GameInfo>((r, reject) => {
-    reject(game);
+  return new Promise<InstallResult>((r, reject) => {
+    reject("invalid_install");
   }).finally(() =>{
     releaseLock(UN_INSTALL_LOCK);
   });

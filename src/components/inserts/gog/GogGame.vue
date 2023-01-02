@@ -64,7 +64,7 @@
 </template>
 
 <script lang="ts">
-import { getSavesLocation, procSaveFile } from "@/plugins_bkg/cloud_saves";
+import { getSavesLocation, procSaveFolder } from "@/plugins_bkg/cloud_saves";
 import { ContextMenu } from "@/components/plugins/context-menu/context-menu";
 import { defineComponent } from "@vue/composition-api";
 import filters from "@/js/filters";
@@ -287,8 +287,17 @@ export default defineComponent({
       const saves = getSavesLocation(this.game);
       if(saves){
         for(const save in saves){
-          console.log(procSaveFile(saves[save], this.game));
-          ipc.send("open-folder", procSaveFile(saves[save], this.game));
+          const saves_folder = procSaveFolder(saves[save], this.game);
+          if(saves_folder){
+            ipc.send("open-folder", procSaveFolder(saves[save], this.game));
+            return;
+          }
+          console.log("Failed to find save location: " + saves[save]);
+          this.$notify({
+            title: "Failed to find save folder",
+            text: saves[save],
+            type: "warning"
+          });
         }
       }
     },

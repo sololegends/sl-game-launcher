@@ -1,5 +1,6 @@
 
-import elevate from "../elevate";
+import * as child from "child_process";
+import elevate, { ElevateCallback } from "../elevate";
 import { Regedit } from "regedit";
 
 const DEFAULT_TYPE = "REG_SZ";
@@ -16,10 +17,9 @@ export const HKCR = "HKEY_CLASSES_ROOT" as Regedit.Machine;
  * @param command - REG command to execute
  * @returns RedEditResponse - the response resulting form the command's execution
  */
-async function exec(command: string): Promise<Regedit.RedEditResponse>{
+async function exec(command: string, as_admin = true): Promise<Regedit.RedEditResponse>{
   return new Promise<Regedit.RedEditResponse>((resolve, reject) => {
-    // Something
-    elevate(command, (error, stdout, stderr) => {
+    const callback = (error: child.ExecException | Error | string | null, stdout: string | Buffer, stderr: string | Buffer) => {
       if(error){
         return reject({
           success: false,
@@ -32,7 +32,17 @@ async function exec(command: string): Promise<Regedit.RedEditResponse>{
         stdout: stdout && stdout instanceof Buffer ? stdout?.toString() : stdout,
         stderr: stderr && stderr instanceof Buffer ? stderr?.toString() : stderr
       });
-    });
+    };
+    if(!as_admin){
+      child.exec(command, callback);
+      return;
+    }
+    // Something
+    try{
+      elevate(command, callback as ElevateCallback);
+    }catch(e){
+      callback("Elevation failed", "", "Elevation failed");
+    }
   });
 }
 
@@ -108,7 +118,7 @@ export async function Query(key: string, value?: string, query_subkeys?: boolean
   data?: string, target?: "key_names" | "data", case_sensitive?: boolean, exact?: boolean,
   type?: Regedit.Type, separator?: string, bit_64?: boolean): Promise<Regedit.RedEditResponse>{
 
-  return exec(buildQuery(key, value, query_subkeys, data, target, case_sensitive, exact, type, separator, bit_64));
+  return exec(buildQuery(key, value, query_subkeys, data, target, case_sensitive, exact, type, separator, bit_64), false);
 }
 
 export function buildAdd(key: string, value: string | undefined, type: Regedit.Type, data: string,

@@ -20,7 +20,7 @@ function triggerReload(game?: GOG.GameInfo){
   win()?.webContents.send("gog-game-reload", game);
 }
 
-export async function downloadAndInstallDLC(game: GOG.GameInfo, dlc_slug: string){
+export async function downloadAndInstallDLC(game: GOG.GameInfo, dlc_slug: string): Promise<string>{
   try{
     const dl_files = await downloadDLC(game, dlc_slug);
     if(Array.isArray(dl_files) && dl_files.length >= 1){
@@ -28,9 +28,11 @@ export async function downloadAndInstallDLC(game: GOG.GameInfo, dlc_slug: string
       cleanupDownloaded(dl_files);
     }
     triggerReload(game);
+    return "success";
   }catch(e){
     insDlFinish(game);
-    console.log("Game install errored or canceled");
+    console.log("Game install errored or canceled: ", e);
+    return e as string;
   }
 }
 
@@ -40,7 +42,11 @@ export async function downloadAndInstallAllDLC(game: GOG.GameInfo){
     return false;
   }
   for(const dlc of game.remote.dlc){
-    downloadAndInstallDLC(game, dlc.slug);
+    const result = await downloadAndInstallDLC(game, dlc.slug);
+    // If cancel, kill the rest
+    if(result === "canceled"){
+      return false;
+    }
   }
 }
 
@@ -61,9 +67,12 @@ export async function downloadAndReinstall(game: GOG.GameInfo){
 
   try{
     await uploadGameSave(game);
-    const dl_files = await downloadGame(game);
-    console.log("dl_files", dl_files);
-    if(dl_files === undefined){
+    const dl_result = await downloadGame(game);
+    console.log("dl_result", dl_result);
+    if(dl_result.status !== "success"){
+      if(dl_result.status === "canceled"){
+        return;
+      }
       notify({
         title: "Game download failed",
         text: "Failed to connect to server",
@@ -71,6 +80,7 @@ export async function downloadAndReinstall(game: GOG.GameInfo){
       });
       return;
     }
+    const dl_files = dl_result.links;
     if(Array.isArray(dl_files) && dl_files.length >= 1){
     // Uninstall first
       await uninstallGame(game);
@@ -97,8 +107,13 @@ export async function downloadAndInstall(game: GOG.GameInfo): Promise<boolean>{
   if(token === undefined){ return false; }
 
   try{
-    const dl_files = await downloadGame(game);
-    if(dl_files === undefined){
+    const dl_result = await downloadGame(game);
+    console.log("dl_result", dl_result);
+    if(dl_result.status !== "success"){
+      if(dl_result.status === "canceled"){
+        releaseLock(ACTION_LOCK);
+        return false;
+      }
       notify({
         title: "Game download failed",
         text: "Failed to connect to server",
@@ -107,6 +122,7 @@ export async function downloadAndInstall(game: GOG.GameInfo): Promise<boolean>{
       releaseLock(ACTION_LOCK);
       return false;
     }
+    const dl_files = dl_result.links;
     if(Array.isArray(dl_files) && dl_files.length >= 1){
       await installGame(game, dl_files, dl_files[0]);
       await syncGameSave(game, (b: boolean ) => {
@@ -131,8 +147,8 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
 
   // Init
   ipcMain.handle("install-game", async(e, game: GOG.GameInfo) => {
-    await downloadAndInstall(game);
-    if(getConfig("auto_dlc")){
+    const result = await downloadAndInstall(game);
+    if(result && getConfig("auto_dlc")){
       console.log("Triggering install all DLC");
       downloadAndInstallAllDLC(game);
     }
@@ -146,8 +162,11 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
   // Init
   ipcMain.on("download-game", async(e, game: GOG.GameInfo) => {
     try{
-      const dl_files = await downloadGame(game);
-      if(dl_files === undefined){
+      const dl_result = await downloadGame(game);
+      if(dl_result.status !== "success"){
+        if(dl_result.status === "canceled"){
+          return false;
+        }
         notify({
           title: "Game download failed",
           text: "Failed to connect to server",

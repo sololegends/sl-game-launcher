@@ -8,7 +8,7 @@
     :color="options.color"
   >
     <template>
-      <span class="game-name no-sel">{{options.title}}</span>
+      <div class="overflow game-name no-sel" :title="options.title">{{options.title}}</div>
       <v-spacer />
       <span class="dl-speed" v-if="dl_speed">{{speed}}</span>
       <v-btn v-if="options.cancel_event" icon @click="cancel" tip-title="Cancel">
@@ -109,9 +109,22 @@ export default defineComponent({
 .dl-speed{
 	font-weight: bold;
 	font-size: 18px;
+  word-break: keep-all;
+  white-space: nowrap;
+  margin-left: 15px;
+}
+.overflow {
+  height: 20px;
+  max-width: 100%;
+  padding: 0 10px 0 5px;
+  position: relative;
+  display: inline-block;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .game-name{
-  padding-left: 10px;
 	font-weight: bold;
 	font-size: 16px;
 }

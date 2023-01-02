@@ -2,7 +2,9 @@
 import { existsSync, readdirSync } from "fs";
 import elevate from "../elevate";
 import { ensureRemote } from "@/plugins_bkg/game_loader";
+import exeInfo from "win-version-info";
 import { GOG } from "@/types/gog/game_info";
+import isInstalled from "@/plugins_bkg/tools/installed_apps";
 import { win } from "@/plugins_bkg";
 
 type RedistInstallResult = {
@@ -37,6 +39,27 @@ async function installRedist(redist_exes: string[]): Promise<RedistInstallResult
   });
 }
 
+async function isInstalledExe(exe_path: string){
+  try{
+    const exe_data = exeInfo(exe_path);
+    if(exe_data.ProductName === undefined || exe_data.ProductVersion === undefined){
+      return false;
+    }
+    return await isInstalled(exe_data.ProductName, exe_data.ProductVersion);
+  }catch(e){
+    console.error(e);
+  }
+  return false;
+}
+
+
+async function isInstalledObj(redist: GOG.GameRedist){
+  if(redist.name === undefined || redist.version === undefined){
+    return false;
+  }
+  return await isInstalled(redist.name, redist.version);
+}
+
 export async function scanAndInstallRedist(game: GOG.GameInfo){
   // Use the remote defined with silent args, if possible
   game.remote = await ensureRemote(game);
@@ -44,7 +67,11 @@ export async function scanAndInstallRedist(game: GOG.GameInfo){
     // Build install set
     const redist_set = [];
     for(const redist of game.remote.redist){
-      redist_set.push("\"" + game.root_dir + "/" + redist.exe_path + "\" " + redist.arguments.join(" "));
+      // * Check if already installed
+      const exe_path = game.root_dir + "/" + redist.exe_path;
+      if(!(await isInstalledObj(redist)) && !(await isInstalledExe(exe_path))){
+        redist_set.push("\"" + exe_path + "\" " + redist.arguments.join(" "));
+      }
     }
     if(redist_set.length > 0){
       await installRedist(redist_set);
@@ -71,7 +98,11 @@ export async function scanAndInstallRedist(game: GOG.GameInfo){
     const exes = readdirSync(exe_folder);
     for(const exe of exes){
       if(exe.endsWith(".exe")){
-        redist_set.push("\"" + exe_folder + "/" + exe + "\"");
+        // * Check if already installed
+        const exe_path = exe_folder + "/" + exe;
+        if(!isInstalledExe(exe_path)){
+          redist_set.push("\"" + exe_path + "\"");
+        }
       }
     }
   }
