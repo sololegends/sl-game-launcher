@@ -2,10 +2,10 @@
 import { app, BrowserWindow, ipcMain, protocol } from "electron";
 import initConfig, { APP_URL_HANDLER, getConfig } from "./plugins_bkg/config";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
+import { parsePE, ParsePEResponse} from "pe-exe-parser";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import { createSplashWindow } from "./plugins_bkg/auto_update";
 import { ensureDir } from "./plugins_bkg/tools/files";
-import exeInfo from "win-version-info";
 import load from "./plugins_bkg";
 import logging from "./plugins_bkg/logging";
 const isDevelopment = process.env.NODE_ENV !== "production";
@@ -49,8 +49,10 @@ if(argsv.length > 0){
   }
 }
 if(cli_options.read_exe){
-  console.log(exeInfo(cli_options.read_exe));
-  app.quit();
+  parsePE(cli_options.read_exe, {}).then((result: ParsePEResponse) => {
+    console.log(result.metadata());
+    app.quit();
+  });
 }
 if(cli_options.version){
   console.log("Version: v" + app.getVersion());

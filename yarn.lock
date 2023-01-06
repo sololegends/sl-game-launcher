@@ -1451,11 +1451,6 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-16.11.45.tgz#155b13a33c665ef2b136f7f245fa525da419e810"
   integrity sha512-3rKg/L5x0rofKuuUt5zlXzOnKyIHXmIu5R8A0TuNDMF2062/AOIDBciFIjToLEJ/9F9DzkHNot+BpNsMI1OLdQ==
 
-"@types/node@^17.0.30":
-  version "17.0.45"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-17.0.45.tgz#2c0fafd78705e7a18b7906b5201a522719dc5190"
-  integrity sha512-w+tIMs3rq2afQdsPJlODhoUEKzFP1ayaoyl1CcnwtIlsVe7K7bA1NGm4s3PraqTLlXnbIN84zuBlxBWo1u9BLw==
-
 "@types/normalize-package-data@^2.4.0":
   version "2.4.1"
   resolved "https://registry.yarnpkg.com/@types/normalize-package-data/-/normalize-package-data-2.4.1.tgz#d3357479a0fdfdd5907fe67e17e0a85c906e1301"
@@ -1570,11 +1565,6 @@
     "@types/webpack-sources" "*"
     anymatch "^3.0.0"
     source-map "^0.6.0"
-
-"@types/win-version-info@^3.1.1":
-  version "3.1.1"
-  resolved "https://registry.yarnpkg.com/@types/win-version-info/-/win-version-info-3.1.1.tgz#0ea3755c6bcbcadf02c2f8decc8645cdffd88bd2"
-  integrity sha512-Dy7t/VEJPiQ1uAD8BMCMm2RvO6a0eKoarNWHleSfcUJHUzGWh1FYHlAHuZZO7ynuJ41WYz+YD10O6UYbFZpRxg==
 
 "@types/yargs-parser@*":
   version "21.0.0"
@@ -8002,11 +7992,6 @@ nanomatch@^1.2.9:
     snapdragon "^0.8.1"
     to-regex "^3.0.1"
 
-napi-macros@^2.0.0:
-  version "2.2.2"
-  resolved "https://registry.yarnpkg.com/napi-macros/-/napi-macros-2.2.2.tgz#817fef20c3e0e40a963fbf7b37d1600bd0201044"
-  integrity sha512-hmEVtAGYzVQpCKdbQea4skABsdXW4RUh5t5mJ2zzqowJS2OyXZTU1KhDVFhx+NlWZ4ap9mqR9TcDO3LTTttd+g==
-
 natural-compare@^1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/natural-compare/-/natural-compare-1.4.0.tgz#4abebfeed7541f2c27acfb29bdbbd15c8d5ba4f7"
@@ -8053,11 +8038,6 @@ node-forge@^0.10.0:
   version "0.10.0"
   resolved "https://registry.yarnpkg.com/node-forge/-/node-forge-0.10.0.tgz#32dea2afb3e9926f02ee5ce8794902691a676bf3"
   integrity sha512-PPmu8eEeG9saEUvI97fm4OYxXVB6bFvyNTyiUOBichBpFG8A1Ljw3bY62+5oOjDEMHRnd0Y7HQ+x7uzxOzC6JA==
-
-node-gyp-build@^4.3.0:
-  version "4.5.0"
-  resolved "https://registry.yarnpkg.com/node-gyp-build/-/node-gyp-build-4.5.0.tgz#7a64eefa0b21112f89f58379da128ac177f20e40"
-  integrity sha512-2iGbaQBV+ITgCz76ZEjmhUKAKVf7xfY1sRl4UiKQspfZMH2h06SyhNsnSVy50cwkFQDGLyif6m/6uFXHkOZ6rg==
 
 node-gyp@^7.1.0:
   version "7.1.2"
@@ -8691,12 +8671,12 @@ pbkdf2@^3.0.3:
     safe-buffer "^5.0.1"
     sha.js "^2.4.8"
 
-pe-parser@^1.0.11:
-  version "1.0.11"
-  resolved "https://registry.yarnpkg.com/pe-parser/-/pe-parser-1.0.11.tgz#1cf8a6c340143430ce74d835e135bef5ae2c677b"
-  integrity sha512-+OzR89dOioAVzFTfEq4Yi4TFlSDjMpVCxXkjeZi0v5/5kDVSnWxfuW/GQM5z9vAudxDqeln78cneMKLptwEDRA==
+pe-exe-parser@^0.1.4:
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/pe-exe-parser/-/pe-exe-parser-0.1.4.tgz#beb12011effde55c316fbff20b8ef31d8e8f2a64"
+  integrity sha512-Po1bg3osdUxQwZuZpZioOFy6jaDNUVmtlxNnvZBMn3qJIcfb4MzdC/Nr+BhvemjKrhtQq003F6OZhcI0KXnfJw==
   dependencies:
-    "@types/node" "^17.0.30"
+    long "^5.2.1"
 
 pend@~1.2.0:
   version "1.2.0"
@@ -11831,14 +11811,6 @@ widest-line@^3.1.0:
   integrity sha512-NsmoXalsWVDMGupxZ5R08ka9flZjjiLvHVAWYOKtiKM8ujtZWr9cRffak+uSE48+Ob8ObalXpwyeUiyDD6QFgg==
   dependencies:
     string-width "^4.0.0"
-
-win-version-info@^6.0.1:
-  version "6.0.1"
-  resolved "https://registry.yarnpkg.com/win-version-info/-/win-version-info-6.0.1.tgz#cf09e2d961e2a16424360cd02f5d9a9086e3e49f"
-  integrity sha512-Z6060xUh9UwPxAjKOcEUybw93jnMtpERcdlb933bGfpBOlRtLYlYlzWk1YoGzofX3yB3pvPuwXrTsWQ4ClMZKQ==
-  dependencies:
-    napi-macros "^2.0.0"
-    node-gyp-build "^4.3.0"
 
 word-wrap@^1.2.3:
   version "1.2.3"

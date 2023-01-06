@@ -3,7 +3,7 @@ const child = require("child_process");
 const fs = require("fs");
 const archiver = require("archiver");
 const zip = require("node-stream-zip");
-const exeInfo = require("win-version-info");
+const {parsePE} = require("pe-exe-parser");
 
 // My stuffs
 const FORMAT = "game-info";
@@ -255,7 +255,7 @@ async function redistFromInnoScript(inno_script, game_folder){
       }
       const params = param_split[1].split("\";")[0].replaceAll("\\", "/").trim().split(" ");
       // Get the file versions
-      const exe_data = exeInfo(game_folder + "/" + exe);
+      const exe_data = await (await parsePE(game_folder + "/" + exe)).metadata();
       final_redist.push({
         name: exe_data.ProductName,
         version: exe_data.ProductVersion,

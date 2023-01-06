@@ -2,9 +2,9 @@
 import { existsSync, readdirSync } from "fs";
 import elevate from "../elevate";
 import { ensureRemote } from "@/plugins_bkg/game_loader";
-import exeInfo from "win-version-info";
 import { GOG } from "@/types/gog/game_info";
 import isInstalled from "@/plugins_bkg/tools/installed_apps";
+import {parsePE} from "pe-exe-parser";
 import { win } from "@/plugins_bkg";
 
 type RedistInstallResult = {
@@ -41,7 +41,7 @@ async function installRedist(redist_exes: string[]): Promise<RedistInstallResult
 
 async function isInstalledExe(exe_path: string){
   try{
-    const exe_data = exeInfo(exe_path);
+    const exe_data = (await parsePE(exe_path, {})).metadata();
     if(exe_data.ProductName === undefined || exe_data.ProductVersion === undefined){
       return false;
     }
