@@ -1,7 +1,7 @@
 {
   "name": "sl-gog-viewer",
   "description": "View, run, install, and uninstall GOG games in the SL Cloud",
-  "homepage": "https://sololegends.slgit.io/sl-game-launcher",
+  "homepage": "https://updates.sololegends.com/",
   "author": "Sololegends",
   "version": "v0.10.9",
   "private": true,
@@ -36,6 +36,7 @@
     "core-js": "^3.21.0",
     "crc32": "^0.2.2",
     "electron-updater": "^5.2.1",
+    "long": "^5.2.1",
     "node-downloader-helper": "^2.1.4",
     "node-stream-zip": "^1.15.0",
     "roboto-fontface": "*",

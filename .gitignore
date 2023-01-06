@@ -39,3 +39,6 @@ DID
 .cert-env
 /tmp
 game_repacked
+src/js/pe-parser/*.js
+src/js/pe-parser/*/*.js
+rva

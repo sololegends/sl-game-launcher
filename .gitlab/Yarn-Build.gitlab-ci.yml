@@ -15,7 +15,7 @@ build:
   artifacts:
     paths:
       - dist_electron
-    expire_in: 1w
+    expire_in: 1d
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
       when: always

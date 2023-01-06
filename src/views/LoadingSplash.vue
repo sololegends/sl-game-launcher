@@ -95,6 +95,13 @@ export default defineComponent({
       this.message = "Download version " + update_info.version;
       this.indeterminate = false;
       ipc.invoke("download-update").catch((e) => {
+        if(e.message.includes("checksum mismatch")){
+          this.message = "Checksum mismatch!";
+          this.indeterminate = false;
+          this.dl_value = 0;
+          this.dl_progress = "";
+          this.upToDate();
+        }
         this.message = "Download failed!";
         this.indeterminate = false;
         this.dl_value = 0;
