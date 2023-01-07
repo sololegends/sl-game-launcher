@@ -3,5 +3,10 @@
 echo "#===========================#"
 echo "# SL Launcher Game Repacker #"
 echo "#===========================#"
+cd ..
+echo "Building typescript project..."
+npx tsc -p tsconfig.repack.json
 
-node ./process_new_game.js "$@"
+cd tools
+export SL_LAUNCHER_APP_OFF
+node ../dist/tools/process_new_game.js "$@"

@@ -1,11 +1,11 @@
 
 import { existsSync, readdirSync } from "fs";
 import elevate from "../elevate";
-import { ensureRemote } from "@/plugins_bkg/game_loader";
+import { ensureRemote } from "../../game_loader";
 import { GOG } from "@/types/gog/game_info";
-import isInstalled from "@/plugins_bkg/tools/installed_apps";
+import isInstalled from "../../tools/installed_apps";
 import {parsePE} from "pe-exe-parser";
-import { win } from "@/plugins_bkg";
+import { win } from "../..";
 
 type RedistInstallResult = {
   error: Error | undefined

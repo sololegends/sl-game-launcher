@@ -1,5 +1,5 @@
 
-import { app_data_dir } from "../background";
+import { appDataDir } from "./config";
 import { ensureDir } from "./tools/files";
 import fs from "fs";
 
@@ -14,7 +14,7 @@ function processParams(params: any[]){ // eslint-disable-line @typescript-eslint
 
 export default function init(){
 
-  const logging_dir = app_data_dir;
+  const logging_dir = appDataDir();
   const log_file = logging_dir + "console.log";
   ensureDir(logging_dir);
   if(fs.existsSync(log_file)){

@@ -22,7 +22,22 @@ function triggerReload(game?: GOG.GameInfo){
 
 export async function downloadAndInstallDLC(game: GOG.GameInfo, dlc_slug: string): Promise<string>{
   try{
-    const dl_files = await downloadDLC(game, dlc_slug);
+    const dl_result = await downloadDLC(game, dlc_slug);
+    console.log("dl_result", dl_result);
+    if(dl_result.status !== "success"){
+      if(dl_result.status === "canceled"){
+        releaseLock(ACTION_LOCK);
+        return "canceled";
+      }
+      notify({
+        title: "DLC download failed",
+        text: "Failed to connect to server",
+        type: "error"
+      });
+      releaseLock(ACTION_LOCK);
+      return "errored";
+    }
+    const dl_files = dl_result.links;
     if(Array.isArray(dl_files) && dl_files.length >= 1){
       await installGame(game, dl_files, dl_files[0], false);
       cleanupDownloaded(dl_files);

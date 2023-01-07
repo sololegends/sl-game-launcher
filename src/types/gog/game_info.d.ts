@@ -44,14 +44,20 @@ export namespace GOG {
 		version?: string
 	}
 
-	export type RemoteGameDLC = {
+	export interface RemoteGameDLCBuilding {
 		slug: string
 		dl_size: number
 		gameId: string
-		present: boolean
+		version?: string
+		iter_id?: number
 		download: string[]
+		install_size?: number
 		uninstall?: DLCUninstall | string
 		redist?: GameRedist[]
+	}
+
+	export interface RemoteGameDLC extends RemoteGameDLCBuilding {
+		present: boolean
 	}
 
 	export type GamePlatform = "aix" | "darwin" | "freebsd" | "linux" | "openbsd" | "sunos" | "windows" | "deck"
@@ -67,7 +73,7 @@ export namespace GOG {
 
 	export type RemoteGameData = {
 		logo: string
-		folder: string
+		folder?: string
 		logo_format: string
 		slug: string
 		download: string[]

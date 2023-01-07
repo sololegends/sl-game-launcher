@@ -1,11 +1,10 @@
 "use strict";
 import { app, BrowserWindow, ipcMain, protocol } from "electron";
-import initConfig, { APP_URL_HANDLER, getConfig } from "./plugins_bkg/config";
+import initConfig, { APP_URL_HANDLER, getConfig, setAppDataDir } from "./plugins_bkg/config";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 import { parsePE, ParsePEResponse} from "pe-exe-parser";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import { createSplashWindow } from "./plugins_bkg/auto_update";
-import { ensureDir } from "./plugins_bkg/tools/files";
 import load from "./plugins_bkg";
 import logging from "./plugins_bkg/logging";
 const isDevelopment = process.env.NODE_ENV !== "production";
@@ -61,7 +60,13 @@ if(cli_options.version){
 console.log("cli_options", cli_options);
 const is_fullscreen = cli_options.fullscreen;
 const is_maximize = cli_options.maximize;
-export const app_data_dir = app.getPath("appData") + "\\sololegends\\" + cli_options.data_folder + "\\";
+if(cli_options.data_folder){
+  setAppDataDir(cli_options.data_folder);
+}
+
+if(process.env.SL_LAUNCHER_APP_OFF){
+  app.quit();
+}
 
 if (!got_lock){
   app.quit();
@@ -96,9 +101,6 @@ if (!got_lock){
 export function isDev(){
   return app.isPackaged !== true;
 }
-
-// Ensure the data dir is intact
-ensureDir(app_data_dir);
 
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
@@ -201,7 +203,7 @@ app.on("ready", async() => {
   }
   // Load the config module
   logging();
-  await initConfig(ipcMain, app_data_dir);
+  await initConfig(ipcMain);
   if(isDevelopment || cli_options.skip_update || getConfig("offline")){
     createWindow();
     return;

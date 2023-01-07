@@ -1,15 +1,13 @@
 
-import { BrowserWindow, IpcMain } from "electron";
 import { createClient, WebDAVClient, WebDAVClientOptions } from "webdav";
 import { DownloaderHelper } from "node-downloader-helper";
+import { ensureDir } from "./tools/files";
 import { getConfig } from "./config";
-import { Globals } from ".";
 import { GOG } from "@/types/gog/game_info";
 
 
 // Next cloud Web Dav connection
 let nc_client = undefined as undefined | WebDAVClient;
-let globals = undefined as undefined | Globals;
 
 export function webDavConfig(){
   return getConfig("webdav") as GOG.WebDavConfig;
@@ -69,7 +67,7 @@ export function downloadFile(_dl_link: string, file_name: string): DownloaderHel
   const dl_link = handlePassURL(_dl_link);
   const gog_path = getConfig("gog_path");
   const tmp_download = gog_path + "\\.temp\\";
-  globals?.ensureDir(tmp_download);
+  ensureDir(tmp_download);
 
   return new DownloaderHelper(dl_link.url, tmp_download, {
     headers: {
@@ -82,6 +80,6 @@ export function downloadFile(_dl_link: string, file_name: string): DownloaderHel
   });
 }
 
-export default function init(ipcMain: IpcMain, _win: BrowserWindow, _globals: Globals){
-  globals = _globals;
+export default function init(){
+  // None
 }

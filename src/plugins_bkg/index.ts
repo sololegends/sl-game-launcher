@@ -1,10 +1,9 @@
 
 import * as child from "child_process";
-import { app_data_dir, cli_options} from "../background";
+import { appDataDir, getOS } from "./config";
 import { BrowserWindow, dialog, IpcMain } from "electron";
 import { ensureDir, getFolderSize, normalizeFolder } from "./tools/files";
 import fs from "fs";
-import { getOS } from "./config";
 import { GOG } from "@/types/gog/game_info";
 import { Notify } from "@/types/notification/notify";
 import z_cache from "./cache";
@@ -40,7 +39,6 @@ export type Globals = {
   getFolderSize: (folder: string) => number
   log: (log: string) => void
 }
-console.log(cli_options);
 const globals = {
   ensureDir: ensureDir,
   normalizeFolder: normalizeFolder,
@@ -78,7 +76,7 @@ export function notify(options: Notify.Alert){
 
 export default function init(ipcMain: IpcMain, win: BrowserWindow){
   globals.notify = notify;
-  globals.app_dir = app_data_dir;
+  globals.app_dir = appDataDir();
   globals.ensureDir(globals.app_dir);
   console.log("globals.app_dir", globals.app_dir);
   // Init the different modules here

@@ -4,9 +4,9 @@ import { acquireLock, LockAbortToken, releaseLock, UN_INSTALL_LOCK } from "../to
 import { loadFromVersionCache, removeFromVersionCache } from "../cache";
 import { notify, win } from "..";
 import { ensureRemote } from "../game_loader";
-import filters from "@/js/filters";
+import filters from "../../js/filters";
 import fs from "fs";
-import { GOG } from "@/types/gog/game_info";
+import { GOG } from "@ctypes/gog/game_info";
 import { initWebDav } from "../nc_webdav";
 import { processScriptReverse } from "../script";
 import tk from "tree-kill";

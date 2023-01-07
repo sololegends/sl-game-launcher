@@ -5,7 +5,7 @@ import elevate from "../as_admin/elevate";
 import { GOG } from "@/types/gog/game_info";
 import os from "os";
 import Reg from "../as_admin/regedit/windows";
-import { Regedit } from "regedit";
+import { Regedit } from "../as_admin/regedit/regedit";
 import { win } from "..";
 
 const REG_TYPE_MUTATE = {

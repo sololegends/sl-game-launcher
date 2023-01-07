@@ -3,7 +3,7 @@
 import * as child from "child_process";
 import { acquireLock, LockAbortToken, releaseLock, UN_INSTALL_LOCK } from "../tools/locks";
 import { ensureDir, getFolderSize, normalizeFolder } from "../tools/files";
-import { game_folder_size, game_iter_id, game_name_file, game_version } from "@/json/files.json";
+import { game_folder_size, game_iter_id, game_name_file, game_version } from "../../json/files.json";
 import { notify, win } from "..";
 import zip, { ZipEntry } from "node-stream-zip";
 import fs from "fs";

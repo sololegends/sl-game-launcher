@@ -1,5 +1,5 @@
 
-import gamepad_profiles from "@json/gamepad_profiles.json";
+import gamepad_profiles from "@/json/gamepad_profiles.json";
 import Vue from "vue";
 
 export type AxisPosition = {

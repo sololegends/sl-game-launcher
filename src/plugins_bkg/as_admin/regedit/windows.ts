@@ -1,7 +1,7 @@
 
 import * as child from "child_process";
 import elevate, { ElevateCallback } from "../elevate";
-import { Regedit } from "regedit";
+import { Regedit } from "./regedit";
 
 const DEFAULT_TYPE = "REG_SZ";
 const NEEDS_SEPARATOR = "REG_MULTI_SZ";

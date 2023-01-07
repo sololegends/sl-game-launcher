@@ -18,6 +18,7 @@
       "@dnd" : ["./src/components/inserts/dnd/*"],
       "@assets" : ["./src/assets/*"],
       "@json" : ["./src/json/*"],
+      "@ctypes" : ["./src/types/*"],
       "@js" : ["./src/js/*"],
       "@views" : ["./src/views/*"],
       "@chartjs": ["./src/components/charts/*"],

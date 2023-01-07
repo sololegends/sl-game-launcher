@@ -51,7 +51,8 @@
       "esnext",
       "dom",
       "dom.iterable",
-      "scripthost"
+      "scripthost",
+      "ES2021.String"
     ]
   },
   "include": [
@@ -59,7 +60,9 @@
     "src/**/*.tsx",
     "src/**/*.vue",
     "tests/**/*.ts",
-    "tests/**/*.tsx"
+    "tests/**/*.tsx",
+    "tools/**/*.ts",
+    "tools/**/*.tsx"
   ],
   "exclude": [
     "node_modules",

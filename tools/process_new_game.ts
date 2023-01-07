@@ -1,38 +1,83 @@
-/* global require */
-const child = require("child_process");
-const fs = require("fs");
-const archiver = require("archiver");
-const zip = require("node-stream-zip");
-const {parsePE} = require("pe-exe-parser");
+import archiver from "archiver";
+import child from "child_process";
+import fs from "fs";
+import {getRemoteGamesList} from "../src/plugins_bkg/game_loader_fns";
+import {GOG} from "../src/types/gog/game_info";
+import initConfig from "../src/plugins_bkg/config";
+import {parsePE} from "pe-exe-parser";
+import zip from "node-stream-zip";
+
+// TYPES
+type ZipLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+
+type CLIOptions = {
+  output?: string
+  clear?: boolean
+  nopack?: boolean
+  merge_data?: boolean
+  merge_info?: boolean
+  zip_level?: ZipLevel
+
+  [key: string]: string | boolean | ZipLevel | undefined
+}
+type PathComponents = {
+  dir: string
+  file: string
+  full: string
+}
+type PackProperties = {
+  unpack_folder: string
+  output_folder: string
+  pack_root: string
+  inno_script: string
+  version?: string
+  iter_id?: number
+  is_dlc?: boolean
+}
+type RunFormat= "game-info" | "inno-script"
+type InnoSections = {
+  Source: string
+  DestDir: string
+  Output: string
+  [key: string]: string
+}
+interface UninstallData{
+  game_id?: string
+  file_name: string
+  content?: GOG.DLCUninstall
+}
+interface UninstallDataAll extends UninstallData{
+  game_id: string
+  file_name: string
+  content: GOG.DLCUninstall
+}
+// END TYPES
+
 
 // My stuffs
 const FORMAT = "game-info";
 // Const FORMAT = "inno-script";
 
-function ensureEmptyDir(dir){
+function ensureEmptyDir(dir: string){
   if(fs.existsSync(dir)){
-    fs.rmSync(dir, {recursive: true, force: true}, (err) =>{
-      console.log(err);
-    });
+    fs.rmSync(dir, {recursive: true, force: true});
   }
   fs.mkdirSync(dir, {recursive: true});
 }
-function ensureDir(dir){
+function ensureDir(dir: string){
   if(!fs.existsSync(dir)){
     fs.mkdirSync(dir, {recursive: true});
   }
 }
-function removeDir(dir){
+function removeDir(dir: string){
   console.log("removing dir:", dir);
   if(fs.existsSync(dir)){
-    fs.rmSync(dir, {recursive: true, force: true}, (err) =>{
-      console.log(err);
-    });
+    fs.rmSync(dir, {recursive: true, force: true});
     console.log("Removed dir: ", dir);
   }
 }
 
-function extractPathComponents(path){
+function extractPathComponents(path: string): PathComponents{
   // Normalize the path
   path = path.replace("\\", "/");
   if(path.includes("/")){
@@ -48,10 +93,21 @@ function extractPathComponents(path){
     file: path,
     full: path
   };
-
 }
 
-async function extractInstallerScript(target, game_data){
+async function getGameRemoteData(): Promise<GOG.GameInfo[]>{
+  if(fs.existsSync("remotes.json")){
+    const stats = fs.statSync("remotes.json") as fs.Stats;
+    if(stats.mtimeMs > new Date().getTime() - 86400000){
+      return JSON.parse(fs.readFileSync("remotes.json").toString("utf8"));
+    }
+  }
+  const remotes = await getRemoteGamesList(false, false);
+  fs.writeFileSync("remotes.json", JSON.stringify(remotes, null, 2));
+  return remotes;
+}
+
+async function extractInstallerScript(target: string, game_data: PackProperties): Promise<void>{
   const bin = "bin/innounp.exe";
   const args = [ "-v", "-d" + game_data.unpack_folder, "-x", target, "install_script.iss" ];
   console.log("Extracting installer script");
@@ -66,14 +122,14 @@ async function extractInstallerScript(target, game_data){
       console.log(data.toString());
     });
 
-  return new Promise((resolver) => {
+  return new Promise<void>((resolver) => {
     active_exe.on("close", () => {
       resolver();
     });
   });
 }
 
-async function unpackExe(target, game_data, format){
+async function unpackExe(target: string, game_data: PackProperties, format: RunFormat): Promise<void>{
   let bin = "bin/innounp.exe";
   let args = [ "-v", "-a",  "-d" + game_data.unpack_folder, "-e", target ];
   if(format === "game-info"){
@@ -92,7 +148,7 @@ async function unpackExe(target, game_data, format){
       console.log(data.toString());
     });
 
-  const promise2 = new Promise((resolver) => {
+  const promise2 = new Promise<void>((resolver) => {
     active_exe.on("close", () => {
       resolver();
     });
@@ -100,16 +156,16 @@ async function unpackExe(target, game_data, format){
   await promise2;
 }
 
-function getFileSize(file){
+function getFileSize(file: string): number{
   const stat = fs.statSync(file);
   return stat.size;
 }
 
-function getFileList(root, current_folder){
+function getFileList(root: string, current_folder?: string): string[]{
   if(current_folder === undefined){
     current_folder = root;
   }
-  let paths = [];
+  let paths = [] as string[];
   const files = fs.readdirSync(current_folder);
   for(const file of files){
     const stat = fs.statSync(current_folder + "/" + file);
@@ -126,7 +182,7 @@ function getFileList(root, current_folder){
   return paths;
 }
 
-function getFolderSize(folder){
+function getFolderSize(folder: string): number{
   if(folder.endsWith("\\") || folder.endsWith("/")){
     folder = folder.substring(0, folder.length - 1);
   }
@@ -145,10 +201,10 @@ function getFolderSize(folder){
   return dir_stat.size;
 }
 
-function parseInnoSetupFileLine(line){
+function parseInnoSetupFileLine(line: string){
   const sections_raw = line.split(";");
   // Process into the distinct sections
-  const sections = {};
+  const sections = {} as InnoSections;
   for(const sect of sections_raw){
     if(sect.trim() === ""){
       continue;
@@ -168,8 +224,8 @@ function parseInnoSetupFileLine(line){
   return sections;
 }
 
-function innoSetupKeyVal(lines){
-  const map = {};
+function innoSetupKeyVal(lines: string[]): Record<string, string>{
+  const map = {} as Record<string, string>;
   for(const line of lines){
     const parts = line.split("=");
     map[parts[0]] = parts[1];
@@ -177,13 +233,13 @@ function innoSetupKeyVal(lines){
   return map;
 }
 
-async function readInsScript(inno_script, section = "UninstallDelete"){
+async function readInsScript(inno_script: string, section = "UninstallDelete"): Promise<string[]>{
   const sect = "[" + section + "]";
   // Read file and break apart by line
   const lines_buffer = fs.readFileSync(inno_script);
   if(lines_buffer === undefined){
     console.error("Failed to read inno_script file [" + inno_script + "]");
-    return;
+    return [];
   }
   const lines = lines_buffer.toString().split(/[\n\r]+/g);
   let collect = false;
@@ -203,17 +259,18 @@ async function readInsScript(inno_script, section = "UninstallDelete"){
   return collection;
 }
 
-function readGameInfo(game_directory){
+function readGameInfo(game_directory: string): GOG.GameInfo | undefined{
   const file_list = fs.readdirSync(game_directory);
   for(const file of file_list){
     if(file.endsWith(".info")){
       console.log("info file: " + game_directory + "/" + file);
-      return JSON.parse(fs.readFileSync(game_directory + "/" + file));
+      return JSON.parse(fs.readFileSync(game_directory + "/" + file).toString()) as GOG.GameInfo;
     }
   }
+  return undefined;
 }
 
-async function uninstallFromFileList(folder, output_dir = "", note = ""){
+async function uninstallFromFileList(folder: string, output_dir = "", note = ""): Promise<UninstallData>{
   const game_id = readGameInfo(folder)?.gameId;
 
   // Get the full file list, relative path to the output
@@ -225,7 +282,7 @@ async function uninstallFromFileList(folder, output_dir = "", note = ""){
     return {
       game_id,
       file_name,
-      content: {files: final_files}
+      content: {files: final_files} as GOG.DLCUninstall
     };
   }
   const fsw = fs.createWriteStream(output_dir + "/" + file_name);
@@ -237,7 +294,7 @@ async function uninstallFromFileList(folder, output_dir = "", note = ""){
   };
 }
 
-async function redistFromInnoScript(inno_script, game_folder){
+async function redistFromInnoScript(inno_script: string, game_folder: string): Promise<GOG.GameRedist[]>{
   const FILENAME = "Filename: \"{app}/";
   const PARAMS = "Parameters: \"";
   const redists = await readInsScript(inno_script, "Run");
@@ -267,7 +324,9 @@ async function redistFromInnoScript(inno_script, game_folder){
   return final_redist;
 }
 
-async function dlcUninstallFromInnoScript(inno_script, output_dir = "", note = "", PREFIX = "Type: files; Name: \"{app}/"){
+async function dlcUninstallFromInnoScript(
+  inno_script: string, output_dir = "", note = "", PREFIX = "Type: files; Name: \"{app}/"
+): Promise<UninstallData>{
   const files = await readInsScript(inno_script);
   const final_files = [];
   let game_id = "nnnnnnnnnnnn";
@@ -291,14 +350,14 @@ async function dlcUninstallFromInnoScript(inno_script, output_dir = "", note = "
   };
 }
 
-async function compressFolder(input, zip_output, level = 9){
+async function compressFolder(input: string, zip_output: string, level = 9 as ZipLevel): Promise<string>{
   const archive_op = archiver.create("zip", {
     zlib: { level }
   });
   console.debug("zip_output", zip_output);
   const zip_output_s = fs.createWriteStream(zip_output);
 
-  const promise = new Promise((resolver) => {
+  const promise = new Promise<string>((resolver) => {
     zip_output_s.on("close", () => {
       console.debug("Compression complete!");
       zip_output_s.close();
@@ -306,13 +365,13 @@ async function compressFolder(input, zip_output, level = 9){
     });
   });
   archive_op.pipe(zip_output_s);
-  archive_op.directory(input, false, {store: false});
+  archive_op.directory(input, false);
   return await archive_op.finalize().then(() => {
     return promise;
   });
 }
 
-async function processInnoInstallFiles(inno_script, unpacked_folder, output){
+async function processInnoInstallFiles(inno_script: string, unpacked_folder: string, output: string): Promise<number>{
   const files = await readInsScript(inno_script, "Files");
   console.debug("files.length", files.length);
   let aggrigate = 0;
@@ -339,7 +398,7 @@ async function processInnoInstallFiles(inno_script, unpacked_folder, output){
   return aggrigate;
 }
 
-async function getDlcUninstall(props, note, format = "game-info"){
+async function getDlcUninstall(props: PackProperties, note: string, format = "game-info" as RunFormat): Promise<undefined | UninstallData>{
   if(format === "inno-script"){
     return await dlcUninstallFromInnoScript(props.inno_script, props.unpack_folder, note);
   }
@@ -349,7 +408,7 @@ async function getDlcUninstall(props, note, format = "game-info"){
   return undefined;
 }
 
-async function processGameFiles(data, format = "game-info"){
+async function processGameFiles(data: PackProperties, format = "game-info"){
   if(format === "game-info"){
     // Remove the tmp folder and commonappdata folders
     if(fs.existsSync(data.output_folder + "/tmp")){
@@ -394,13 +453,13 @@ async function processGameFiles(data, format = "game-info"){
     return;
   }
   if(format === "inno-script"){
-    const {inno_script, unpacked_folder, output_folder} = data;
-    await processInnoInstallFiles(inno_script, unpacked_folder, output_folder);
+    const {inno_script, unpack_folder, output_folder} = data;
+    await processInnoInstallFiles(inno_script, unpack_folder, output_folder);
   }
 }
 
-async function getSlug(props, format = "game-info"){
-  let slug = "error";
+async function getSlug(props: PackProperties, format = "game-info" as RunFormat): Promise<string>{
+  let slug = "error" as string | undefined;
   if(format === "inno-script"){
     const setup = await readInsScript(props.inno_script, "Setup");
     const app_Data = innoSetupKeyVal(setup);
@@ -420,7 +479,7 @@ async function getSlug(props, format = "game-info"){
   return slug;
 }
 
-async function getVersion(game_exe, props, format = "game-info"){
+async function getVersion(game_exe: string, props: PackProperties, format = "game-info" as RunFormat){
   if(props.version && props.iter_id){
     return {
       version: props.version,
@@ -452,19 +511,33 @@ async function getVersion(game_exe, props, format = "game-info"){
   }
   return {
     version,
-    iter_id: parseInt(iter_id)
+    iter_id: iter_id ? parseInt(iter_id) : iter_id
   };
 }
 
-async function mergeGameInfo(new_info){
-  // Load old game info
-  // Check if it exists
-  if(!fs.existsSync("game-data.json")){
-    console.error("Failed to fine game-data.json file in script dir");
+async function mergeGameInfo(new_info: GOG.RemoteGameData): Promise<GOG.RemoteGameData>{
+  await initConfig();
+  // Try and find the remote data
+  const remotes = await getGameRemoteData();
+  let old_info = undefined;
+  // Find the game
+  for(const game of remotes){
+    if(game.remote && game.remote.slug === new_info.slug){
+      old_info = game.remote;
+      delete old_info.folder;
+    }
+  }
+  if(old_info === undefined){
+    console.log("Failed to find remote match for ", new_info);
+    fs.writeFileSync("new_info." + new_info.slug + ".json", JSON.stringify(new_info, null, 2));
     return new_info;
   }
-  // Load the old info
-  const old_info = JSON.parse(fs.readFileSync("game-data.json").toString());
+  // Load old game info
+  // Check if it exists
+  if(fs.existsSync("game-data.json")){
+    // Load the old info file instead
+    old_info = JSON.parse(fs.readFileSync("game-data.json").toString());
+  }
   console.log("Old data loaded for merge...");
   // Add version block if not present
   if(old_info.versions === undefined){
@@ -494,7 +567,7 @@ async function mergeGameInfo(new_info){
   return old_info;
 }
 
-async function repackGame(game_exe, output_dir, options){
+async function repackGame(game_exe: string, output_dir: string, options: CLIOptions): Promise<GOG.RemoteGameData>{
   const path = extractPathComponents(game_exe);
   // Unpack the game exe
   const unpack_folder = output_dir + "/game_exe_unpack_folder";
@@ -520,7 +593,7 @@ async function repackGame(game_exe, output_dir, options){
   await processGameFiles(props, FORMAT);
   // Build the redist block
   // Check for install script and the redist within
-  let redist = [];
+  let redist = [] as GOG.GameRedist[];
   if(fs.existsSync(props.unpack_folder + "/install_script.iss")){
     redist = await redistFromInnoScript(props.unpack_folder + "/install_script.iss", game_folder);
   }
@@ -552,11 +625,12 @@ async function repackGame(game_exe, output_dir, options){
     download: [
       zip_name
     ],
+    dlc: [],
     redist
   };
 }
 
-async function repackDLC(dlc_exe, output_dir, options){
+async function repackDLC(dlc_exe: string, output_dir: string, options: CLIOptions): Promise<GOG.RemoteGameDLCBuilding>{
   const path = extractPathComponents(dlc_exe);
   // Unpack the game exe
   const unpack_folder = output_dir + "/dlc_exe_unpack_folder";
@@ -586,7 +660,7 @@ async function repackDLC(dlc_exe, output_dir, options){
 
   // Make uninstall script
   const version_data = await getVersion(dlc_exe, props, FORMAT);
-  const {game_id, file_name, content} = await getDlcUninstall(props, version_data.iter_id, FORMAT);
+  const {game_id, file_name, content} = await getDlcUninstall(props, version_data.iter_id + "", FORMAT) as UninstallDataAll;
   console.log("game_id: ", game_id);
   const uninstall_json = content ? content : file_name;
   const slug = await getSlug(props, FORMAT);
@@ -611,10 +685,10 @@ async function repackDLC(dlc_exe, output_dir, options){
   };
 }
 
-async function main(game_exe, dlc_folder, options_arr){
+async function main(game_exe: string, dlc_folder: string, options_arr: string[]){
   const options = {
     zip_level: 8
-  };
+  } as CLIOptions;
   if(options_arr){
     for(const part of options_arr){
       const key_val = part.split("=");
@@ -664,15 +738,18 @@ async function main(game_exe, dlc_folder, options_arr){
   }
 
   // Process the main game
-  let game = game_exe === "NONE" ? {} : await repackGame(game_exe, output_dir, options);
-  game.dlc = [];
+  let game = game_exe === "NONE" ? {} as GOG.RemoteGameData : await repackGame(game_exe, output_dir, options);
+  const dlc = [] as GOG.RemoteGameDLCBuilding[];
   if(dlc_folder !== "NONE"){
     const dlc_files = fs.readdirSync(dlc_folder);
     console.log(dlc_files);
     for(const dlc_file of dlc_files){
       if(dlc_file.endsWith(".exe")){
-        game.dlc.push(await repackDLC(dlc_folder + "/" + dlc_file, output_dir, options));
+        dlc.push(await repackDLC(dlc_folder + "/" + dlc_file, output_dir, options));
       }
+    }
+    if(dlc.length > 0){
+      game.dlc = dlc as GOG.RemoteGameDLC[];
     }
   }
   // Do we merge data
@@ -686,7 +763,6 @@ async function main(game_exe, dlc_folder, options_arr){
     console.log("No actions taken");
   }
 }
-
 /* global process */
 const args = process.argv.slice(2);
 main(args[0], args.length >= 2 ? args[1] : "proc/dlc", args.slice(2));
