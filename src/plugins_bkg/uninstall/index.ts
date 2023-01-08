@@ -130,7 +130,11 @@ export async function uninstallDLC(game: GOG.GameInfo, dlc: GOG.RemoteGameDLC): 
 
 async function uninstallGameZip(game: GOG.GameInfo, token: LockAbortToken): Promise<GOG.GameInfo>{
   sendUninstallStart(game, "game: " + game.name);
-  await processScriptReverse(game);
+  try{
+    await processScriptReverse(game);
+  }catch(e){
+    console.log("Failed tin reverse script", e);
+  }
   return new Promise<GOG.GameInfo>((resolve, reject) => {
     if(token.aborted()){
       reject(game);

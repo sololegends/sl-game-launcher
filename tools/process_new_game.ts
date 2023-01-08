@@ -314,8 +314,8 @@ async function redistFromInnoScript(inno_script: string, game_folder: string): P
       // Get the file versions
       const exe_data = await (await parsePE(game_folder + "/" + exe)).metadata();
       final_redist.push({
-        name: exe_data.ProductName,
-        version: exe_data.ProductVersion,
+        name: exe_data?.ProductName,
+        version: exe_data?.ProductVersion,
         exe_path: exe,
         arguments: params
       });
