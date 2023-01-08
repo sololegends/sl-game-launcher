@@ -85,7 +85,7 @@ export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: str
       active_dl.on("stop", () => {
         cleanupDownloaded(dl_link_set);
       });
-      active_dl.on("progress", (p: Stats) => {
+      active_dl.on("progress.throttled", (p: Stats) => {
         const prog = {
           total: total,
           progress: p.downloaded,

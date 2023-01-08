@@ -76,7 +76,8 @@ export function downloadFile(_dl_link: string, file_name: string): DownloaderHel
     fileName: file_name,
     resumeIfFileExists: false,
     removeOnStop: true,
-    removeOnFail: true
+    removeOnFail: true,
+    progressThrottle: 500
   });
 }
 

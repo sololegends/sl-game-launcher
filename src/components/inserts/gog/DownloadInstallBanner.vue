@@ -10,6 +10,7 @@
     <template>
       <div class="overflow game-name no-sel" :title="options.title">{{options.title}}</div>
       <v-spacer />
+      <span class="dl-eta" v-if="dl_eta">ETA: {{dl_eta}}</span>
       <span class="dl-speed" v-if="dl_speed">{{speed}}</span>
       <v-btn v-if="options.cancel_event" icon @click="cancel" tip-title="Cancel">
         <fa-icon icon="times" size="xl" />
@@ -37,6 +38,8 @@ export default defineComponent({
       progress_percent: 0,
       show: false,
       dl_speed: undefined as undefined | number,
+      dl_eta: undefined as undefined | string,
+      dl_eta_hist: [] as number[],
       options: {
         title: "None",
         indeterminate: false
@@ -62,6 +65,16 @@ export default defineComponent({
     }
   },
   methods: {
+    dlEta(){
+      if(this.dl_eta_hist.length > 0 || this.dl_speed === undefined){
+        this.dl_eta = "...";
+      }
+      let dl_eta = 0;
+      for(const eta of this.dl_eta_hist){
+        dl_eta += eta;
+      }
+      this.dl_eta = filter.betterSeconds(dl_eta / this.dl_eta_hist.length);
+    },
     bannerInit(e: unknown, options: App.ProgressBannerOpts | string){
       this.in_error = false;
       if(typeof options === "string"){
@@ -80,6 +93,13 @@ export default defineComponent({
       this.in_error = false;
       this.calcProgress(progress);
       this.dl_speed = progress.speed;
+      this.dl_total = progress.total;
+      if(progress.speed){
+        if(this.dl_eta_hist.unshift(progress.total / progress.speed) > 5){
+          this.dl_eta_hist = this.dl_eta_hist.slice(0, 4);
+          this.dlEta();
+        }
+      }
     },
     bannerError(e: unknown, error: string){
       this.options.title = error;
@@ -106,7 +126,7 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.dl-speed{
+.dl-speed, .dl-eta{
 	font-weight: bold;
 	font-size: 18px;
   word-break: keep-all;
