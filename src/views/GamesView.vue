@@ -5,7 +5,7 @@
       <v-text-field v-model="filter" clearable placeholder="Search..." @input="resetSelectedGame" />
     </div>
     <div
-      v-if="filtered_games.length <= 0 && (games.length > 0 || remote_games)"
+      v-if="filtered_games.length <= 0 && (games.length > 0 || remote_games) && !loading_remote_games"
       class="flex h100" style="flex-direction: column;text-align: center;"
     >
       <div class="text-h6">No Games <fa-icon icon="sad-tear" size="lg" /></div>
@@ -382,6 +382,14 @@ export default mixin(gamepad).extend({
               this.filterGames();
             });
             return;
+          }else{
+            resolve([]);
+            this.loading_remote_games = true;
+            ipc.invoke("read-remote-games").then((remote_games: GOG.GameInfo[]) => {
+              this.loading_remote_games = false;
+              this.remote_games = remote_games;
+              this.filterGames();
+            });
           }
           reject(this.games);
         });
