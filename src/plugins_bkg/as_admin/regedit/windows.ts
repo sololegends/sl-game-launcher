@@ -121,7 +121,7 @@ export async function Query(key: string, value?: string, query_subkeys?: boolean
   return exec(buildQuery(key, value, query_subkeys, data, target, case_sensitive, exact, type, separator, bit_64), false);
 }
 
-export function buildAdd(key: string, value: string | undefined, type: Regedit.Type, data: string,
+export function buildAdd(key: string, value: string | undefined, type?: Regedit.Type, data?: string,
   separator?: string, force?: boolean, bit_64?: boolean): string{
   let command = "reg add \"" + key.replaceAll("\"", "\\\"") + "\"";
   // Value

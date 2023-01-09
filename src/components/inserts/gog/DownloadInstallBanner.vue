@@ -87,6 +87,7 @@ export default defineComponent({
       this.options = options;
       this.show = true;
       this.dl_speed = undefined;
+      this.dl_eta = undefined;
       this.progress_percent = 0;
     },
     bannerProgress(e: unknown, progress: App.ProgressBannerProgress){
@@ -105,10 +106,12 @@ export default defineComponent({
       this.options.title = error;
       this.options.color = "red";
       this.in_error = true;
+      this.dl_eta = undefined;
     },
     bannerHide(){
       this.in_error = false;
       this.show = false;
+      this.dl_eta = undefined;
     },
     calcProgress(prog : App.ProgressBannerProgress){
       this.progress_percent = Math.floor((prog.progress / prog.total) * 100);

@@ -75,6 +75,7 @@ export default mixin(gamepad).extend({
       games: [] as GOG.GameInfo[],
       remote_games: [] as GOG.GameInfo[],
       loading_remote_games: true,
+      force_done_loading: false,
       filtered_games: [] as GOG.GameInfo[],
       active: undefined as undefined | string,
       timer: -1,
@@ -230,7 +231,7 @@ export default mixin(gamepad).extend({
   },
   methods: {
     async awaitLoad(){
-      while(this.games.length <= 0){
+      while(this.games.length <= 0 && !this.force_done_loading){
         console.log("Awaiting load: calling read-games");
         const games = await this.updateGames();
         if(games.length > 0){
@@ -380,6 +381,7 @@ export default mixin(gamepad).extend({
               this.loading_remote_games = false;
               this.remote_games = remote_games;
               this.filterGames();
+              this.force_done_loading = true;
             });
             return;
           }else{
@@ -389,6 +391,7 @@ export default mixin(gamepad).extend({
               this.loading_remote_games = false;
               this.remote_games = remote_games;
               this.filterGames();
+              this.force_done_loading = true;
             });
           }
           reject(this.games);

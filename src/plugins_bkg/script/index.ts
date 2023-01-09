@@ -34,6 +34,30 @@ type PostScriptResult = {
 
 async function action_setRegistry(game: GOG.GameInfo, action: GOG.ScriptInstall.setRegistry, undo: boolean): Promise<ActionResult>{
   const args = action.arguments;
+  if(args.root && args.subkey && !args.valueName){
+    if(undo){
+      return {
+        command: Reg.buildDelete(
+          args.root + "\\" + args.subkey,
+          undefined,
+          true,
+          game.osBitness?.includes("64") ? true : false
+        )
+      };
+    }
+    // Run the registry add fn
+    return {
+      command: Reg.buildAdd(
+        args.root + "\\" + args.subkey,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        true,
+        game.osBitness?.includes("64") ? true : false
+      )
+    };
+  }
   if(!args.root || !args.subkey || !args.valueData || !args.valueName || !args.valueType){
     console.warn("Invalid or unsupported setRegistry entry", action);
     return {

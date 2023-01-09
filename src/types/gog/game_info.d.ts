@@ -143,6 +143,7 @@ export namespace GOG {
 				valueData: string
 				valueName: string
 				valueType: string
+				deleteSubkeys: boolean
 			}
 		}
 	}

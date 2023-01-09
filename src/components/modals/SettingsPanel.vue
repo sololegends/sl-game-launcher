@@ -4,7 +4,7 @@
       <v-list slot="body">
 
         <v-list-item @click="toggleAutoDLC">
-          <v-switch dense v-model="auto_dlc" label="Auth download DLC on install" @click="toggleAutoDLC"></v-switch>
+          <v-switch dense v-model="auto_dlc" label="Auto download DLC on install" @click="toggleAutoDLC"></v-switch>
         </v-list-item>
 
         <v-list-item @click="toggleTheme">
