@@ -96,7 +96,7 @@ export default defineComponent({
       this.dl_speed = progress.speed;
       this.dl_total = progress.total;
       if(progress.speed){
-        if(this.dl_eta_hist.unshift(progress.total / progress.speed) > 5){
+        if(this.dl_eta_hist.unshift((progress.total - progress.progress) / progress.speed) > 5){
           this.dl_eta_hist = this.dl_eta_hist.slice(0, 4);
           this.dlEta();
         }
