@@ -19,7 +19,7 @@ v2.x.x Todo:
   ☐ GamePad Support
     ☐ Manage DLC
     ☐ Change Versions
-  ☐ Support regestry keys in save data saving (which is stupid games do that but here we are)
+  ✔ Support regestry keys in save data saving (which is stupid games do that but here we are) @done(23-01-09 17:55)
 
 v3.x.x Todo: 
   ✔ Cloud sav syncing @done(22-10-05 17:12)

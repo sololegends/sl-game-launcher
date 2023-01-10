@@ -47,49 +47,4 @@ elif [ "$1" == "version" ]; then
   ver_replace $ver
   exit
 
-elif [ "$1" == "build" ]; then
-  DIST=$(ls -l dist/ | grep index)
-  if [ "$DIST" == "" ]; then
-    yarn
-    yarn global add @vue/cli
-  fi
-  # Build the dist
-  yarn run build
-  chmod -R 755 dist
-
-elif [ "$1" == "docker" ]; then
-  DIST=$(ls -l dist/ | grep index)
-  if [ "$DIST" == "" ]; then
-    yarn
-    yarn global add @vue/cli
-  fi
-  # Build the dist
-  yarn run build
-  chmod -R 755 dist
-  docker build --name localhost/dnd-web:testing .
-elif [ "$1" == "clean" ]; then
-  rm -rf .git node_modules src .gitignore .gitlab-ci.yml babel.config.js CHANGELOG.md README.md DEPENDENCIES.md package.json vue.config.js run
-elif [ "$1" == "dev-docker" ]; then 
-  DIST=$(ls -l dist/ | grep index)
-  if [ "$DIST" == "" ]; then
-    yarn
-    yarn global add @vue/cli
-  fi
-  VERSION=$(git config --get "user.name" | tr '[:upper:]' '[:lower:]' | tr '[ ]' '-')-$(git branch --no-color --show-current)
-  # Build the dist
-  yarn run build --mode development
-  chmod -R 755 dist
-  docker context create multi-arch
-  docker buildx create --name multiarch --driver docker-container --use multi-arch 
-  docker buildx build --push --platform $ARCH --pull \
-    -t docker.sololegends.com:443/sololegends/dnd-gui:dev-$VERSION .
-
-elif [ "$1" == "init-cypress" ]; then
-  if [ ! -f ./cypress.env.json ]; then
-    echo "{" > cypress.env.json
-    echo "  \"APP_WEB_ROOT\": \"http://127.0.0.1:8082\"," >> cypress.env.json
-    echo "  \"APP_WEB_USER\": \"app_test\"," >> cypress.env.json
-    echo "  \"APP_WEB_PASS\": \"nmJKio()09OIkjMN\"" >> cypress.env.json
-    echo "}" >> cypress.env.json
-  fi
 fi

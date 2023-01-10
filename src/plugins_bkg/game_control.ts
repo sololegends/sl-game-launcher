@@ -131,6 +131,9 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       game.root_dir + (the_task?.workingDir ? "/" + the_task?.workingDir : ""),
       procArgs(the_task?.arguments)
     );
+    // ============================================
+    // Actually run the game task
+    // ============================================
     running_game.process = child.execFile(
       exec_file,
       procArgs(the_task?.arguments),
