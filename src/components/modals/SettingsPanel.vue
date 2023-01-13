@@ -273,7 +273,7 @@ export default defineComponent({
       ipc.send("gog-path-change", this.gog_path);
     },
     saveWebDav(){
-      ipc.send("cfg-set", "webdav", this.webdav);
+      ipc.send("cfg-set", "webdav", this.webdav, true);
       ipc.send("cfg-set", "remote_save_folder", this.remote_save_folder);
     },
     copyVersionInfo(): void{

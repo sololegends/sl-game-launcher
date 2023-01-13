@@ -1,4 +1,5 @@
 
+import crypt from "./tools/crypt";
 import { ensureDir } from "./tools/files";
 import fs from "fs";
 import { GOG } from "@/types/gog/game_info";
@@ -30,6 +31,8 @@ export function appDataDir(): string{
 }
 
 let config = {} as Record<string, unknown>;
+let crypto_key = undefined as undefined | string;
+const STATIC_KEY = "Illusion-Expulsion1-Calamari-Acre-Cedar!";
 
 let lock = false;
 async function sleep(milliseconds: number): Promise<void>{
@@ -49,6 +52,19 @@ function unlock(){
   lock = false;
 }
 
+function cryptoInit(): string{
+  if(crypto_key === undefined){
+    if(fs.existsSync(app_data_dir + "key")){
+      crypto_key = crypt.decrypt(fs.readFileSync(app_data_dir + "key").toString(), STATIC_KEY, "crypto_salt");
+    }else{
+      // Generate a new one
+      crypto_key = crypt.randomString(32);
+      fs.writeFileSync(app_data_dir + "key", crypt.encrypt(crypto_key, STATIC_KEY, "crypto_salt"));
+    }
+  }
+  return crypto_key as string;
+}
+
 export function getOS(): GOG.GamePlatform{
   const platform = process.platform;
   // TODO: Detect the Steam Deck Linux version
@@ -59,12 +75,21 @@ export function getOS(): GOG.GamePlatform{
 }
 
 export function getConfig(key: string){
-  return config[key];
+  const value = config[key];
+  if(value !== undefined && typeof value === "string" && value.startsWith("$$ENC:")){
+    const crypto_key = cryptoInit();
+    const decrypted = crypt.decrypt(value.substring(6), crypto_key, key);
+    if(decrypted){
+      return JSON.parse(decrypted);
+    }
+    return undefined;
+  }
+  return value;
 }
-export function setConfig(key: string, value: unknown, conf_file: string){
+export function setConfig(key: string, value: unknown, conf_file: string, encrypt?: boolean){
   getLock().then(() => {
-    console.log("Setting config: [" + key + "] = " + value);
-    config[key] = value;
+    const crypto_key = cryptoInit();
+    config[key] = encrypt === true ? "$$ENC:" + crypt.encrypt(JSON.stringify(value), crypto_key, key) : value;
     fs.writeFile(conf_file, JSON.stringify(config), function(err){
       unlock();
       if (err){
@@ -82,8 +107,8 @@ export default function init(ipcMain?: IpcMain){
     ipcMain.handle("cfg-get", (e, key: string) => {
       return getConfig(key);
     });
-    ipcMain.on("cfg-set", (e, key: string, value: unknown) => {
-      setConfig(key, value, conf_file);
+    ipcMain.on("cfg-set", (e, key: string, value: unknown, encrypt?: boolean) => {
+      setConfig(key, value, conf_file, encrypt);
     });
   }
 
