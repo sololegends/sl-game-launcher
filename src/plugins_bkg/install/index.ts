@@ -33,14 +33,17 @@ export function sendInstallEnd(game: GOG.GameInfo){
   console.log("Ending Install");
   win()?.webContents.send("game-dlins-end", game);
   win()?.webContents.send("progress-banner-hide");
+  win()?.setProgressBar(-1);
 }
 
 export function sendInstallError(game: GOG.GameInfo){
   win()?.webContents.send("game-ins-error", game);
   win()?.webContents.send("progress-banner-error", "Failed to install game: " + game.name);
+  win()?.setProgressBar(-1);
 }
 
 export function cancelInstall(game: GOG.GameInfo){
+  win()?.setProgressBar(-1);
   if(active_ins !== undefined && active_ins.pid){
     win()?.webContents.send("game-ins-end", game, false);
     tk(active_ins.pid, "SIGKILL", function(err){
@@ -57,6 +60,7 @@ export function cancelInstall(game: GOG.GameInfo){
 }
 
 async function zipPostInstall(game: GOG.GameInfo){
+  win()?.setProgressBar(2);
   const game_reloaded = await getLocalGameData(game.root_dir, false);
   if(game_reloaded){
     // Execute script check and execution
@@ -71,6 +75,7 @@ async function zipPostInstall(game: GOG.GameInfo){
       });
     }
   }
+  win()?.setProgressBar(-1);
 }
 
 async function installGameZip(
@@ -113,6 +118,7 @@ async function installGameZip(
             total: total_count,
             progress: ex_count
           });
+          win()?.setProgressBar(ex_count / total_count);
         }
       });
       if(token.aborted()){
@@ -147,6 +153,7 @@ async function installGameZip(
 
 function installGameExe(game: GOG.GameInfo, dl_files: string[], exe: string, token: LockAbortToken): Promise<InstallResult>{
   return new Promise<InstallResult>((resolve, reject) => {
+    win()?.setProgressBar(2);
     sendInstallStart(game);
     const gog_path = getConfig("gog_path");
     const tmp_download = gog_path + "\\.temp\\";
@@ -178,6 +185,7 @@ function installGameExe(game: GOG.GameInfo, dl_files: string[], exe: string, tok
       reject("install_failed");
     });
     active_ins.addListener("close", (code: number) => {
+      win()?.setProgressBar(-1);
       token.off("abort");
       game.root_dir = ins_dir;
       active_ins = undefined;

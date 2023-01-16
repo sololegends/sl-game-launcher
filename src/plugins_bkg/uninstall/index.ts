@@ -15,6 +15,7 @@ let active_uns = undefined as undefined | child.ChildProcess;
 
 export function sendUninstallStart(game: GOG.GameInfo, title: string, notify_title?: string){
   console.log("Starting Uninstall");
+  win()?.setProgressBar(2);
   win()?.webContents.send("game-uns-start", game, notify_title);
   win()?.webContents.send("progress-banner-init", {
     title: "Uninstalling " + title,
@@ -25,15 +26,18 @@ export function sendUninstallStart(game: GOG.GameInfo, title: string, notify_tit
 export function sendUninstallFailed(game: GOG.GameInfo, title: string, notify_title?: string){
   win()?.webContents.send("game-uns-error", notify_title);
   win()?.webContents.send("progress-banner-error", "Failed to uninstall " + title);
+  win()?.setProgressBar(-1);
 }
 
 export function sendUninstallEnd(game: GOG.GameInfo, title?: string){
   console.log("Ending Uninstall");
   win()?.webContents.send("game-uns-end", game, title);
   win()?.webContents.send("progress-banner-hide");
+  win()?.setProgressBar(-1);
 }
 
 export function cancelUninstall(game: GOG.GameInfo){
+  win()?.setProgressBar(-1);
   if(active_uns !== undefined && active_uns.pid){
     win()?.webContents.send("game-ins-end", game, false);
     tk(active_uns.pid, "SIGKILL", function(err){
@@ -155,6 +159,7 @@ async function uninstallGameZip(game: GOG.GameInfo, token: LockAbortToken): Prom
 
 async function uninstallGameExe(game: GOG.GameInfo, title: string, exe = "unins000.exe", token: LockAbortToken): Promise<GOG.GameInfo>{
   return new Promise<GOG.GameInfo>((resolve, reject) => {
+    win()?.setProgressBar(2);
     sendUninstallStart(game, title);
     active_uns = child.execFile(
       game.root_dir + "\\" + exe,

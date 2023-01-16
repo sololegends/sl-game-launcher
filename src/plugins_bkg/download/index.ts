@@ -81,9 +81,11 @@ export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: str
       const active_dl = downloadFile(webdav.getFileDownloadLink(game_remote.folder + "/" + dl_link), dl_link);
       active_dl.on("end", () => {
         done();
+        win()?.setProgressBar(-1);
       });
       active_dl.on("stop", () => {
         cleanupDownloaded(dl_link_set);
+        win()?.setProgressBar(-1);
       });
       active_dl.on("progress.throttled", (p: Stats) => {
         const prog = {
@@ -93,9 +95,11 @@ export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: str
         };
         win()?.webContents.send("game-dl-progress", game, prog);
         win()?.webContents.send("progress-banner-progress", prog);
+        win()?.setProgressBar(p.downloaded / total);
       });
       active_dl.on("error", (e) => {
         win()?.webContents.send("game-dl-error", game, e);
+        win()?.setProgressBar(-1);
         win()?.webContents.send("progress-banner-error", "Failed to download game: " + game.name);
       });
       token.on("abort", () => {

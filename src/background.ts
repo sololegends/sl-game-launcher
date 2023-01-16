@@ -159,6 +159,10 @@ async function createWindow(){
     win?.webContents.send("win-restore");
   });
 
+  ipcMain.on("window-progress", (e, progress) => {
+    win?.setProgressBar(progress);
+  });
+
   // Load all the modules
   load(ipcMain, win);
 
