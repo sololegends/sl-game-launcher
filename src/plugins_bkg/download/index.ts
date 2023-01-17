@@ -56,65 +56,66 @@ export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: str
   for(const dl_link of dl_link_set){
     promise_array.push(new Promise<DownloadResult>((resolve, reject) => {
       // Acquire lock
-      acquireLock(DOWNLOAD_SEQUENCE);
-      // Initialize download
-      win()?.webContents.send("progress-banner-init", {
-        title: "Downloading " + dl_link,
-        cancel_event: "game-dl-cancel",
-        cancel_data: game
-      });
-      const total = game_remote.dl_size;
+      acquireLock(DOWNLOAD_SEQUENCE).then(() => {
+        // Initialize download
+        win()?.webContents.send("progress-banner-init", {
+          title: "Downloading " + dl_link,
+          cancel_event: "game-dl-cancel",
+          cancel_data: game
+        });
+        const total = game_remote.dl_size;
 
-      function done(){
+        function done(){
         // Release lock
-        token.off("abort");
-        releaseLock(DOWNLOAD_SEQUENCE);
-        resolve({status: "success", links: [dl_link]});
-      }
+          token.off("abort");
+          releaseLock(DOWNLOAD_SEQUENCE);
+          resolve({status: "success", links: [dl_link]});
+        }
 
-      const save_loc = tmp_download + "/" + dl_link;
-      // Remove on start if left over
-      if(fs.existsSync(save_loc)){
-        fs.rmSync(save_loc);
-      }
-      // Perform download
-      const active_dl = downloadFile(webdav.getFileDownloadLink(game_remote.folder + "/" + dl_link), dl_link);
-      active_dl.on("end", () => {
-        done();
-        win()?.setProgressBar(-1);
+        const save_loc = tmp_download + "/" + dl_link;
+        // Remove on start if left over
+        if(fs.existsSync(save_loc)){
+          fs.rmSync(save_loc);
+        }
+        // Perform download
+        const active_dl = downloadFile(webdav.getFileDownloadLink(game_remote.folder + "/" + dl_link), dl_link);
+        active_dl.on("end", () => {
+          done();
+          win()?.setProgressBar(-1);
+        });
+        active_dl.on("stop", () => {
+          cleanupDownloaded(dl_link_set);
+          win()?.setProgressBar(-1);
+        });
+        active_dl.on("progress.throttled", (p: Stats) => {
+          const prog = {
+            total: total,
+            progress: p.downloaded,
+            speed: p.speed
+          };
+          win()?.webContents.send("game-dl-progress", game, prog);
+          win()?.webContents.send("progress-banner-progress", prog);
+          win()?.setProgressBar(p.downloaded / total);
+        });
+        active_dl.on("error", (e) => {
+          win()?.webContents.send("game-dl-error", game, e);
+          win()?.setProgressBar(-1);
+          win()?.webContents.send("progress-banner-error", "Failed to download game: " + game.name);
+        });
+        token.on("abort", () => {
+          console.log("Aborting download");
+          active_dl.stop();
+          releaseLock(DOWNLOAD_SEQUENCE);
+          reject("canceled");
+        });
+        if(token.aborted()){
+          console.log("Aborting download");
+          releaseLock(DOWNLOAD_SEQUENCE);
+          reject("canceled");
+          return;
+        }
+        active_dl.start();
       });
-      active_dl.on("stop", () => {
-        cleanupDownloaded(dl_link_set);
-        win()?.setProgressBar(-1);
-      });
-      active_dl.on("progress.throttled", (p: Stats) => {
-        const prog = {
-          total: total,
-          progress: p.downloaded,
-          speed: p.speed
-        };
-        win()?.webContents.send("game-dl-progress", game, prog);
-        win()?.webContents.send("progress-banner-progress", prog);
-        win()?.setProgressBar(p.downloaded / total);
-      });
-      active_dl.on("error", (e) => {
-        win()?.webContents.send("game-dl-error", game, e);
-        win()?.setProgressBar(-1);
-        win()?.webContents.send("progress-banner-error", "Failed to download game: " + game.name);
-      });
-      token.on("abort", () => {
-        console.log("Aborting download");
-        active_dl.stop();
-        releaseLock(DOWNLOAD_SEQUENCE);
-        reject("canceled");
-      });
-      if(token.aborted()){
-        console.log("Aborting download");
-        releaseLock(DOWNLOAD_SEQUENCE);
-        reject("canceled");
-        return;
-      }
-      active_dl.start();
     }));
   }
 

@@ -4,7 +4,6 @@ import { initWebDav, mutateFolder, webDavConfig } from "../nc_webdav";
 import {
   loadFromDataCache,
   loadFromImageCache,
-  loadFromVersionCache,
   saveToDataCache,
   saveToImageCache
 } from "../cache";
@@ -133,6 +132,7 @@ export async function getLocalGameData(game_dir: string, heavy = true): Promise<
         }
         if(fs.existsSync(game_dir + "/" + game_version)){
           l_info.c_version = fs.readFileSync(game_dir + "/" + game_version).toString();
+          l_info.current_version = l_info.c_version;
         }
         // Install size
         if(fs.existsSync(game_dir + "/" + game_folder_size)){
@@ -145,7 +145,6 @@ export async function getLocalGameData(game_dir: string, heavy = true): Promise<
         l_info.root_dir = game_dir;
         if(heavy){
           l_info.play_time = getPlaytime(l_info);
-          l_info.current_version = loadFromVersionCache(flattenName(l_info.name));
           // Load remote data
           try{
             l_info.remote = await ensureRemote(l_info);

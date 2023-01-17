@@ -18,6 +18,11 @@ let active_ins = undefined as undefined | child.ChildProcess;
 
 export type InstallResult = "success" | "canceled" | "extract_failed" | "install_failed" | "lock_failed" | "invalid_install" | "unknown";
 
+export type VersionInstallData = {
+  version: string
+  iter_id?: number
+}
+
 export function sendInstallStart(game: GOG.GameInfo, indeterminate = true){
   console.log("Starting Install");
   win()?.webContents.send("game-ins-start", game);
@@ -80,7 +85,7 @@ async function zipPostInstall(game: GOG.GameInfo){
 
 async function installGameZip(
   game: GOG.GameInfo, dl_files: string[], zip_f: string,
-  token: LockAbortToken, do_post = true): Promise<InstallResult>{
+  token: LockAbortToken, do_post = true, version?: VersionInstallData): Promise<InstallResult>{
   return new Promise<InstallResult>((resolve, reject) => {
     sendInstallStart(game, false);
     const gog_path = getConfig("gog_path");
@@ -130,9 +135,11 @@ async function installGameZip(
         archive.close().then(() => {
           // Write game name to file
           game.root_dir = ins_dir;
+          const version_txt = version?.version ? version.version : (game.remote?.version ? game.remote?.version : "0");
+          const version_id = version?.iter_id ? version.iter_id : (game.remote?.iter_id ? game.remote?.iter_id : 0);
           fs.writeFileSync(ins_dir + "/" + game_name_file, game.remote_name);
-          fs.writeFileSync(ins_dir + "/" + game_version, game.remote?.version ? game.remote?.version : "0");
-          fs.writeFileSync(ins_dir + "/" + game_iter_id, (game.remote?.iter_id ? game.remote?.iter_id : 0) + "");
+          fs.writeFileSync(ins_dir + "/" + game_version, version_txt);
+          fs.writeFileSync(ins_dir + "/" + game_iter_id, version_id + "");
           fs.writeFileSync(ins_dir + "/" + game_folder_size, getFolderSize(ins_dir) + "");
           sendInstallEnd(game);
           if(do_post){
@@ -151,7 +158,9 @@ async function installGameZip(
   });
 }
 
-function installGameExe(game: GOG.GameInfo, dl_files: string[], exe: string, token: LockAbortToken): Promise<InstallResult>{
+function installGameExe(
+  game: GOG.GameInfo, dl_files: string[], exe: string,
+  token: LockAbortToken, do_post = true, version?: VersionInstallData): Promise<InstallResult>{
   return new Promise<InstallResult>((resolve, reject) => {
     win()?.setProgressBar(2);
     sendInstallStart(game);
@@ -193,11 +202,21 @@ function installGameExe(game: GOG.GameInfo, dl_files: string[], exe: string, tok
       // Write game name to file
       fs.writeFileSync(ins_dir + "/" + game_name_file, game.remote_name);
       if(code === 3221226525){
+        // Write game name to file
+        game.root_dir = ins_dir;
+        const version_txt = version?.version ? version.version : (game.remote?.version ? game.remote?.version : "0");
+        const version_id = version?.iter_id ? version.iter_id : (game.remote?.iter_id ? game.remote?.iter_id : 0);
         fs.writeFileSync(ins_dir + "/" + game_name_file, game.remote_name);
-        fs.writeFileSync(ins_dir + "/" + game_version, game.remote?.version ? game.remote?.version : "0");
-        fs.writeFileSync(ins_dir + "/" + game_iter_id, (game.remote?.iter_id ? game.remote?.iter_id : 0) + "");
+        fs.writeFileSync(ins_dir + "/" + game_version, version_txt);
+        fs.writeFileSync(ins_dir + "/" + game_iter_id, version_id + "");
         fs.writeFileSync(ins_dir + "/" + game_folder_size, getFolderSize(ins_dir) + "");
         sendInstallEnd(game);
+        if(do_post){
+          zipPostInstall(game).then(() => {
+            resolve("success");
+          });
+          return;
+        }
         resolve("success");
         return;
       }
@@ -213,7 +232,9 @@ function installGameExe(game: GOG.GameInfo, dl_files: string[], exe: string, tok
   });
 }
 
-export async function installGame(game: GOG.GameInfo, dl_files: string[], exe: string, do_post = true): Promise<InstallResult>{
+export async function installGame(
+  game: GOG.GameInfo, dl_files: string[], exe: string, do_post = true, version?: VersionInstallData
+): Promise<InstallResult>{
   const lock = await acquireLock(UN_INSTALL_LOCK, true);
   if(lock === undefined){
     return new Promise<InstallResult>((r, reject) => {
@@ -222,11 +243,11 @@ export async function installGame(game: GOG.GameInfo, dl_files: string[], exe: s
   }
   console.log("Install init: ", exe);
   if(exe.endsWith(".exe")){
-    return installGameExe(game, dl_files, exe, lock).finally(() =>{
+    return installGameExe(game, dl_files, exe, lock, do_post, version).finally(() =>{
       releaseLock(UN_INSTALL_LOCK);
     });
   }else if(exe.endsWith(".zip")){
-    return installGameZip(game, dl_files, exe, lock, do_post).finally(() =>{
+    return installGameZip(game, dl_files, exe, lock, do_post, version).finally(() =>{
       releaseLock(UN_INSTALL_LOCK);
     });
   }

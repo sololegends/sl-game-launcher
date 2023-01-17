@@ -93,14 +93,6 @@
             tip-title="Clear Icon Cache" @click="clearImageCache"
           />
         </v-list-item>
-        <v-list-item>
-          Versions: {{procSize(cache.version_size)}}
-          <v-spacer />
-          <!-- <fa-icon
-            style="cursor:pointer;transition:0.1s" class="subtitle-1" icon="trash-alt"
-            tip-title="Clear Version Cache" @click="clearImageCache"
-          /> -->
-        </v-list-item>
       </v-list>
 
 
@@ -183,7 +175,6 @@ export default defineComponent({
       cache: {
         data_size: -1,
         image_size: -1,
-        version_size: -1,
         loading: true
       },
       show_uninstalled: true,
@@ -237,7 +228,6 @@ export default defineComponent({
       const s = new Date().getTime();
       this.cache.data_size = await ipc.invoke("data-cache-size");
       this.cache.image_size = await ipc.invoke("image-cache-size");
-      this.cache.version_size = await ipc.invoke("version-cache-size");
       const e = new Date().getTime();
       if(e - s < 1000){
         setTimeout(() => {

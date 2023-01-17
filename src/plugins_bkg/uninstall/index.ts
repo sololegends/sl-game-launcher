@@ -1,7 +1,6 @@
 
 import * as child from "child_process";
 import { acquireLock, LockAbortToken, releaseLock, UN_INSTALL_LOCK } from "../tools/locks";
-import { loadFromVersionCache, removeFromVersionCache } from "../cache";
 import { notify, win } from "..";
 import { ensureRemote } from "../game_loader";
 import filters from "../../js/filters";
@@ -204,7 +203,7 @@ export async function uninstallGame(game: GOG.GameInfo): Promise<GOG.GameInfo>{
   return new Promise<GOG.GameInfo>((resolve, reject) => {
     ensureRemote(game).then((remote) => {
       game.remote = remote;
-      const version = loadFromVersionCache(filters.flattenName(game.name));
+      const version = game.current_version;
       let download = game.remote.download;
       if(game.remote.versions && version && game.remote.versions[version]){
         download = game.remote.versions[version].download;
@@ -214,7 +213,6 @@ export async function uninstallGame(game: GOG.GameInfo): Promise<GOG.GameInfo>{
       }
       if(game.remote.is_zip || (download.length > 0 && download[0].endsWith(".zip"))){
         uninstallGameZip(game, lock).then((game) => {
-          removeFromVersionCache(filters.flattenName(game.name));
           resolve(game);
         }).catch((game) => {
           reject(game);
@@ -222,7 +220,6 @@ export async function uninstallGame(game: GOG.GameInfo): Promise<GOG.GameInfo>{
         return;
       }else if(game.remote === undefined || !game.remote.is_zip){
         uninstallGameExe(game, "game: " + game.name, "unins000.exe", lock).then((game) => {
-          removeFromVersionCache(filters.flattenName(game.name));
           resolve(game);
         }).catch((game) => {
           reject(game);

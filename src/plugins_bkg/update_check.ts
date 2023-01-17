@@ -1,15 +1,14 @@
 
-import { BrowserWindow, IpcMain } from "electron";
+import { notify as notifyFn, win } from ".";
 import { downloadAndReinstall } from "./game_dl_install";
 import { ensureRemote } from "./game_loader";
 import {getConfig} from "./config";
 import { GOG } from "@/types/gog/game_info";
-import { notify as notifyFn } from ".";
+import { IpcMain } from "electron";
 
-let _win = undefined as BrowserWindow | undefined;
 let _ipcMain = undefined as IpcMain | undefined;
 
-export async function checkForUpdates(game: GOG.GameInfo, sticky = false, notify = true, no_prompt = false){
+export async function checkForUpdates(game: GOG.GameInfo, notify = true, no_prompt = false){
   if(getConfig("offline")){
     if(notify){
       notifyFn({
@@ -24,62 +23,61 @@ export async function checkForUpdates(game: GOG.GameInfo, sticky = false, notify
   }
   game.remote = await ensureRemote(game, false);
   return new Promise<boolean>((resolver) => {
-    if(_win === undefined || _ipcMain === undefined){
+    if(win() === undefined || _ipcMain === undefined){
       resolver(false);
       return;
     }
-    _win?.webContents.send("save-game-sync-state", game.name, "Checking for updates: " + game.name);
+    const updateGame = function(){
+      downloadAndReinstall(game).finally(() => {
+        resolver(false);
+      });
+      win()?.webContents.send("save-game-stopped");
+    };
+    win()?.webContents.send("save-game-sync-state", game.name, "Checking for updates: " + game.name);
     const game_id = game.iter_id || 0;
     if(game.remote?.iter_id && game.remote.iter_id > game_id){
       if(no_prompt){
-        downloadAndReinstall(game).finally(() => {
-          resolver(false);
-        });
-        _win?.webContents.send("save-game-stopped");
-        return false;
+        updateGame();
+        return;
       }
       if(notify){
+        const evt = "do-game-update-" + new Date().getTime();
         const evt_1 = "ignore-game-update-" + new Date().getTime();
-        notifyFn({
-          title: "Game update available!",
-          text: game.name + " has a new version available. " + game.remote.version,
-          type: "info",
-          sticky,
-          closed: evt_1,
-          actions: [
-            {
-              name: "Update Now",
-              event: "reinstall-game",
-              data: game,
-              clear: true
-            },
-            {
-              name: "Ignore",
-              event: evt_1,
-              clear: true
-            }
-          ]
-        });
         _ipcMain.once(evt_1, async() => {
-          _win?.webContents.send("save-game-stopped");
+          win()?.webContents.send("save-game-stopped");
           resolver(false);
-          return false;
+          return;
         });
+        _ipcMain.once(evt, async() => {
+          updateGame();
+          return;
+        });
+        win()?.webContents.send(
+          "question",
+          "The game will launch following update completion.",
+          game.name + " has a new version available. " + game.remote.version,
+          {
+            header: "Game update available",
+            buttons: [
+              { text: "Update", id: evt },
+              { text: "Skip", id: evt_1 }
+            ]
+          }
+        );
       }else{
         resolver(false);
       }
       // Send message to game card that it has an update
-      _win?.webContents.send("game-remote-updated", game.remote);
-      _win?.webContents.send("save-game-stopped");
+      win()?.webContents.send("game-remote-updated", game.remote);
+      win()?.webContents.send("save-game-stopped");
       return;
     }
-    _win?.webContents.send("save-game-stopped");
+    win()?.webContents.send("save-game-stopped");
     resolver(false);
   });
 }
 
-export default function init(ipcMain: IpcMain, win: BrowserWindow){
-  _win = win;
+export default function init(ipcMain: IpcMain){
   _ipcMain = ipcMain;
 
   ipcMain.on("check-for-updates", async(e, games: GOG.GameInfo[]) => {
@@ -94,7 +92,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
   });
 
   ipcMain.handle("update-game", (e, game: GOG.GameInfo) => {
-    return checkForUpdates(game, false, true, true);
+    return checkForUpdates(game, true, true);
   });
 
 }

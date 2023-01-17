@@ -1,6 +1,6 @@
 
 import * as child from "child_process";
-import { acquireLock, LAUNCH_GAME_LOCK } from "./tools/locks";
+import { acquireLock, LAUNCH_GAME_LOCK, releaseLock } from "./tools/locks";
 import { BrowserWindow, IpcMain } from "electron";
 import { syncGameSave, uploadGameSave } from "./cloud_saves";
 import { checkForUpdates } from "./update_check";
@@ -55,7 +55,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   }
 
   async function launchGame(e: unknown, game: GOG.GameInfo){
-    const lock = acquireLock(LAUNCH_GAME_LOCK, true, false);
+    const lock = await acquireLock(LAUNCH_GAME_LOCK, true, false);
     if(lock === undefined){
       globals.notify({
         type: "warning",
@@ -68,10 +68,9 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       quitGame();
       runningGameChanged();
     }
-    let halt = false;
     const cancel_launch_evt = "cancel-game-launch";
     const haltfn = () => {
-      halt = true;
+      lock.abort();
       win?.webContents.send("progress-banner-init", {
         title: "Canceling Launch",
         indeterminate: true,
@@ -88,7 +87,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     win?.webContents.send("save-game-sync-state", game.name, "Syncing Remote Data");
     game.remote = await ensureRemote(game, false);
     win?.webContents.send("save-game-stopped", game);
-    if(halt){
+    if(lock.aborted()){
       win?.webContents.send("progress-banner-hide");
       return false;
     }
@@ -97,14 +96,14 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       syncGameSave(game, resolver);
     });
     await cloud_sync;
-    if(halt){
+    if(lock.aborted()){
       win?.webContents.send("progress-banner-hide");
       return false;
     }
-    await checkForUpdates(game);
+    await checkForUpdates(game, true, false);
     win?.webContents.send("progress-banner-hide");
     ipcMain.off(cancel_launch_evt, haltfn);
-    if(halt){
+    if(lock.aborted()){
       win?.webContents.send("progress-banner-hide");
       return false;
     }
@@ -149,6 +148,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       });
     console.log("Game started: " + running_game.process.pid);
     running_game.process.addListener("close", (code: number) => {
+      releaseLock(LAUNCH_GAME_LOCK);
       console.log("Game exited with code: " + code);
       running_game = undefined;
       updatePlayTime(game, (new Date().getTime() - start) / 1000);

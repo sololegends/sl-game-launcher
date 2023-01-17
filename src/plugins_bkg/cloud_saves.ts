@@ -353,7 +353,7 @@ async function deployCloudSave(
     text: "Saves for game " + game.remote_name + " synchronized locally",
     type: "success"
   });
-  resolver(true);
+  return resolver(true);
 }
 
 async function newerInCloud(
@@ -430,46 +430,48 @@ export async function syncGameSave(game: GOG.GameInfo, resolver: (cloud: boolean
 
     // Proceed to user request IF the saves existed (newer_in_cloud !== -1)
     if(newer_in_cloud === -1){
-      deployCloudSave(game, web_dav, remote_save_file, resolver);
-      return;
+      return deployCloudSave(game, web_dav, remote_save_file, resolver);
     }
-    const evt = "use-cloud-save-" + new Date().getTime();
-    const evtl = "use-local-save-" + new Date().getTime();
-    win?.webContents.send(
-      "question",
-      "Do you want to keep the local saves or use the cloud save?"
+    return new Promise<void>((resolve) => {
+      const evt = "use-cloud-save-" + new Date().getTime();
+      const evtl = "use-local-save-" + new Date().getTime();
+      win?.webContents.send(
+        "question",
+        "Do you want to keep the local saves or use the cloud save?"
       + "\n\nWARNING: If you use the cloud, all the local saves will be overwritten.",
-      "Newer saves for " + game.remote_name + " in cloud",
-      {
-        header: "Cloud Save Synchronization",
-        buttons: [
-          { text: "Use Cloud", id: evt },
-          { text: "Use Local", id: evtl }
-        ]
-      }
-    );
-    win?.webContents.send("save-game-stopped", game);
-    const fn = {
-      deploy: ()=> {
+        "Newer saves for " + game.remote_name + " in cloud",
+        {
+          header: "Cloud Save Synchronization",
+          buttons: [
+            { text: "Use Cloud", id: evt },
+            { text: "Use Local", id: evtl }
+          ]
+        }
+      );
+      win?.webContents.send("save-game-stopped", game);
+      const fn = {
+        deploy: ()=> {
         // Nothing
-      },
-      cancel: ()=> {
+        },
+        cancel: ()=> {
         // Nothing
-      }
-    };
-    const deploy = () => {
-      deployCloudSave(game, web_dav, remote_save_file, resolver);
-      ipcMain.off(evtl, fn.cancel);
-    };
-    fn.deploy = deploy;
-    const cancel = () => {
-      resolver(false);
-      ipcMain.off(evt, fn.deploy);
-    };
-    fn.cancel = cancel;
-    ipcMain.once(evt, fn.deploy);
-    ipcMain.once(evtl, fn.cancel);
-    return;
+        }
+      };
+      const deploy = () => {
+        deployCloudSave(game, web_dav, remote_save_file, resolver).then((result) => {
+          resolve(result);
+        });
+        ipcMain.off(evtl, fn.cancel);
+      };
+      fn.deploy = deploy;
+      const cancel = () => {
+        resolve(resolver(false));
+        ipcMain.off(evt, fn.deploy);
+      };
+      fn.cancel = cancel;
+      ipcMain.once(evt, fn.deploy);
+      ipcMain.once(evtl, fn.cancel);
+    });
   }else{
     console.error("Failed to get web dav connection for save sync!");
   }

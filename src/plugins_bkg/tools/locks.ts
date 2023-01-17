@@ -112,7 +112,7 @@ export function releaseLock(lock: string){
   console.log("Releasing lock: " + lock);
   if(LOCKS[lock] !== undefined){
     LOCKS[lock]?.abort();
-    LOCKS[lock] = undefined;
+    delete LOCKS[lock];
   }
 }
 

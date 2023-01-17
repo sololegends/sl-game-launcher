@@ -4,7 +4,6 @@ import { Globals } from ".";
 
 let image_cache_dir = "none";
 let data_cache_dir = "none";
-let version_cache_dir = "none";
 let l_globals = undefined as undefined | Globals;
 
 const LOADED = {} as Record<string, number>;
@@ -51,11 +50,6 @@ export function clearDataCache(): void{
   l_globals?.ensureDir(data_cache_dir);
 }
 
-export function clearVersionCache(): void{
-  fs.rmSync(version_cache_dir, { recursive: true });
-  l_globals?.ensureDir(version_cache_dir);
-}
-
 export function saveToImageCache(name: string, image: Buffer, folder?: string): boolean{
   return saveToCache(image_cache_dir, name, image, folder);
 }
@@ -89,19 +83,6 @@ export function removeFromDataCache(name: string, folder?: string){
 }
 
 
-export function saveToVersionCache(name: string, data: Buffer, folder?: string): boolean{
-  return saveToCache(version_cache_dir, name, data, folder);
-}
-
-export function loadFromVersionCache(name: string, folder?: string): undefined | string{
-  return loadFromCache(version_cache_dir, name, folder)?.toString();
-}
-
-export function removeFromVersionCache(name: string, folder?: string){
-  return removeFromCache(version_cache_dir, name, folder);
-}
-
-
 export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Globals){
 
   function getImageCacheSize(): number{
@@ -111,17 +92,12 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   function getDataCacheSize(): number{
     return globals.getFolderSize(data_cache_dir);
   }
-  function getVersionCacheSize(): number{
-    return globals.getFolderSize(version_cache_dir);
-  }
 
   // Init
   image_cache_dir = globals.app_dir + "img_cache\\";
   data_cache_dir = globals.app_dir + "data_cache\\";
-  version_cache_dir = globals.app_dir + "version_cache\\";
   globals.ensureDir(image_cache_dir);
   globals.ensureDir(data_cache_dir);
-  globals.ensureDir(version_cache_dir);
   l_globals = globals;
 
   ipcMain.handle("cache-folder", () =>{
@@ -136,9 +112,6 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     return getDataCacheSize();
   });
 
-  ipcMain.handle("version-cache-size", () =>{
-    return getVersionCacheSize();
-  });
 
   ipcMain.handle("image-cache-clear", () =>{
     return clearImageCache();
@@ -148,7 +121,4 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     return clearDataCache();
   });
 
-  ipcMain.handle("version-cache-clear", () =>{
-    return clearVersionCache();
-  });
 }
