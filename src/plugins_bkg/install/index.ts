@@ -101,12 +101,12 @@ async function installGameZip(
     }
     const archive = new zip.async({file: tmp_download + zip_f});
     token.on("abort", ()=>{
-      if(archive){
-        archive.close();
-        reject("canceled");
-      }
+      reject("canceled");
     });
     archive.entriesCount.then((total_count) => {
+      if(token.aborted()){
+        reject("canceled"); return;
+      }
       let ex_count = 0;
       archive.on("extract", (entry: ZipEntry) => {
         if(!token.aborted()){
@@ -127,10 +127,14 @@ async function installGameZip(
         }
       });
       if(token.aborted()){
-        archive.close();
         reject("canceled"); return;
       }
       archive.extract(null, ins_dir).then((count) => {
+        if(token.aborted()){
+          console.log("Closing archive in extraxt -> then");
+          archive.close();
+          return;
+        }
         console.log("Extracted:" + count);
         archive.close().then(() => {
           // Write game name to file

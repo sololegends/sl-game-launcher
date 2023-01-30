@@ -1,10 +1,11 @@
+
+import {parsePE, PE_Metadata} from "pe-exe-parser";
 import archiver from "archiver";
 import child from "child_process";
 import fs from "fs";
 import {getRemoteGamesList} from "../src/plugins_bkg/game_loader_fns";
 import {GOG} from "../src/types/gog/game_info";
 import initConfig from "../src/plugins_bkg/config";
-import {parsePE} from "pe-exe-parser";
 import zip from "node-stream-zip";
 
 // TYPES
@@ -312,7 +313,12 @@ async function redistFromInnoScript(inno_script: string, game_folder: string): P
       }
       const params = param_split[1].split("\";")[0].replaceAll("\\", "/").trim().split(" ");
       // Get the file versions
-      const exe_data = await (await parsePE(game_folder + "/" + exe)).metadata();
+      let exe_data = {} as PE_Metadata;
+      try{
+        exe_data = await (await parsePE(game_folder + "/" + exe)).metadata();
+      }catch(e){
+        // Nothing here
+      }
       final_redist.push({
         name: exe_data?.ProductName,
         version: exe_data?.ProductVersion,

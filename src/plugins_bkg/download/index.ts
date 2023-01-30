@@ -27,6 +27,7 @@ function nrd(game: GOG.GameInfo){
 }
 
 export function cleanupDownloaded(dl_link_set: string[]){
+  console.log("Cleaning downloads: ", dl_link_set);
   for(const i in dl_link_set){
     const dl = dl_link_set[i];
     // Remove the file in temp
@@ -63,7 +64,6 @@ export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: str
           cancel_event: "game-dl-cancel",
           cancel_data: game
         });
-        const total = game_remote.dl_size;
 
         function done(){
         // Release lock
@@ -89,13 +89,13 @@ export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: str
         });
         active_dl.on("progress.throttled", (p: Stats) => {
           const prog = {
-            total: total,
+            total: p.total,
             progress: p.downloaded,
             speed: p.speed
           };
           win()?.webContents.send("game-dl-progress", game, prog);
           win()?.webContents.send("progress-banner-progress", prog);
-          win()?.setProgressBar(p.downloaded / total);
+          win()?.setProgressBar(p.downloaded / p.total);
         });
         active_dl.on("error", (e) => {
           win()?.webContents.send("game-dl-error", game, e);

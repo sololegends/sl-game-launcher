@@ -131,6 +131,26 @@ export async function uninstallDLC(game: GOG.GameInfo, dlc: GOG.RemoteGameDLC): 
   });
 }
 
+export async function uninstallDLCSlug(game: GOG.GameInfo, dlc_slug: string): Promise<GOG.GameInfo>{
+  try{
+    game.remote = await ensureRemote(game);
+  }catch(e){
+    return new Promise<GOG.GameInfo>((resolve, reject) => {
+      reject({status: "remote_failed"});
+    });
+  }
+  let idx = 0;
+  for(const i in game.remote.dlc){
+    const dlc = game.remote.dlc[i];
+    if(dlc.slug === dlc_slug){
+      idx = i as unknown as number;
+      break;
+    }
+  }
+  return uninstallDLC(game, game.remote.dlc[idx]);
+}
+
+
 async function uninstallGameZip(game: GOG.GameInfo, token: LockAbortToken): Promise<GOG.GameInfo>{
   sendUninstallStart(game, "game: " + game.name);
   try{
