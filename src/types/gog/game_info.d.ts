@@ -131,7 +131,7 @@ export namespace GOG {
 				overwrite: true,
 				source: string,
 				target: string,
-				type: "folder" | "file"
+				type: "folder" | "file" | "archive"
 			}
 		}
 

@@ -1,12 +1,13 @@
 
 
-import { constants, copyFileSync, existsSync, readdirSync, readFileSync } from "fs";
+import { constants, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "fs";
 import elevate from "../as_admin/elevate";
 import { GOG } from "@/types/gog/game_info";
 import os from "os";
 import Reg from "../as_admin/regedit/windows";
 import { Regedit } from "../as_admin/regedit/regedit";
 import { win } from "..";
+import zip from "node-stream-zip";
 
 const REG_TYPE_MUTATE = {
   string: "REG_SZ",
@@ -17,6 +18,8 @@ function gogPath(path: string, game: GOG.GameInfo){
   return path
     .replace("{app}", game.root_dir)
     .replace("{supportDir}", game.root_dir + "/__support")
+    .replace("{deployDir}", game.root_dir + "/__deploy")
+    .replace("{redistDir}", game.root_dir + "/__redist")
     .replace("{userdocs}", os.homedir() + "/Documents")
     .replace("{userappdata}", os.homedir() + "/ApData/Roaming");
 }
@@ -96,14 +99,14 @@ async function action_supportData(game: GOG.GameInfo, action: GOG.ScriptInstall.
   if(undo){
     return {};
   }
+  if(!args.source || !args.target){
+    return {};
+  }
+  // Copy the whole folder
+  const src = gogPath(args.source, game);
+  const target = gogPath(args.target, game);
   switch(args.type){
   case "folder": {
-    if(!args.source || !args.target){
-      return {};
-    }
-    // Copy the whole folder
-    const src = gogPath(args.source, game);
-    const target = gogPath(args.target, game);
     const files = readdirSync(src);
     for(const file of files){
       if(args.overwrite){
@@ -113,10 +116,29 @@ async function action_supportData(game: GOG.GameInfo, action: GOG.ScriptInstall.
       copyFileSync(src + "/" + file, target + "/" + file, constants.COPYFILE_EXCL);
     }
     break;
-  } case "file":
+  } case "file": {
     // Copy the file
-    // CopyFileSync(args.source, args.target);
+    copyFileSync(src, target, args.overwrite ? undefined : constants.COPYFILE_EXCL);
     break;
+  } case "archive": {
+    if(!existsSync(target)){
+      mkdirSync(target, {recursive: true});
+    }
+    const archive = new zip.async({file: src});
+    return new Promise<ActionResult>((resolve, reject) => {
+      archive.extract(null, target).then(() => {
+        archive.close().then(() => {
+          resolve({});
+        }).catch((e) => {
+          reject({result: e});
+        });
+      }).catch((e) => {
+        reject({result: e});
+      });
+    });
+
+    break;
+  }
   default: break;
   }
   return {};
