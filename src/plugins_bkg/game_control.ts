@@ -146,6 +146,13 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
         }
         console.log(data.toString());
       });
+    if(running_game.process.pid === undefined){
+      releaseLock(LAUNCH_GAME_LOCK);
+      running_game = undefined;
+      console.log("Failed to launch game", game);
+      quitGame();
+      return false;
+    }
     console.log("Game started: " + running_game.process.pid);
     running_game.process.addListener("close", (code: number) => {
       releaseLock(LAUNCH_GAME_LOCK);

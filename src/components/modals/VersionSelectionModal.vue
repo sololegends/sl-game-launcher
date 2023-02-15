@@ -102,7 +102,8 @@ export default defineComponent({
   },
   computed: {
     isCurrentVersion(): boolean{
-      return this.game?.current_version ? false : true;
+      return this.game?.current_version !== undefined
+        && this.game.current_version === this.game.remote?.version ? true : false;
     },
     currentVersion(): string{
       return this.game?.current_version || "";
