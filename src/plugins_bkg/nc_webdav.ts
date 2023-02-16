@@ -16,7 +16,7 @@ export function webDavConfig(){
 export function mutateFolder(folder: string){
   const nc_cfg = webDavConfig();
   // Return  folder;
-  return  "/files/" + nc_cfg.user + "/" + folder;
+  return  "/files/" + nc_cfg.user + "/" + folder + ((folder.endsWith("/") || folder === "") ? "" : "/");
 }
 
 export async function initWebDav(options: WebDAVClientOptions = {}, force = false): Promise<WebDAVClient | undefined>{

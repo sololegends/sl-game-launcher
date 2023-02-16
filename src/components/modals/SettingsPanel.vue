@@ -24,17 +24,17 @@
         </v-list-item>
 
         <v-card-title class="primary header" style="padding: 0px 12px;">
-          <div class="subtitle-1 white--text">GOG Games Folder</div>
+          <div class="subtitle-1 white--text">Games Folder</div>
           <v-spacer />
           <fa-icon
             style="cursor:pointer;margin-right:10px" class="subtitle-1 white--text" icon="folder"
-            tip-title="Open GOG Folder" @click="openGOGFolder"
+            tip-title="Open Game Folder" @click="openGamesFolder"
           />
         </v-card-title>
 
         <v-list-item @click="getFolder" class="gog-folder-item">
           <fa-icon icon="folder" size="xl" />
-          <div class="h2 gog-path">{{gogPath}}</div>
+          <div class="h2 gog-path">{{gamesPath}}</div>
         </v-list-item>
 
         <v-divider></v-divider>
@@ -163,7 +163,7 @@ export default defineComponent({
         dark_mode: false
       },
       dev_mode: false,
-      gog_path: undefined as undefined | string,
+      games_path: undefined as undefined | string,
       webdav: {
         url: "",
         user: "",
@@ -204,8 +204,8 @@ export default defineComponent({
     this.show_repacked_only = this.$store.getters.showRepackedOnly;
   },
   computed: {
-    gogPath(): string{
-      return this.gog_path === undefined ? "Select GOG Path" : this.gog_path;
+    gamesPath(): string{
+      return this.games_path === undefined ? "Select Games Path" : this.games_path;
     }
   },
   methods: {
@@ -258,9 +258,9 @@ export default defineComponent({
 
     },
     setGogFolder(path: string){
-      this.gog_path = path;
-      ipc.send("cfg-set", "gog_path", this.gog_path);
-      ipc.send("gog-path-change", this.gog_path);
+      this.games_path = path;
+      ipc.send("cfg-set", "gog_path", this.games_path);
+      ipc.send("gog-path-change", this.games_path);
     },
     saveWebDav(){
       ipc.send("cfg-set", "webdav", this.webdav, true);
@@ -300,8 +300,8 @@ export default defineComponent({
       const cache_folder = await ipc.invoke("cache-folder");
       ipc.send("open-folder", cache_folder);
     },
-    async openGOGFolder(){
-      ipc.send("open-folder", this.gogPath);
+    async openGamesFolder(){
+      ipc.send("open-folder", this.gamesPath);
     },
     procKey: filter.procKey,
     procSize: filter.formatSize

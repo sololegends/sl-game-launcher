@@ -166,13 +166,13 @@ async function execAction(game: GOG.GameInfo, action: GOG.ScriptAction, undo: bo
   return {};
 }
 
-export async function processScript(game: GOG.GameInfo, undo = false): Promise<PostScriptResult>{
+export async function processScript(game: GOG.GameInfo, undo = false, game_id_override?: string): Promise<PostScriptResult>{
   if(game.root_dir === undefined || game.root_dir === "remote" || !existsSync(game.root_dir)){
     return {};
   }
 
   // Check for script file
-  const script_file = game.root_dir + "/goggame-" + game.gameId + ".script";
+  const script_file = game.root_dir + "/goggame-" + (game_id_override ? game_id_override : game.gameId) + ".script";
   console.log("Looking for script file: ", script_file);
   if(existsSync(script_file)){
     // Load the script
@@ -229,6 +229,6 @@ export async function processScript(game: GOG.GameInfo, undo = false): Promise<P
 }
 
 // For uninstalling
-export async function processScriptReverse(game: GOG.GameInfo){
-  return processScript(game, true);
+export async function processScriptReverse(game: GOG.GameInfo, game_id_override?: string){
+  return processScript(game, true, game_id_override);
 }

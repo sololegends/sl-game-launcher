@@ -64,14 +64,17 @@ export function cancelInstall(game: GOG.GameInfo){
   }
 }
 
-async function zipPostInstall(game: GOG.GameInfo){
+async function zipPostInstall(game: GOG.GameInfo, dlc_data?: GOG.RemoteGameDLCBuilding){
   win()?.setProgressBar(2);
   const game_reloaded = await getLocalGameData(game.root_dir, false);
+  console.debug("dlc_data:", dlc_data);
   if(game_reloaded){
     // Execute script check and execution
     try{
-      await processScript(game_reloaded);
-      await scanAndInstallRedist(game_reloaded);
+      await processScript(game_reloaded, false, dlc_data?.gameId);
+      if(!dlc_data){
+        await scanAndInstallRedist(game_reloaded);
+      }
     }catch(e){
       console.log("Error when installing dependencies and running post script", JSON.stringify(e));
       notify({
@@ -85,7 +88,8 @@ async function zipPostInstall(game: GOG.GameInfo){
 
 async function installGameZip(
   game: GOG.GameInfo, dl_files: string[], zip_f: string,
-  token: LockAbortToken, do_post = true, version?: VersionInstallData): Promise<InstallResult>{
+  token: LockAbortToken, do_post = true, version?: VersionInstallData,
+  dlc_data?: GOG.RemoteGameDLCBuilding): Promise<InstallResult>{
   return new Promise<InstallResult>((resolve, reject) => {
     sendInstallStart(game, false);
     const gog_path = getConfig("gog_path");
@@ -147,7 +151,7 @@ async function installGameZip(
           fs.writeFileSync(ins_dir + "/" + game_folder_size, getFolderSize(ins_dir) + "");
           sendInstallEnd(game);
           if(do_post){
-            zipPostInstall(game).then(() => {
+            zipPostInstall(game, dlc_data).then(() => {
               resolve("success");
             });
             return;
@@ -216,9 +220,10 @@ function installGameExe(
         fs.writeFileSync(ins_dir + "/" + game_folder_size, getFolderSize(ins_dir) + "");
         sendInstallEnd(game);
         if(do_post){
-          zipPostInstall(game).then(() => {
-            resolve("success");
-          });
+          // Don't need this the exe does it
+          // ZipPostInstall(game, dlc_data).then(() => {
+          //   Resolve("success");
+          // });
           return;
         }
         resolve("success");
@@ -237,7 +242,8 @@ function installGameExe(
 }
 
 export async function installGame(
-  game: GOG.GameInfo, dl_files: string[], exe: string, do_post = true, version?: VersionInstallData
+  game: GOG.GameInfo, dl_files: string[], exe: string, do_post = true,
+  version?: VersionInstallData, dlc_data?: GOG.RemoteGameDLCBuilding
 ): Promise<InstallResult>{
   const lock = await acquireLock(UN_INSTALL_LOCK, true);
   if(lock === undefined){
@@ -251,7 +257,7 @@ export async function installGame(
       releaseLock(UN_INSTALL_LOCK);
     });
   }else if(exe.endsWith(".zip")){
-    return installGameZip(game, dl_files, exe, lock, do_post, version).finally(() =>{
+    return installGameZip(game, dl_files, exe, lock, do_post, version, dlc_data).finally(() =>{
       releaseLock(UN_INSTALL_LOCK);
     });
   }

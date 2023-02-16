@@ -74,7 +74,7 @@ export default mixin(gamepad).extend({
     return {
       games: [] as GOG.GameInfo[],
       remote_games: [] as GOG.GameInfo[],
-      loading_remote_games: true,
+      loading_remote_games: false,
       force_done_loading: false,
       filtered_games: [] as GOG.GameInfo[],
       active: undefined as undefined | string,
@@ -369,6 +369,7 @@ export default mixin(gamepad).extend({
     },
     async updateGames(){
       return new Promise<GOG.GameInfo[]>((resolve, reject) => {
+        console.log("invoking read-games");
         ipc.invoke("read-games", true).then(async(res: GOG.GameInfo[]) => {
           this.games = res;
           if(this.games.length > 0){
@@ -376,23 +377,29 @@ export default mixin(gamepad).extend({
             ipc.send("check-for-updates", this.games);
             this.filterGames();
             resolve(this.games);
-            this.loading_remote_games = true;
-            ipc.invoke("read-remote-games").then((remote_games: GOG.GameInfo[]) => {
-              this.loading_remote_games = false;
-              this.remote_games = remote_games;
-              this.filterGames();
-              this.force_done_loading = true;
-            });
+            if(this.loading_remote_games === false){
+              this.loading_remote_games = true;
+              console.log("invoking read-remote-games");
+              ipc.invoke("read-remote-games").then((remote_games: GOG.GameInfo[]) => {
+                this.loading_remote_games = false;
+                this.remote_games = remote_games;
+                this.filterGames();
+                this.force_done_loading = true;
+              });
+            }
             return;
           }else{
             resolve([]);
-            this.loading_remote_games = true;
-            ipc.invoke("read-remote-games").then((remote_games: GOG.GameInfo[]) => {
-              this.loading_remote_games = false;
-              this.remote_games = remote_games;
-              this.filterGames();
-              this.force_done_loading = true;
-            });
+            if(this.loading_remote_games === false){
+              this.loading_remote_games = true;
+              console.log("invoking read-remote-games");
+              ipc.invoke("read-remote-games").then((remote_games: GOG.GameInfo[]) => {
+                this.loading_remote_games = false;
+                this.remote_games = remote_games;
+                this.filterGames();
+                this.force_done_loading = true;
+              });
+            }
           }
           reject(this.games);
         });

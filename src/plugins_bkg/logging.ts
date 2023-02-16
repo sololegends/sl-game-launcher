@@ -22,24 +22,31 @@ export default function init(){
   }
   const output = fs.createWriteStream(log_file);
 
+  const odebug = console.debug;
+  console.debug = function(message: string, ...optionalParams: any[]){ // eslint-disable-line @typescript-eslint/no-explicit-any
+    processParams(optionalParams);
+    odebug.apply(console, [ message, ...(optionalParams ? optionalParams : []) ]);
+    output.write("\r\n[" + new Date() + "] >> DEBUG >> " + message + " " + (optionalParams ? optionalParams : ""));
+  };
+
   const olog = console.log;
   console.log = function(message: string, ...optionalParams: any[]){ // eslint-disable-line @typescript-eslint/no-explicit-any
     processParams(optionalParams);
-    olog.apply(olog, [ message, ...(optionalParams ? optionalParams : []) ]);
-    output.write("\r\n[" + new Date() + "] >> LOG >> " + message + " " + (optionalParams ? optionalParams : ""));
+    olog.apply(console, [ message, ...(optionalParams ? optionalParams : []) ]);
+    output.write("\r\n[" + new Date() + "] >> LOG   >> " + message + " " + (optionalParams ? optionalParams : ""));
   };
 
   const owarn = console.warn;
   console.warn = function(message: string, ...optionalParams: any[]){ // eslint-disable-line @typescript-eslint/no-explicit-any
     processParams(optionalParams);
-    owarn.apply(owarn, [ message, ...(optionalParams ? optionalParams : []) ]);
-    output.write("\r\n[" + new Date() + "] >> WARN >> " + message + " " + (optionalParams ? optionalParams : ""));
+    owarn.apply(console, [ message, ...(optionalParams ? optionalParams : []) ]);
+    output.write("\r\n[" + new Date() + "] >> WARN  >> " + message + " " + (optionalParams ? optionalParams : ""));
   };
 
   const oerror = console.error;
   console.error = function(message: string, ...optionalParams: any[]){ // eslint-disable-line @typescript-eslint/no-explicit-any
     processParams(optionalParams);
-    oerror.apply(oerror, [ message, ...(optionalParams ? optionalParams : []) ]);
+    oerror.apply(console, [ message, ...(optionalParams ? optionalParams : []) ]);
     output.write("\r\n[" + new Date() + "] >> ERROR >> " + message + " " + (optionalParams ? optionalParams : ""));
   };
 }

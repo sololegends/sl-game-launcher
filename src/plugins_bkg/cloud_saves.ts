@@ -53,7 +53,7 @@ export function procSaveFile(save_file_raw: string, game: GOG.GameInfo): string{
 export function getRemoteSaveDirectory(name: string): string{
   const rf = getConfig("remote_save_folder") as string;
   const mutated_folder = mutateFolder( rf ? rf : REMOTE_FOLDER);
-  return mutated_folder + "/" + name;
+  return mutated_folder + name;
 }
 
 export function getSavesLocation(game: GOG.GameInfo): undefined | GOG.GameSave{
@@ -234,13 +234,13 @@ export async function uploadGameSave(game: GOG.GameInfo){
     return;
   }
   if(!await saveGamesExists(game, save_files)){
-    globals?.notify({
-      title: "Cloud Save",
-      text: "Failed to locate saves for game " + game.remote_name,
-      type: "warning",
-      sticky: true
-    });
-    console.log("Failed to file local game save folder!");
+    // Globals?.notify({
+    //   Title: "Cloud Save",
+    //   Text: "Failed to locate saves for game " + game.remote_name,
+    //   Type: "warning",
+    //   Sticky: true
+    // });
+    console.log("Failed to find local game save folder!");
     return;
   }
   win?.webContents.send("save-game-sync-start", game.name);
@@ -333,7 +333,7 @@ async function deployCloudSave(
   game: GOG.GameInfo,
   web_dav: WebDAVClient,
   remove_save_file: string,
-  resolver: (cloud: boolean) => void){
+  resolver: (cloud: boolean, local_present: boolean) => void){
 
   const save_files = getSavesLocation(game);
   if(save_files === undefined){
@@ -343,7 +343,7 @@ async function deployCloudSave(
 
   const save_file = await pullSaveFromCloud(game.name, web_dav, game.remote_name, REMOTE_FILE_BASE + ".zip");
   if(save_file === undefined){
-    return resolver(false);
+    return resolver(false, true);
   }
   win?.webContents.send("save-game-sync-state", game.name, "Unpacking");
   await unpackGameSave(game, save_files, save_file);
@@ -353,7 +353,7 @@ async function deployCloudSave(
     text: "Saves for game " + game.remote_name + " synchronized locally",
     type: "success"
   });
-  return resolver(true);
+  return resolver(true, true);
 }
 
 async function newerInCloud(
@@ -403,12 +403,12 @@ async function newerInCloud(
   return oldest === 0 ? -1 : oldest + 15000 < Date.parse(stat.lastmod);
 }
 
-export async function syncGameSave(game: GOG.GameInfo, resolver: (cloud: boolean) => void){
+export async function syncGameSave(game: GOG.GameInfo, resolver: (cloud: boolean, local_present: boolean) => void){
   // Check if the cloud save location is specified
   const save_files = getSavesLocation(game);
   if(save_files === undefined){
     console.warn("Failed to find save game location for game: ", game);
-    return resolver(false);
+    return resolver(false, false);
   }
   const web_dav = await initWebDav();
   const nc_cfg = webDavConfig();
@@ -423,7 +423,7 @@ export async function syncGameSave(game: GOG.GameInfo, resolver: (cloud: boolean
     const newer_in_cloud = await newerInCloud(game, web_dav, remote_save_folder, remote_save_file);
     if(!newer_in_cloud){
       win?.webContents.send("save-game-stopped", game);
-      return resolver(false);
+      return resolver(false, true);
     }
 
     // At this point we know the file exists, and is newer than local saves
@@ -465,7 +465,7 @@ export async function syncGameSave(game: GOG.GameInfo, resolver: (cloud: boolean
       };
       fn.deploy = deploy;
       const cancel = () => {
-        resolve(resolver(false));
+        resolve(resolver(false, true));
         ipcMain.off(evt, fn.deploy);
       };
       fn.cancel = cancel;
@@ -475,7 +475,7 @@ export async function syncGameSave(game: GOG.GameInfo, resolver: (cloud: boolean
   }else{
     console.error("Failed to get web dav connection for save sync!");
   }
-  return resolver(false);
+  return resolver(false, true);
 }
 
 export default function init(ipcMain: IpcMain, _win: BrowserWindow, _globals: Globals){

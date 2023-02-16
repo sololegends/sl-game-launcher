@@ -3,6 +3,7 @@
 import { acquireLock, DOWNLOAD, DOWNLOAD_SEQUENCE, LockAbortToken, releaseLock } from "../tools/locks";
 import { downloadFile, initWebDav } from "../nc_webdav";
 import { notify, win } from "..";
+import { dlcDataFromSlug } from "../game_loader_fns";
 import { ensureDir } from "../tools/files";
 import { ensureRemote } from "../game_loader";
 import fs from "fs";
@@ -11,7 +12,7 @@ import { GOG } from "@/types/gog/game_info";
 import { Stats } from "node-downloader-helper";
 
 export type DownloadResult = {
-  status: "success" | "webdav_error" | "canceled" | "token_failed" | "remote_failed" | "unknown",
+  status: "success" | "webdav_error" | "canceled" | "token_failed" | "remote_failed" | "dlc_not_found" | "unknown",
   links?: string[]
 };
 
@@ -183,15 +184,14 @@ export async function downloadDLC(game: GOG.GameInfo, dlc_slug: string): Promise
     });
   }
   // Find dlc install index
-  let idx = 0;
-  for(const i in game.remote.dlc){
-    const dlc = game.remote.dlc[i];
-    if(dlc.slug === dlc_slug){
-      idx = i as unknown as number;
-      break;
-    }
+  const dlc = await dlcDataFromSlug(game, dlc_slug);
+  if(dlc === undefined){
+    nrd(game);
+    return new Promise<DownloadResult>((resolve, reject) => {
+      reject({status: "dlc_not_found"});
+    });
   }
-  return downloadPrep(game, game.remote.dlc[idx].download);
+  return downloadPrep(game, dlc.download);
 }
 
 export async function downloadVersion(game: GOG.GameInfo, version_id: string, version: GOG.RemoteGameDLC): Promise<DownloadResult>{

@@ -14,6 +14,7 @@ import { cleanupDownloaded, downloadDLC, downloadGame, downloadVersion } from ".
 import { notify, win } from "./index";
 import { syncGameSave, uploadGameSave } from "./cloud_saves";
 import { uninstallDLC, uninstallDLCSlug, uninstallGame } from "./uninstall";
+import { dlcDataFromSlug } from "./game_loader_fns";
 import { ensureRemote } from "./game_loader";
 import { getConfig } from "./config";
 import { GOG } from "@/types/gog/game_info";
@@ -58,7 +59,7 @@ async function awaitSaveSync(game: GOG.GameInfo, cancel_note = ""){
     return false;
   }
   showAwaitSaveSync(sync_token, cancel_note);
-  await syncGameSave(game, async(b: boolean ) => {
+  await syncGameSave(game, async(b: boolean, present: boolean) => {
     if(b){
       console.log("Saves synchronized from the cloud");
       return;
@@ -68,7 +69,9 @@ async function awaitSaveSync(game: GOG.GameInfo, cancel_note = ""){
       releaseLock(sync_token_n);
       return;
     }
-    await uploadGameSave(game);
+    if(present){
+      await uploadGameSave(game);
+    }
   });
   clearAwaitSaveSync();
   if(sync_token.aborted()){
@@ -99,7 +102,11 @@ export async function downloadAndInstallDLC(game: GOG.GameInfo, dlc_slug: string
     dl_files = dl_result.links;
     if(Array.isArray(dl_files) && dl_files.length >= 1){
       hit_install = true;
-      await installGame(game, dl_files, dl_files[0], false);
+      const dlc = await dlcDataFromSlug(game, dlc_slug);
+      if(dlc === undefined){
+        console.error("Failed to find dlc from slug [", dlc_slug, "]", dlc);
+      }
+      await installGame(game, dl_files, dl_files[0], true, undefined, dlc);
       cleanupDownloaded(dl_files);
     }
     triggerReload(game);
@@ -177,7 +184,7 @@ export async function downloadAndReinstall(game: GOG.GameInfo){
     if(Array.isArray(dl_files) && dl_files.length >= 1){
     // Uninstall first
       await uninstallGame(game);
-      await installGame(game, dl_files, dl_files[0], false);
+      await installGame(game, dl_files, dl_files[0]);
       // Reinstall the DLC, if any
       for(const dlc of installed_dlc){
         await downloadAndInstallDLC(game, dlc.slug);

@@ -85,8 +85,13 @@ function performUninstall(game: GOG.GameInfo, uninstall: GOG.UninstallDef){
 
 export async function uninstallDLC(game: GOG.GameInfo, dlc: GOG.RemoteGameDLC): Promise<GOG.GameInfo>{
   await acquireLock(UN_INSTALL_LOCK, true);
+  sendUninstallStart(game, "dlc: " + filters.procKey(dlc.slug));
+  try{
+    await processScriptReverse(game, dlc?.gameId);
+  }catch(e){
+    console.log("Failed tin reverse script", e);
+  }
   return new Promise<GOG.GameInfo>((resolve, reject) => {
-    sendUninstallStart(game, "dlc: " + filters.procKey(dlc.slug));
     if(dlc.uninstall){
       let uninstall = dlc.uninstall;
       if(typeof uninstall === "string"){
@@ -109,6 +114,7 @@ export async function uninstallDLC(game: GOG.GameInfo, dlc: GOG.RemoteGameDLC): 
       performUninstall(game, uninstall);
       sendUninstallEnd(game, "DLC: " + filters.procKey(dlc.slug));
       resolve(game);
+      return;
     }
 
     // Rough uninstall?
@@ -155,6 +161,14 @@ async function uninstallGameZip(game: GOG.GameInfo, token: LockAbortToken): Prom
   sendUninstallStart(game, "game: " + game.name);
   try{
     await processScriptReverse(game);
+    // Perform dl reverse if needed
+    if(game?.remote?.dlc){
+      for(const dlc of game.remote.dlc){
+        if(dlc.gameId){
+          await processScriptReverse(game, dlc.gameId);
+        }
+      }
+    }
   }catch(e){
     console.log("Failed tin reverse script", e);
   }

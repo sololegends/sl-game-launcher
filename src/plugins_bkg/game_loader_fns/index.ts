@@ -51,7 +51,9 @@ export function loadPresentDLC(game: GOG.GameInfo, remote: GOG.RemoteGameData): 
     }
     const name = dlc.slug.replace(remote.slug + "_", "");
     dlc.present = dlc_found.includes(name);
-    dlc.gameId = dlc_ids[name];
+    if(dlc.gameId === undefined){
+      dlc.gameId = dlc_ids[name];
+    }
   }
   return remote;
 }
@@ -64,7 +66,7 @@ export async function getRemoteGameData(game: GOG.GameInfo, use_cache = true): P
   const remote_cache_data = loadFromDataCache("game-data.json", cache_name);
   const web_dav_cfg = webDavConfig();
   const web_dav = await initWebDav();
-  const remote_folder = mutateFolder(web_dav_cfg.folder + "/" + game.remote_name);
+  const remote_folder = mutateFolder(web_dav_cfg.folder) + game.remote_name;
   if(use_cache && remote_cache_data){
     const game_data = loadPresentDLC(game, JSON.parse(remote_cache_data));
     game_data.folder = remote_folder;
@@ -201,12 +203,15 @@ export async function getRemoteGamesList(use_cache = true, filter_installed = tr
   console.log("Remote load stage");
   const web_dav = await initWebDav();
   const nc_cfg = webDavConfig();
+  const promises = [] as Promise<void>[];
   if(nc_cfg !== undefined && web_dav !== undefined){
     const mutated_folder = mutateFolder(nc_cfg.folder);
+    console.log("Reading games folder: ", mutated_folder);
     const contents = await web_dav.getDirectoryContents(mutated_folder) as FileStat[];
     for(const i in contents){
       const file = contents[i] as FileStat;
-      const name = file.filename.replace(mutated_folder + "/", "");
+      console.debug("Reading game folder: ", file);
+      const name = file.filename.replace(mutated_folder, "");
       if(file.type === "directory" && !name.startsWith("~") && !local_games.includes(name)){
         // Get the remote data payload
         const game = {
@@ -223,10 +228,17 @@ export async function getRemoteGamesList(use_cache = true, filter_installed = tr
           root_dir: "remote",
           is_installed: false
         } as GOG.GameInfo;
-        game.remote = await ensureRemote(game, use_cache);
+        promises.push(new Promise<void>((resolve) => {
+          ensureRemote(game, use_cache).then((remote) =>{
+            game.remote = remote;
+            resolve();
+          });
+
+        }));
         remote_games.push(game);
       }
     }
+    await Promise.all(promises);
   }
   return remote_games;
 }
@@ -313,6 +325,22 @@ export async function getGameImage(game: GOG.GameInfo){
     icon: "data:image/" + ext + ";base64," + img_data.toString("base64"),
     remote: game.remote
   };
+}
+
+export async function dlcDataFromSlug(game: GOG.GameInfo, dlc_slug: string): Promise<GOG.RemoteGameDLCBuilding | undefined>{
+  game.remote = await ensureRemote(game);
+  let idx = -1;
+  for(const i in game.remote.dlc){
+    const dlc = game.remote.dlc[i];
+    if(dlc.slug === dlc_slug){
+      idx = i as unknown as number;
+      break;
+    }
+  }
+  if(idx === -1){
+    return undefined;
+  }
+  return game.remote.dlc[idx];
 }
 
 export default {
