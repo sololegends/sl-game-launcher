@@ -14,9 +14,10 @@ export namespace GOG {
 			category: string
 			isPrimary: boolean
 			languages: string[]
-			name: string
+			name?: string
 			osBitness?: string[]
-			path: string
+			path?: string
+			link?: string
 			type: string
 	}
 
@@ -58,6 +59,7 @@ export namespace GOG {
 
 	export interface RemoteGameDLC extends RemoteGameDLCBuilding {
 		present: boolean
+		playTasks?: PlayTasks[]
 	}
 
 	export type GamePlatform = "aix" | "darwin" | "freebsd" | "linux" | "openbsd" | "sunos" | "windows" | "deck"
@@ -74,6 +76,7 @@ export namespace GOG {
 	export type RemoteGameData = {
 		logo: string
 		folder?: string
+		game_id?: string
 		logo_format: string
 		slug: string
 		download: string[]

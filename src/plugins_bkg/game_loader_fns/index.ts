@@ -31,6 +31,7 @@ export function loadPresentDLC(game: GOG.GameInfo, remote: GOG.RemoteGameData): 
   const files = fs.readdirSync(game_dir);
   const dlc_found = [];
   const dlc_ids = {} as Record<string, string>;
+  const dlc_tasks = {} as Record<string, GOG.PlayTasks[]>;
   for(const i in files){
     const file = files[i];
     if(file.endsWith(".info") && (file.startsWith("goggame") || file.startsWith("game-data"))){
@@ -40,16 +41,20 @@ export function loadPresentDLC(game: GOG.GameInfo, remote: GOG.RemoteGameData): 
         const name = flattenName(l_info.name);
         dlc_found.push(name);
         dlc_ids[name] = l_info.gameId;
+        dlc_tasks[name] = l_info.playTasks;
       }
     }
   }
   for(const i in remote.dlc){
     const dlc = remote.dlc[i];
+    const name = dlc.slug.replace(remote.slug + "_", "");
     if(dlc.gameId && Object.values(dlc_ids).includes(dlc.gameId)){
+      if(dlc_tasks[name] !== undefined){
+        dlc.playTasks = dlc_tasks[name];
+      }
       dlc.present = true;
       continue;
     }
-    const name = dlc.slug.replace(remote.slug + "_", "");
     dlc.present = dlc_found.includes(name);
     if(dlc.gameId === undefined){
       dlc.gameId = dlc_ids[name];

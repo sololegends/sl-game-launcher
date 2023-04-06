@@ -1,22 +1,15 @@
 
-import { notify as notifyFn, win } from ".";
 import { downloadAndReinstall } from "./game_dl_install";
 import { ensureRemote } from "./game_loader";
 import {getConfig} from "./config";
 import { GOG } from "@/types/gog/game_info";
 import { IpcMain } from "electron";
+import { win } from ".";
 
 let _ipcMain = undefined as IpcMain | undefined;
 
 export async function checkForUpdates(game: GOG.GameInfo, notify = true, no_prompt = false){
   if(getConfig("offline")){
-    if(notify){
-      notifyFn({
-        title: "Game update failed",
-        text: "Failed to connect to server",
-        type: "error"
-      });
-    }
     return new Promise<boolean>((resolver) => {
       resolver(false);
     });

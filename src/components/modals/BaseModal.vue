@@ -28,24 +28,30 @@
       </v-card-text>
 
       <v-divider v-if="(action && action.length!=0)||!(closeable&&show_cancel)" />
-      <v-card-actions class="text-right">
-        <v-btn style="opacity:0;" v-if="!(filteredActions.length!=0||!(closeable&&show_cancel))"></v-btn>
+      <v-card-actions>
+        <div class="text-left">
+          <slot name="actions-left" />
+        </div>
         <v-spacer />
-        <v-btn @click="closeModal" v-if="!closeable&&show_cancel">Cancel</v-btn>
-        <v-btn
-          v-for="item in filteredActions"
-          :key="dynamicProp(item.text)"
-          :name="dynamicProp(item.name)"
-          :loading="dynamicProp(item.loading, false)"
-          :id="'edit_user_' + dynamicProp(item.text)"
-          :type="item.name===undefined ? 'button' : 'submit'"
-          :class="buttonTheme(item)"
-          @click="actionClick(item, $event)"
-          :style="'background-color:' + item.color"
-          :disabled="dynamicProp(item.disabled, false)"
-        >
-          {{dynamicProp(item.text)}}
-        </v-btn>
+        <div class="text-right">
+          <v-btn style="opacity:0;" v-if="!(filteredActions.length!=0||!(closeable&&show_cancel))"></v-btn>
+          <v-spacer />
+          <v-btn @click="closeModal" v-if="!closeable&&show_cancel">Cancel</v-btn>
+          <v-btn
+            v-for="item in filteredActions"
+            :key="dynamicProp(item.text)"
+            :name="dynamicProp(item.name)"
+            :loading="dynamicProp(item.loading, false)"
+            :id="'edit_user_' + dynamicProp(item.text)"
+            :type="item.name===undefined ? 'button' : 'submit'"
+            :class="buttonTheme(item)"
+            @click="actionClick(item, $event)"
+            :style="'background-color:' + item.color"
+            :disabled="dynamicProp(item.disabled, false)"
+          >
+            {{dynamicProp(item.text)}}
+          </v-btn>
+        </div>
       </v-card-actions>
     </v-card>
   </v-dialog>

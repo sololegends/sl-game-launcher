@@ -11,15 +11,28 @@ import zip from "node-stream-zip";
 // TYPES
 type ZipLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
-type CLIOptions = {
-  output?: string
-  clear?: boolean
-  nopack?: boolean
-  merge_data?: boolean
-  merge_info?: boolean
+interface CLIOptions {
+  output: string
   zip_level?: ZipLevel
 
-  [key: string]: string | boolean | ZipLevel | undefined
+  [key: string]: string | number | boolean | ZipLevel | undefined
+}
+
+interface RepackCLIOptions extends CLIOptions {
+  merge_data?: boolean
+  merge_info?: boolean
+  clear?: boolean
+  nocleanup?: boolean
+  dlc: string
+}
+interface DLCCLIOptions extends CLIOptions {
+  input: string
+  gameid: string
+  dlcid: string
+  dlc_name: string
+  zip_name: string
+  version?: string
+  iter_id?: number
 }
 type PathComponents = {
   dir: string
@@ -425,14 +438,16 @@ async function processGameFiles(data: PackProperties, format = "game-info"){
     }
     // Move the app contents to the main game folder
     // Get file list
-    const files = getFileList(data.output_folder, data.output_folder + "/app");
-    for(const file of files){
-      // Ensure directory
-      ensureDir(extractPathComponents(file.replace("app", data.output_folder)).dir);
-      fs.copyFileSync(data.output_folder + "/" + file, file.replace("app", data.output_folder));
+    if(fs.existsSync(data.output_folder + "/app")){
+      const files = getFileList(data.output_folder, data.output_folder + "/app");
+      for(const file of files){
+        // Ensure directory
+        ensureDir(extractPathComponents(file.replace("app", data.output_folder)).dir);
+        fs.copyFileSync(data.output_folder + "/" + file, file.replace("app", data.output_folder));
+      }
+      // Clean up the app dir
+      fs.rmSync(data.output_folder + "/app", {recursive: true});
     }
-    // Clean up the app dir
-    fs.rmSync(data.output_folder + "/app", {recursive: true});
     if(fs.existsSync(data.output_folder + "/__redist/ISI")){
       fs.rmSync(data.output_folder + "/__redist/ISI", {recursive: true});
     }
@@ -573,7 +588,7 @@ async function mergeGameInfo(new_info: GOG.RemoteGameData): Promise<GOG.RemoteGa
   return old_info;
 }
 
-async function repackGame(game_exe: string, output_dir: string, options: CLIOptions): Promise<GOG.RemoteGameData>{
+async function repackGame(game_exe: string, output_dir: string, options: RepackCLIOptions): Promise<GOG.RemoteGameData>{
   const path = extractPathComponents(game_exe);
   // Unpack the game exe
   const unpack_folder = output_dir + "/game_exe_unpack_folder";
@@ -603,6 +618,7 @@ async function repackGame(game_exe: string, output_dir: string, options: CLIOpti
   if(fs.existsSync(props.unpack_folder + "/install_script.iss")){
     redist = await redistFromInnoScript(props.unpack_folder + "/install_script.iss", game_folder);
   }
+  const game_id = readGameInfo(props.output_folder)?.gameId;
   // Get the install size metric
   const install_size = await getFolderSize(game_folder);
   // Compress game data
@@ -623,6 +639,7 @@ async function repackGame(game_exe: string, output_dir: string, options: CLIOpti
   return {
     logo: "logo.jpg",
     logo_format: "image/jpg",
+    game_id,
     version: version_data.version,
     iter_id: version_data.iter_id,
     slug,
@@ -636,7 +653,7 @@ async function repackGame(game_exe: string, output_dir: string, options: CLIOpti
   };
 }
 
-async function repackDLC(dlc_exe: string, output_dir: string, options: CLIOptions): Promise<GOG.RemoteGameDLCBuilding>{
+async function repackDLC(dlc_exe: string, output_dir: string, options: RepackCLIOptions): Promise<GOG.RemoteGameDLCBuilding>{
   const path = extractPathComponents(dlc_exe);
   // Unpack the game exe
   const unpack_folder = output_dir + "/dlc_exe_unpack_folder";
@@ -691,10 +708,79 @@ async function repackDLC(dlc_exe: string, output_dir: string, options: CLIOption
   };
 }
 
-async function main(game_exe: string, dlc_folder: string, options_arr: string[]){
+async function freshPackDLC(output_dir: string, options: DLCCLIOptions): Promise<GOG.RemoteGameDLCBuilding>{
+  // Unpack the game exe
+  const dlc_folder = options.input;
+  const props = {
+    inno_script: "",
+    unpack_folder: "",
+    output_folder: dlc_folder,
+    pack_root: output_dir,
+    is_dlc: true
+  };
+  ensureEmptyDir(output_dir);
+  // Process the file list
+  await processGameFiles(props, FORMAT);
+  // Build the DLC info file
+  const dlc_info = {
+    gameId: options.dlcid,
+    language: "English",
+    languages: [
+      "en-US"
+    ],
+    name: options.dlc_name,
+    playTasks: [],
+    rootGameId: options.gameid,
+    version: 1
+  };
+  fs.writeFileSync(dlc_folder + "/game-data-" + options.dlcid + ".info", JSON.stringify(dlc_info, null, 2));
+
+  // Get the install size metric
+  const install_size = await getFolderSize(dlc_folder);
+  // Compress game data
+  const zip_name = options.zip_name;
+  const zip_output = output_dir + "/" + zip_name;
+  await compressFolder(dlc_folder, zip_output, options.zip_level);
+  const dl_size = await getFileSize(zip_output);
+
+  // Make uninstall script
+  const version_data = {
+    version: options.version,
+    iter_id: options.iter_id
+  };
+  const {game_id, file_name, content} = await getDlcUninstall(props, options.iter_id + "", FORMAT) as UninstallDataAll;
+  console.log("game_id: ", game_id);
+  const uninstall_json = content ? content : file_name;
+  const slug = await getSlug(props, FORMAT);
+
+  const dlc_frag = {
+    slug,
+    gameId: game_id,
+    version: version_data.version,
+    iter_id: version_data.iter_id,
+    dl_size,
+    install_size,
+    download: [
+      zip_name
+    ],
+    uninstall: uninstall_json
+  };
+  // Write data files
+  fs.writeFileSync(output_dir + "/dlc-data.frag.json", JSON.stringify(dlc_frag, null, 2));
+  return dlc_frag;
+}
+
+async function main(game_exe: string, options_arr: string[]){
   const options = {
-    zip_level: 8
-  } as CLIOptions;
+    output: "game_repacked",
+    zip_level: 8,
+    clear: false,
+    merge_data: false,
+    merge_info: false,
+    nopack: false,
+    nocleanup: false,
+    dlc: "NONE"
+  } as RepackCLIOptions;
   if(options_arr){
     for(const part of options_arr){
       const key_val = part.split("=");
@@ -708,14 +794,15 @@ async function main(game_exe: string, dlc_folder: string, options_arr: string[])
   if(options){
     console.debug(options);
   }
+  if(options.dlc === "default"){
+    options.dlc = "proc/dlc";
+  }
   const output_dir = options.output || "game_repacked";
+  const dlc_folder = options.dlc || "NONE";
   if(options.clear){
     console.log("Clearing exe/bin and DLC");
     // Removing DLC folder
     if(dlc_folder !== "NONE"){
-      if(dlc_folder === "default"){
-        dlc_folder = "proc/dlc";
-      }
       const dlcs = fs.readdirSync(dlc_folder);
       for(const dlc of dlcs){
         console.log(dlc);
@@ -769,9 +856,64 @@ async function main(game_exe: string, dlc_folder: string, options_arr: string[])
     console.log("No actions taken");
   }
 }
+
+async function packDLC(options_arr: string[]){
+  const options = {
+    output: "dlc_repacked",
+    gameid: "REPLACE_ME",
+    dlcid: "REPLACE_ME",
+    zip_name: "REPLACE_ME",
+    input: "REPLACE_ME",
+    dlc_name: "REPLACE_ME",
+    zip_level: 8
+  } as DLCCLIOptions;
+  if(options_arr){
+    for(const part of options_arr){
+      const key_val = part.split("=");
+      if(key_val.length === 1){
+        options[key_val[0]] = true;
+        continue;
+      }
+      options[key_val[0]] = key_val[1];
+    }
+  }
+  if(options){
+    console.debug(options);
+  }
+  let errored = false;
+  if(options.gameid === "REPLACE_ME"){
+    console.error("Parameter 'gameid' is required.");
+    errored = true;
+  }
+  if(options.dlcid === "REPLACE_ME"){
+    console.error("Parameter 'dlcid' is required.");
+    errored = true;
+  }
+  if(options.zip_name === "REPLACE_ME"){
+    console.error("Parameter 'zip_name' is required.");
+    errored = true;
+  }
+  if(options.input === "REPLACE_ME"){
+    console.error("Parameter 'input' is required.");
+    errored = true;
+  }
+  if(options.dlc_name === "REPLACE_ME"){
+    console.error("Parameter 'dlc_name' is required.");
+    errored = true;
+  }
+  if(!errored){
+    // Get to doing the thing.
+    await freshPackDLC(options.output, options);
+  }
+}
+
 /* global process */
 const args = process.argv.slice(2);
-main(args[0], args.length >= 2 ? args[1] : "proc/dlc", args.slice(2));
+if(args[0] === "packdlc"){
+  packDLC(args.slice(1));
+}else{
+  main(args[0], args.slice(1));
+}
 
 /* global exports */
 exports.main = main;

@@ -36,6 +36,7 @@
     <DLCSelectionModal />
     <VersionSelectionModal />
     <SaveSyncStatus />
+    <LaunchOptionsModal ref="launch_option_modal" />
   </div>
 </template>
 
@@ -47,6 +48,8 @@ import gamepad from "@mixins/gamepad";
 import GenericCard from "../components/inserts/gog/GenericCard.vue";
 import { GOG } from "@/types/gog/game_info";
 import {ipcRenderer as ipc} from "electron";
+import LaunchOptionsModal from "@modals/LaunchOptionsModal.vue";
+import { LaunchOptionsN } from "base_modal_ext";
 import mixin from "@mixins/index";
 import SaveSyncStatus from "@/components/inserts/gog/SaveSyncStatus.vue";
 import ScrollablePanel from "@/components/general/ScrollablePanel.vue";
@@ -62,7 +65,8 @@ export default mixin(gamepad).extend({
     ScrollablePanel,
     VersionSelectionModal,
     DownloadInstallBanner,
-    SaveSyncStatus
+    SaveSyncStatus,
+    LaunchOptionsModal
   },
   mixins: [
     gamepad
@@ -103,6 +107,7 @@ export default mixin(gamepad).extend({
     }
   },
   mounted(){
+    window.launch_option_modal = this.$refs.launch_option_modal as LaunchOptionsN.LaunchOptionsModal;
     this.$store.dispatch("set_minimal_ui", false);
     this.store_subscription = this.$store.subscribe((mutation) => {
       if(mutation.type === "set_show_repacked_only" || mutation.type === "set_show_uninstalled"){

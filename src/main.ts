@@ -45,6 +45,12 @@ Vue.prototype.$properties = {
   app: "SL Launcher"
 };
 Vue.prototype.axios = axios;
+Vue.prototype.$gog_api = axios.create({
+  baseURL: "https://api.gog.com"
+});
+Vue.prototype.$gog_com = axios.create({
+  baseURL: "https://www.gog.com"
+});
 
 Vue.prototype.$fn = {
   copyText: function(text: string, element: HTMLElement | string){
@@ -112,7 +118,7 @@ Vue.prototype.$app = {
 };
 
 window.APP_VERSION = "v0.10.23";
-window.BUILD_DATE = "2023-02-16 16:27:06";
+window.BUILD_DATE = "2023-04-06 18:49:29";
 export default createApp({
   router,
   render: (h: ((app: VueConstructor) => void)) => h(App),

@@ -54,7 +54,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     return [];
   }
 
-  async function launchGame(e: unknown, game: GOG.GameInfo){
+  async function launchGame(e: unknown, game: GOG.GameInfo, play_task?: GOG.PlayTasks){
     const lock = await acquireLock(LAUNCH_GAME_LOCK, true, false);
     if(lock === undefined){
       globals.notify({
@@ -108,25 +108,25 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       return false;
     }
     const start = new Date().getTime();
-    let exec_file = undefined;
-    let the_task = undefined;
-    for(const i in game.playTasks){
-      const task = game.playTasks[i];
-      console.log(task);
-      if(task.isPrimary){
-        exec_file = game.root_dir + "\\" + task.path;
-        the_task = task;
-        break;
+    let the_task = play_task;
+    if(the_task === undefined){
+      for(const i in game.playTasks){
+        const task = game.playTasks[i];
+        console.log(task);
+        if(task.isPrimary){
+          the_task = task;
+          break;
+        }
       }
     }
-    if(exec_file === undefined){
+    if(the_task === undefined){
       return false;
     }
     running_game = {
       info: game
     };
     console.log(
-      "Running Game: " + exec_file,
+      "Running Game: " + game.root_dir + "\\" + the_task.path,
       game.root_dir + (the_task?.workingDir ? "/" + the_task?.workingDir : ""),
       procArgs(the_task?.arguments)
     );
@@ -134,7 +134,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     // Actually run the game task
     // ============================================
     running_game.process = child.execFile(
-      exec_file,
+      game.root_dir + "\\" + the_task.path,
       procArgs(the_task?.arguments),
       {
         cwd: game.root_dir + (the_task?.workingDir ? "/" + the_task?.workingDir : "")

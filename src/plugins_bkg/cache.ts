@@ -121,4 +121,24 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     return clearDataCache();
   });
 
+  // Play task saving
+  ipcMain.handle("save-default-playtask", (e, game_name: string, playtask_id: string) =>{
+    const str = loadFromDataCache("playtasks.json", "$$internal$$");
+    let tasks = {} as Record<string, string>;
+    if(str !== undefined){
+      tasks = JSON.parse(str);
+    }
+    tasks[game_name] = playtask_id;
+    return saveToDataCache("playtasks.json", Buffer.from(JSON.stringify(tasks, null, 2)), "$$internal$$");
+  });
+
+  ipcMain.handle("load-default-playtask", (e, game_name: string) =>{
+    const str = loadFromDataCache("playtasks.json", "$$internal$$");
+    let tasks = {} as Record<string, string>;
+    if(str !== undefined){
+      tasks = JSON.parse(str);
+    }
+    return tasks[game_name];
+  });
+
 }

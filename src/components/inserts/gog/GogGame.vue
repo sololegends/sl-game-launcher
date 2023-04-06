@@ -65,6 +65,7 @@
 
 <script lang="ts">
 import { getSavesLocation, procSaveFolder } from "@/plugins_bkg/cloud_saves";
+import { AxiosResponse } from "axios";
 import { ContextMenu } from "@/components/plugins/context-menu/context-menu";
 import { defineComponent } from "@vue/composition-api";
 import filters from "@/js/filters";
@@ -174,6 +175,13 @@ export default defineComponent({
           click: this.uninstall,
           icon: "trash-alt"
         });
+        if(this.getAllPlayTasks().length > 1){
+          items.push({
+            title: "Launch Config",
+            click: this.changeLaunchType,
+            icon: "cogs"
+          });
+        }
         items.push({
           title: "Browse Local Folder",
           click: this.browse,
@@ -378,7 +386,7 @@ export default defineComponent({
       ipc.on("game-uns-error", this.loadingOff);
       ipc.send("uninstall-game", this.game);
     },
-    loadingOff(): void{
+    loadingOff(){
       this.loading = false;
       this.loading_update = false;
       ipc.off("game-dlins-end", this.loadingOff);
@@ -387,26 +395,80 @@ export default defineComponent({
       ipc.off("game-uns-error", this.loadingOff);
       ipc.off("zip-package-done", this.loadingOff);
     },
-    launchGame(): void{
+    getAllPlayTasks(): GOG.PlayTasks[]{
+      const play_tasks = [...this.game.playTasks];
+      if(this.game.remote){
+        for(const dlc of this.game.remote.dlc){
+          if(dlc.playTasks && dlc.playTasks.length > 0){
+            play_tasks.push(...dlc.playTasks);
+          }
+        }
+      }
+      return play_tasks;
+    },
+    async changeLaunchType(){
+      const result = await window.launch_option_modal.open(this.getAllPlayTasks(), this.game, true, true);
+      if(result){
+        this.$notify({
+          title: "Launch configuration changed",
+          text: this.game.name,
+          type: "success"
+        });
+      }
+    },
+    async launchGame(e: MouseEvent){
+      if(e.ctrlKey){
+        // Get the GoG link for it
+        this.$gog_api.get("products/" + this.game.gameId).then((response: AxiosResponse) => {
+          if(response.data){
+            // Get the link
+            if(response.data?.links?.product_card){
+              window.open(response.data?.links?.product_card, "_blank");
+              return;
+            }
+            this.$modal.show("message", {
+              api_output: JSON.stringify(response.data, null, 2),
+              message: "Game Data: No Store Link"
+            });
+          }
+        });
+        return;
+      }
       // If not installed, install it
       if(this.isRemote){
         this.downloadAndInstall();
         return;
       }
-      for(const i in this.game.playTasks){
-        const task = this.game.playTasks[i];
-        if(task.isPrimary){
-          ipc.invoke("run-game", this.game).then((started: boolean) => {
-            if(started){
-              ipc.send("game-running-changed", this.game);
-            }else{
-              this.$notify({
-                type: "error",
-                title: "Failed to launch Game!",
-                text: this.game.name
-              });
-            }
-          });
+      // Do launch option check
+      // Stitch all the play tasks from game and DLC
+      const play_tasks = this.getAllPlayTasks();
+      const result = await window.launch_option_modal.open(play_tasks, this.game);
+      if(result){
+        if(result.type === "FileTask"){
+          if(result.isPrimary || result.category === "game"){
+            ipc.invoke("run-game", this.game, result).then((started: boolean) => {
+              if(started){
+                ipc.send("game-running-changed", this.game);
+              }else{
+                this.$notify({
+                  type: "error",
+                  title: "Failed to launch Game!",
+                  text: this.game.name
+                });
+              }
+            });
+            return;
+          }
+          if(result.category === "document"){
+            ipc.send("open-file", this.game.root_dir + "/" + result.path);
+            return;
+          }
+          // Default:
+          ipc.send("open-link", this.game.root_dir + "/" + result.path);
+          return;
+        }
+        if(result.type === "URLTask"){
+          ipc.send("open-link", result.link);
           return;
         }
       }

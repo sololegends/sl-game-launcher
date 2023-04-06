@@ -1,5 +1,6 @@
 import Vue, { VNode } from "vue";
 import { GeneralPopup } from "confirmation_modal";
+import { LaunchOptionsN } from "base_modal_ext";
 import { Notify } from "./shims-app";
 
 declare global {
@@ -24,6 +25,9 @@ declare global {
     }
 		question_modal: {
       open: GeneralPopup.QuestionFn
+    }
+    launch_option_modal:{
+      open: LaunchOptionsN.LaunchOptionsFn
     }
   }
 }

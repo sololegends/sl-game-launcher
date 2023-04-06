@@ -2,6 +2,7 @@
 declare module "base_modal_ext"{
 	import { SomeArray, SomeMap } from "@/shims-app";
 	import {BaseModalN} from "base_modal";
+	import { GOG } from "@/types/gog/game_info";
 	import { User } from "user";
 
 	export namespace DeleteConfirmN{
@@ -69,5 +70,17 @@ declare module "base_modal_ext"{
 		}
 	}
 
+
+	export namespace LaunchOptionsN{
+		export interface LaunchOptionsModal extends Vue{
+			open: GeneralPopup.LaunchOptionsFn
+		}
+		export type LaunchOptionsFn = (
+			tasks: GOG.PlayTasks[],
+			game: GOG.GameInfo,
+			force?: boolean,
+			primary_only?: boolean
+		) => Promise<GOG.PLayTasks>
+	}
 
 }

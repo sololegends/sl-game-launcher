@@ -25,6 +25,8 @@ type VuetifyRules = {
 declare module "vue/types/vue" {
   interface Vue {
     $api: axios
+    $gog_api: axios
+    $gog_com: axios
     $router: typeof router
     $store: typeof Vuex
   }

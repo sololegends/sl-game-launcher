@@ -1,9 +1,7 @@
 
-import * as child from "child_process";
-import { appDataDir, getOS } from "./config";
 import { BrowserWindow, dialog, IpcMain } from "electron";
 import { ensureDir, getFolderSize, normalizeFolder } from "./tools/files";
-import fs from "fs";
+import { appDataDir } from "./config";
 import { GOG } from "@/types/gog/game_info";
 import { Notify } from "@/types/notification/notify";
 import z_cache from "./cache";
@@ -11,6 +9,7 @@ import z_cloud_saves from "./cloud_saves";
 import z_game_dl_install from "./game_dl_install";
 import z_game_loader from "./game_loader";
 import z_gc_init from "./game_control";
+import z_misc_os from "./misc_os";
 import z_play_time_tracker from "./play_time_tracker";
 import z_process_cloud from "./process_cloud";
 import z_sys_notifications from "./sys_notifications";
@@ -27,7 +26,8 @@ const fns = [
   z_process_cloud,
   z_game_dl_install,
   z_cloud_saves,
-  z_update_check
+  z_update_check,
+  z_misc_os
 ];
 
 
@@ -83,20 +83,6 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
   for(const i in fns){
     fns[i](ipcMain, win, globals);
   }
-
-  ipcMain.on("open-folder", (e, path: string) => {
-    path = path.replaceAll("[&|;:$()]+", "");
-    const os = getOS();
-    switch(os){
-    case "windows": path = path.replaceAll("/", "\\"); break;
-    case "linux": path = path.replaceAll("\\", "/"); break;
-    default: break;
-    }
-    console.log("Opening path:", path);
-    if(fs.existsSync(path)){
-      child.exec("explorer.exe " + path);
-    }
-  });
 
   ipcMain.handle("browse-folder", async() => {
     return await dialog.showOpenDialog({
