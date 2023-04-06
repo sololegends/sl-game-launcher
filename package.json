@@ -3,7 +3,7 @@
   "description": "View, run, install, and uninstall GOG games in the SL Cloud",
   "homepage": "https://updates.sololegends.com/",
   "author": "Sololegends",
-  "version": "v0.10.23",
+  "version": "v0.11.0",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve --mode=development",
