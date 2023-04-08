@@ -17,7 +17,7 @@ const REG_TYPE_MUTATE = {
 function mutatePath(path: string, game: GOG.GameInfo){
   return path
     .replace("{app}", game.root_dir)
-    .replace("{appDi}", game.root_dir)
+    .replace("{appDir}", game.root_dir)
     .replace("{supportDir}", game.root_dir + "/__support")
     .replace("{deployDir}", game.root_dir + "/__deploy")
     .replace("{redistDir}", game.root_dir + "/__redist")

@@ -93,7 +93,6 @@ export default defineComponent({
         ipc.invoke("save-default-playtask", this.game?.name, "none");
       } else {
         this.resolve(play_task);
-        return;
       }
       this.resolved = true;
       this.$modal.hide(this.id);
