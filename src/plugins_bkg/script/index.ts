@@ -1,6 +1,6 @@
 
 
-import { constants, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "fs";
+import { constants, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import elevate from "../as_admin/elevate";
 import { GOG } from "@/types/gog/game_info";
 import os from "os";
@@ -14,14 +14,26 @@ const REG_TYPE_MUTATE = {
   dword: "REG_DWORD"
 } as Record<string, Regedit.Type>;
 
-function gogPath(path: string, game: GOG.GameInfo){
+function mutatePath(path: string, game: GOG.GameInfo){
   return path
     .replace("{app}", game.root_dir)
+    .replace("{appDi}", game.root_dir)
     .replace("{supportDir}", game.root_dir + "/__support")
     .replace("{deployDir}", game.root_dir + "/__deploy")
     .replace("{redistDir}", game.root_dir + "/__redist")
     .replace("{userdocs}", os.homedir() + "/Documents")
     .replace("{userappdata}", os.homedir() + "/ApData/Roaming");
+}
+
+function mutateFile(path: string, game: GOG.GameInfo){
+  return path
+    .replaceAll("{app}", game.root_dir)
+    .replaceAll("{appDir}", game.root_dir)
+    .replaceAll("{supportDir}", game.root_dir + "/__support")
+    .replaceAll("{deployDir}", game.root_dir + "/__deploy")
+    .replaceAll("{redistDir}", game.root_dir + "/__redist")
+    .replaceAll("{userdocs}", os.homedir() + "/Documents")
+    .replaceAll("{userappdata}", os.homedir() + "/ApData/Roaming");
 }
 
 type ActionResult = {
@@ -68,7 +80,7 @@ async function action_setRegistry(game: GOG.GameInfo, action: GOG.ScriptInstall.
     };
   }
   // Mutate the data
-  const data = gogPath(args.valueData, game);
+  const data = mutatePath(args.valueData, game);
   if(undo){
     return {
       command: Reg.buildDelete(
@@ -95,37 +107,60 @@ async function action_setRegistry(game: GOG.GameInfo, action: GOG.ScriptInstall.
 
 async function action_supportData(game: GOG.GameInfo, action: GOG.ScriptInstall.supportData, undo: boolean): Promise<ActionResult>{
   const args = action.arguments;
-
-  if(undo){
-    return {};
-  }
   if(!args.source || !args.target){
     return {};
   }
+  const src = mutatePath(args.source, game);
+  const target = mutatePath(args.target, game);
+  if(undo){
+    switch(args.type){
+    case "folder": {
+      const files = readdirSync(src);
+      for(const file of files){
+        if(args.overwrite){
+          rmSync(target + "/" + file);
+        }
+      }
+      break;
+    } case "file": {
+      if(args.overwrite){
+        rmSync(target);
+      }
+      break;
+    } case "archive": {
+      if(args.overwrite){
+        rmSync(target);
+      }
+      break;
+    }
+    default: break;
+    }
+  }
   // Copy the whole folder
-  const src = gogPath(args.source, game);
-  const target = gogPath(args.target, game);
   switch(args.type){
   case "folder": {
     const files = readdirSync(src);
     for(const file of files){
-      if(args.overwrite){
-        copyFileSync(src + "/" + file, target + "/" + file);
-        continue;
-      }
-      copyFileSync(src + "/" + file, target + "/" + file, constants.COPYFILE_EXCL);
+      copyFileSync(src + "/" + file, target + "/" + file, args.overwrite ? undefined : constants.COPYFILE_EXCL);
+      rmSync(src + "/" + file);
     }
     break;
   } case "file": {
+    // Mutate the files with args like appDir, userDir, etc
+    if(args.mutate){
+      writeFileSync(src, mutateFile(readFileSync(src).toString(), game));
+    }
     // Copy the file
     copyFileSync(src, target, args.overwrite ? undefined : constants.COPYFILE_EXCL);
+    // Remove the source file
+    rmSync(src);
     break;
   } case "archive": {
     if(!existsSync(target)){
       mkdirSync(target, {recursive: true});
     }
     const archive = new zip.async({file: src});
-    return new Promise<ActionResult>((resolve, reject) => {
+    const promise = new Promise<ActionResult>((resolve, reject) => {
       archive.extract(null, target).then(() => {
         archive.close().then(() => {
           resolve({});
@@ -136,6 +171,10 @@ async function action_supportData(game: GOG.GameInfo, action: GOG.ScriptInstall.
         reject({result: e});
       });
     });
+    promise.then(() => {
+      rmSync(src);
+    });
+    return promise;
 
     break;
   }
@@ -172,8 +211,12 @@ export async function processScript(game: GOG.GameInfo, undo = false, game_id_ov
   }
 
   // Check for script file
-  const script_file = game.root_dir + "/goggame-" + (game_id_override ? game_id_override : game.gameId) + ".script";
+  let script_file = game.root_dir + "/goggame-" + (game_id_override ? game_id_override : game.gameId) + ".script";
   console.log("Looking for script file: ", script_file);
+  if(!existsSync(script_file)){
+    script_file = game.root_dir + "/game-data-" + (game_id_override ? game_id_override : game.gameId) + ".script";
+  }
+  console.log("Looking for secondary script file: ", script_file);
   if(existsSync(script_file)){
     // Load the script
     try{

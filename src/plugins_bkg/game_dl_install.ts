@@ -388,7 +388,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
     releaseLock(ACTION_LOCK);
   });
 
-  ipcMain.on("rerun-ins-script", (e, game: GOG.GameInfo) => {
-    processScript(game);
+  ipcMain.on("rerun-ins-script", (e, game: GOG.GameInfo, game_id?: string) => {
+    processScript(game, false, game_id);
   });
 }

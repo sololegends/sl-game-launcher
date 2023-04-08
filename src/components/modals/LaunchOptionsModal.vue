@@ -14,7 +14,7 @@
           <v-chip dense color="primary">
             <fa-icon
               style="height:20px"
-              :icon="item.isPrimary?'play':'plus'"
+              :icon="item.isPrimary?'play':(item.category === 'RESET' ? 'trash-alt' : 'plus')"
               size="xs"
             />
           </v-chip>
@@ -66,7 +66,7 @@ export default defineComponent({
       launch_options: [] as GOG.PlayTasks[],
       game: {} as GOG.GameInfo | undefined,
       resolved: false,
-      dont_ask_again: true
+      dont_ask_again: false
     };
   },
   computed: {
@@ -84,10 +84,16 @@ export default defineComponent({
       return task.path + ":" + task.type + ":" + task.arguments + ":" + task.isPrimary + ":" + task.link;
     },
     useLaunchOption(play_task: GOG.PlayTasks){
-      this.resolve(play_task);
       if(this.dont_ask_again && play_task.category === "game"){
         // Save for loading later
         ipc.invoke("save-default-playtask", this.game?.name, this.playTaskID(play_task));
+      }
+
+      if(play_task.category === "RESET"){
+        ipc.invoke("save-default-playtask", this.game?.name, "none");
+      } else {
+        this.resolve(play_task);
+        return;
       }
       this.resolved = true;
       this.$modal.hide(this.id);
@@ -99,13 +105,23 @@ export default defineComponent({
     async open(tasks: GOG.PlayTasks[], game: GOG.GameInfo, force = false, primary_only = false): Promise<GOG.PlayTasks | undefined>{
       this.launch_options = tasks;
       if(primary_only){
-        this.launch_options = this.launch_options.filter(ele => ele.isPrimary === true);
+        this.launch_options = this.launch_options.filter(ele => ele.isPrimary === true || ele.category === "game");
       }
       this.game = game;
       if(tasks.length === 1){
         // Return and resolve immediately
         return new Promise((resolve) => {
           resolve(tasks[0]);
+        });
+      }
+      if(force){
+        this.launch_options.push({
+          name: "Reset Remembered Launch",
+          path: "This will make the launcher ask each launch again",
+          category: "RESET",
+          isPrimary: false,
+          languages: [],
+          type: "internal"
         });
       }
       // Check if there is already a task that is supposed to be loaded by default
@@ -122,7 +138,7 @@ export default defineComponent({
           }
         }
       }
-      tasks.sort(function(a, b){
+      this.launch_options.sort(function(a, b){
         if (!a.isPrimary && b.isPrimary){
           return 1;
         }
@@ -146,7 +162,7 @@ export default defineComponent({
         this.reject(undefined);
       }
       this.resolved = false;
-      this.dont_ask_again = true;
+      this.dont_ask_again = false;
     },
     beforeOpen(){
       // Nothing here

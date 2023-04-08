@@ -313,21 +313,36 @@ export async function getGameImage(game: GOG.GameInfo){
       };
     }
   }
-  const webcache = new zip.async({file: cache_zip});
-  const data = await webcache.entryData("resources.json");
-  const resource = JSON.parse(data.toString());
-  let image = resource["images\\logo2x"];
-  if(image === undefined){
-    image = resource["images\\logo"];
+  try{
+    const webcache = new zip.async({file: cache_zip});
+    const data = await webcache.entryData("resources.json");
+    const resource = JSON.parse(data.toString());
+    let image = resource["images\\logo2x"];
+    if(image === undefined){
+      image = resource["images\\logo"];
+    }
+    // Ugh old GOG games do this..
+    if(image === undefined){
+      image = resource["images/logo2x"];
+    }
+    if(image === undefined){
+      image = resource["images/logo"];
+    }
+    const img_data = await webcache.entryData(image);
+    if(game.remote){
+      saveToImageCache(game.remote.logo, img_data, game.remote.slug);
+    }
+    const ext = image.substr(image.lastIndexOf(".") + 1);
+    await webcache.close();
+    return {
+      icon: "data:image/" + ext + ";base64," + img_data.toString("base64"),
+      remote: game.remote
+    };
+  }catch(e){
+    console.error("Failed to get image from webcache", e);
   }
-  const img_data = await webcache.entryData(image);
-  if(game.remote){
-    saveToImageCache(game.remote.logo, img_data, game.remote.slug);
-  }
-  const ext = image.substr(image.lastIndexOf(".") + 1);
-  await webcache.close();
   return {
-    icon: "data:image/" + ext + ";base64," + img_data.toString("base64"),
+    icon: "data:image/png;base64",
     remote: game.remote
   };
 }

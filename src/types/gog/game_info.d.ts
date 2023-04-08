@@ -131,7 +131,9 @@ export namespace GOG {
 		export interface supportData {
 			action: "supportData"
 			arguments: {
-				overwrite: true,
+				// Mutate ONLY for file types
+				mutate?: boolean,
+				overwrite: boolean,
 				source: string,
 				target: string,
 				type: "folder" | "file" | "archive"
@@ -151,7 +153,10 @@ export namespace GOG {
 		}
 	}
 
-	export type ScriptInstallAction = ScriptInstall.savePath | ScriptInstall.setRegistry | ScriptInstall.supportData
+	export type ScriptInstallAction =
+		ScriptInstall.savePath
+		| ScriptInstall.setRegistry
+		| ScriptInstall.supportData
 
 	export type ScriptAction = {
 		install: ScriptInstallAction

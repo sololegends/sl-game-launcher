@@ -28,6 +28,13 @@
             size="xl"
           />
         </v-list-item-action>
+        <v-list-item-action v-if="game && game.is_installed && $store.getters.dev_mode && item.present">
+          <fa-icon
+            tip-title="Rerun Setup Script (Ctrl + Click)"
+            icon="cogs"
+            size="xl"
+          />
+        </v-list-item-action>
       </v-list-item>
     </v-list>
   </base-modal>
@@ -94,6 +101,9 @@ export default defineComponent({
     }
   },
   methods: {
+    runSetupScript(dlc_id: string): void{
+      ipc.send("rerun-ins-script", this.game, dlc_id);
+    },
     downloadAll(){
       for(const i in this.dlc){
         if(!this.dlc[i].present){
@@ -109,6 +119,10 @@ export default defineComponent({
       }
     },
     installDLC(dlc: GOG.RemoteGameDLC, e?: MouseEvent){
+      if(e?.ctrlKey){
+        this.runSetupScript(dlc.gameId);
+        return;
+      }
       if(dlc.present){
         ipc.send("uninstall-dlc", this.game, dlc);
         this.$modal.hide(this.id);
