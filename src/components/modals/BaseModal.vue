@@ -44,7 +44,7 @@
             :loading="dynamicProp(item.loading, false)"
             :id="'edit_user_' + dynamicProp(item.text)"
             :type="item.name===undefined ? 'button' : 'submit'"
-            :class="'modal-btn' + buttonTheme(item)"
+            :class="'modal-btn ' + buttonTheme(item)"
             @click="actionClick(item, $event)"
             :style="'background-color:' + item.color"
             :disabled="dynamicProp(item.disabled, false)"
@@ -244,7 +244,7 @@ export default defineComponent({
 });
 </script>
 <style scoped>
-  .modal-btn{
+  .modal-btn {
     margin-left:5px;
   }
 
