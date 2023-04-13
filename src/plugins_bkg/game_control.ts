@@ -62,6 +62,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
         title: "Cannot launch game!",
         text: "Another game is already running"
       });
+      releaseLock(LAUNCH_GAME_LOCK);
       return;
     }
     if(running_game !== undefined && running_game.process !== undefined){
@@ -88,6 +89,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     game.remote = await ensureRemote(game, false);
     win?.webContents.send("save-game-stopped", game);
     if(lock.aborted()){
+      releaseLock(LAUNCH_GAME_LOCK);
       win?.webContents.send("progress-banner-hide");
       return false;
     }
@@ -97,6 +99,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     });
     await cloud_sync;
     if(lock.aborted()){
+      releaseLock(LAUNCH_GAME_LOCK);
       win?.webContents.send("progress-banner-hide");
       return false;
     }
@@ -104,6 +107,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     win?.webContents.send("progress-banner-hide");
     ipcMain.off(cancel_launch_evt, haltfn);
     if(lock.aborted()){
+      releaseLock(LAUNCH_GAME_LOCK);
       win?.webContents.send("progress-banner-hide");
       return false;
     }

@@ -122,6 +122,7 @@ export namespace GOG {
 	export namespace ScriptInstall {
 		export interface savePath {
 			action: "savePath"
+			no_uninstall: boolean
 			arguments: {
 				savePath: string,
 				type: "folder" | "file"
@@ -130,6 +131,7 @@ export namespace GOG {
 
 		export interface supportData {
 			action: "supportData"
+			no_uninstall: boolean
 			arguments: {
 				// Mutate ONLY for file types
 				mutate?: boolean,
@@ -142,6 +144,7 @@ export namespace GOG {
 
 		export interface setRegistry {
 			action: "setRegistry"
+			no_uninstall: boolean
 			arguments: {
 				root: Machine
 				subkey: string

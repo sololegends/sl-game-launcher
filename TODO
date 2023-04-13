@@ -8,7 +8,13 @@ v1.x.x Todo:
   ✔ Added support for different OSs in the save file location data @done(22-10-05 16:42)
   ✔ Verify game names can be anything now.. @done(22-12-12 21:42)
   ✔ Sync play time stats to cloud @done(22-12-16 18:56)
+  ✔ Cloud sav syncing @done(22-10-05 17:12)
+  ✔ Better support for non-GOG games @done(22-10-05 17:12)
+  ✔ Custom info files for data when using the zip packaging @done(22-10-05 17:12)
+  ✔ Support for regestry entries during install @done(22-12-12 21:42)
+  ✔ Support for installing dependencies / required libraries @done(22-12-12 21:42)
   ☐ Add rating locks / parental controls (local storage)
+  ☐ Re-work the backend to the REST API instead of relying on WebDAV (because SO SLOW)
 
 v2.x.x Todo: 
   ☐ Linux support
@@ -19,11 +25,18 @@ v2.x.x Todo:
   ☐ GamePad Support
     ☐ Manage DLC
     ☐ Change Versions
-  ✔ Support regestry keys in save data saving (which is stupid games do that but here we are) @done(23-01-09 17:55)
+  ☐ Support regestry keys in save data saving (which is stupid games do that but here we are)
 
 v3.x.x Todo: 
-  ✔ Cloud sav syncing @done(22-10-05 17:12)
-  ✔ Better support for non-GOG games @done(22-10-05 17:12)
-  ✔ Custom info files for data when using the zip packaging @done(22-10-05 17:12)
-  ✔ Support for regestry entries during install @done(22-12-12 21:42)
-  ✔ Support for installing dependencies / required libraries @done(22-12-12 21:42)
+
+
+Mics:
+  ☐ For GOG Games: Open Gog product page in context menu 
+  ☐ Sorting:
+    ☐ Alphabetic
+    ☐ By Latest played
+    ☐ By Ready to play (installed)
+  ☐ Graphical download page 
+  ☐ New layout with games list and details page ala-steam
+  ☐ Add Steam games to the UI
+  ☐ Backend log viewer in the GUI (Dev Mode only)

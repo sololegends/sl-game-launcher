@@ -6,6 +6,7 @@ import { ensureDir, getFolderSize, normalizeFolder } from "../tools/files";
 import { game_folder_size, game_iter_id, game_name_file, game_version } from "../../json/files.json";
 import { notify, win } from "..";
 import zip, { ZipEntry } from "node-stream-zip";
+import filters from "@/js/filters";
 import fs from "fs";
 import { getConfig } from "../config";
 import { getLocalGameData } from "../game_loader";
@@ -23,11 +24,11 @@ export type VersionInstallData = {
   iter_id?: number
 }
 
-export function sendInstallStart(game: GOG.GameInfo, indeterminate = true){
+export function sendInstallStart(game: GOG.GameInfo, indeterminate = true, dlc_data?: GOG.RemoteGameDLCBuilding){
   console.log("Starting Install");
   win()?.webContents.send("game-ins-start", game);
   win()?.webContents.send("progress-banner-init", {
-    title: "Installing game: " + game.name,
+    title: "Installing " + (dlc_data ? "DLC: " + filters.procKey(dlc_data.slug) : "game: " + game.name),
     indeterminate: indeterminate,
     cancel_event: "game-dl-cancel",
     cancel_data: game
@@ -41,9 +42,11 @@ export function sendInstallEnd(game: GOG.GameInfo){
   win()?.setProgressBar(-1);
 }
 
-export function sendInstallError(game: GOG.GameInfo){
+export function sendInstallError(game: GOG.GameInfo, dlc_data?: GOG.RemoteGameDLCBuilding){
   win()?.webContents.send("game-ins-error", game);
-  win()?.webContents.send("progress-banner-error", "Failed to install game: " + game.name);
+  win()?.webContents.send("progress-banner-error",
+    "Failed to install " + (dlc_data ? "DLC: " + filters.procKey(dlc_data.slug) : "game: " + game.name)
+  );
   win()?.setProgressBar(-1);
 }
 
@@ -91,7 +94,7 @@ async function installGameZip(
   token: LockAbortToken, do_post = true, version?: VersionInstallData,
   dlc_data?: GOG.RemoteGameDLCBuilding): Promise<InstallResult>{
   return new Promise<InstallResult>((resolve, reject) => {
-    sendInstallStart(game, false);
+    sendInstallStart(game, false, dlc_data);
     const gog_path = getConfig("gog_path");
     const tmp_download = gog_path + "\\.temp\\";
     let ins_dir = game.root_dir;

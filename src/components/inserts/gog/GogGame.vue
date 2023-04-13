@@ -254,6 +254,13 @@ export default defineComponent({
           icon: "recycle"
         });
       }
+      if(this.fromGog()){
+        items.push({
+          title: "Open GOG Page",
+          click: this.openGogPage,
+          icon: "link"
+        });
+      }
       items.push({
         title: "Close",
         click: () => { this.show_menu = false; },
@@ -269,6 +276,9 @@ export default defineComponent({
     }
   },
   methods: {
+    fromGog(){
+      return this.game.gameId.length !== 32;
+    },
     async checkForUpdates(){
       this.loading_update = true;
       await ipc.invoke("check-update-game", this.game, true);
@@ -416,22 +426,25 @@ export default defineComponent({
         });
       }
     },
+    openGogPage(){
+      // Get the GoG link for it
+      this.$gog_api.get("products/" + this.game.gameId).then((response: AxiosResponse) => {
+        if(response.data){
+          // Get the link
+          if(response.data?.links?.product_card){
+            window.open(response.data?.links?.product_card, "_blank");
+            return;
+          }
+          this.$modal.show("message", {
+            api_output: JSON.stringify(response.data, null, 2),
+            message: "Game Data: No Store Link"
+          });
+        }
+      });
+    },
     async launchGame(e: MouseEvent){
       if(e.ctrlKey){
-        // Get the GoG link for it
-        this.$gog_api.get("products/" + this.game.gameId).then((response: AxiosResponse) => {
-          if(response.data){
-            // Get the link
-            if(response.data?.links?.product_card){
-              window.open(response.data?.links?.product_card, "_blank");
-              return;
-            }
-            this.$modal.show("message", {
-              api_output: JSON.stringify(response.data, null, 2),
-              message: "Game Data: No Store Link"
-            });
-          }
-        });
+        this.openGogPage();
         return;
       }
       // If not installed, install it

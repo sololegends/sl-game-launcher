@@ -112,78 +112,87 @@ async function action_supportData(game: GOG.GameInfo, action: GOG.ScriptInstall.
   }
   const src = mutatePath(args.source, game);
   const target = mutatePath(args.target, game);
-  if(undo){
+  try{
+    if(undo){
+      switch(args.type){
+      case "folder": {
+        const files = readdirSync(src);
+        for(const file of files){
+          if(args.overwrite){
+            rmSync(target + "/" + file);
+          }
+        }
+        break;
+      } case "file": {
+        if(args.overwrite){
+          rmSync(target);
+        }
+        break;
+      } case "archive": {
+        if(args.overwrite){
+          rmSync(target);
+        }
+        break;
+      }
+      default: break;
+      }
+    }
+    // Copy the whole folder
     switch(args.type){
     case "folder": {
       const files = readdirSync(src);
       for(const file of files){
-        if(args.overwrite){
-          rmSync(target + "/" + file);
-        }
+        copyFileSync(src + "/" + file, target + "/" + file, args.overwrite ? undefined : constants.COPYFILE_EXCL);
+        rmSync(src + "/" + file);
       }
       break;
     } case "file": {
-      if(args.overwrite){
-        rmSync(target);
+    // Mutate the files with args like appDir, userDir, etc
+      if(args.mutate){
+        writeFileSync(src, mutateFile(readFileSync(src).toString(), game));
       }
+      // Copy the file
+      copyFileSync(src, target, args.overwrite ? undefined : constants.COPYFILE_EXCL);
+      // Remove the source file
+      rmSync(src);
       break;
     } case "archive": {
-      if(args.overwrite){
-        rmSync(target);
+      if(!existsSync(target)){
+        mkdirSync(target, {recursive: true});
       }
+      const archive = new zip.async({file: src});
+      const promise = new Promise<ActionResult>((resolve, reject) => {
+        archive.extract(null, target).then(() => {
+          archive.close().then(() => {
+            resolve({});
+          }).catch((e) => {
+            reject({result: e});
+          });
+        }).catch((e) => {
+          reject({result: e});
+        });
+      });
+      promise.then(() => {
+        rmSync(src);
+      });
+      return promise;
+
       break;
     }
     default: break;
     }
-  }
-  // Copy the whole folder
-  switch(args.type){
-  case "folder": {
-    const files = readdirSync(src);
-    for(const file of files){
-      copyFileSync(src + "/" + file, target + "/" + file, args.overwrite ? undefined : constants.COPYFILE_EXCL);
-      rmSync(src + "/" + file);
-    }
-    break;
-  } case "file": {
-    // Mutate the files with args like appDir, userDir, etc
-    if(args.mutate){
-      writeFileSync(src, mutateFile(readFileSync(src).toString(), game));
-    }
-    // Copy the file
-    copyFileSync(src, target, args.overwrite ? undefined : constants.COPYFILE_EXCL);
-    // Remove the source file
-    rmSync(src);
-    break;
-  } case "archive": {
-    if(!existsSync(target)){
-      mkdirSync(target, {recursive: true});
-    }
-    const archive = new zip.async({file: src});
-    const promise = new Promise<ActionResult>((resolve, reject) => {
-      archive.extract(null, target).then(() => {
-        archive.close().then(() => {
-          resolve({});
-        }).catch((e) => {
-          reject({result: e});
-        });
-      }).catch((e) => {
-        reject({result: e});
-      });
-    });
-    promise.then(() => {
-      rmSync(src);
-    });
-    return promise;
-
-    break;
-  }
-  default: break;
+  }catch(e){
+    return {
+      result: "error: " + (e as object).toString()
+    };
   }
   return {};
 }
 
 async function installAction(game: GOG.GameInfo, action: GOG.ScriptInstallAction, undo: boolean): Promise<ActionResult>{
+  if(undo && action.no_uninstall){
+    return {};
+  }
   switch(action.action){
   // Skip this for now
   case "savePath": break;

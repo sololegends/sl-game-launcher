@@ -42,7 +42,7 @@
             :key="dynamicProp(item.text)"
             :name="dynamicProp(item.name)"
             :loading="dynamicProp(item.loading, false)"
-            :id="'edit_user_' + dynamicProp(item.text)"
+            :id="'modal_button' + dynamicProp(item.text)"
             :type="item.name===undefined ? 'button' : 'submit'"
             :class="'modal-btn ' + buttonTheme(item)"
             @click="actionClick(item, $event)"

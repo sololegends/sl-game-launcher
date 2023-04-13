@@ -203,8 +203,8 @@ export async function downloadAndReinstall(game: GOG.GameInfo){
 export async function downloadAndInstall(game: GOG.GameInfo): Promise<boolean>{
   const token = await acquireLock(ACTION_LOCK, false);
   if(token === undefined){ return false; }
-  // Update remote data
-  await ensureRemote(game);
+  // Update remote data, no cache
+  await ensureRemote(game, false);
   try{
     const dl_result = await downloadGame(game);
     console.log("dl_result", dl_result);
