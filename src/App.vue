@@ -18,6 +18,7 @@
       <NotificationsPanel v-if="isFull" :position="{left:10,bottom:10}" style="z-index:9999;" />
       <span v-if="$store.getters.offline" class="text-centered">OFFLINE</span>
       <v-app-bar v-if="isFull" app color="primary elevation-3" dense>
+        <v-avatar size="40" />
         <h2 class="does-window-drag no-sel white--text">{{$properties.app}}</h2>
         <v-spacer class="does-window-drag h100" />
         <v-btn id="open_alert_drawer" icon @click="show_side_notify=true">

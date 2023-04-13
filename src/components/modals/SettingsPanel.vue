@@ -93,13 +93,24 @@
             tip-title="Clear Icon Cache" @click="clearImageCache"
           />
         </v-list-item>
+
+        <v-divider style="margin-top:20px;"></v-divider>
+
+        <v-card-title class="primary header" style="padding: 0px 12px;">
+          <div class="subtitle-1 white--text">Debugging</div>
+        </v-card-title>
+
+        <v-list-item @click="toggleDevMode">
+          <v-switch dense v-model="dev_mode" label="Dev Mode" @click="toggleDevMode"></v-switch>
+        </v-list-item>
+
+        <v-list-item v-if="dev_mode">
+          <LoggingDialog />
+        </v-list-item>
       </v-list>
 
 
       <div slot="footer">
-        <v-list-item @click="toggleDevMode">
-          <v-switch dense v-model="dev_mode" label="Dev Mode" @click="toggleDevMode"></v-switch>
-        </v-list-item>
         <v-card>
           <v-card-title class="primary header" style="padding: 0px 12px;">
             <div class="subtitle-1 white--text">APP Version Information</div>
@@ -135,6 +146,7 @@ import { ipcRenderer as ipc, OpenDialogReturnValue } from "electron";
 import { defineComponent } from "@vue/composition-api";
 import filter from "@filters";
 import { GOG } from "@/types/gog/game_info";
+import LoggingDialog from "../dialogs/LoggingDialog.vue";
 import SideDrawer from "@modals/SideDrawer.vue";
 
 type VersionData = {
@@ -147,7 +159,7 @@ type VersionDataMap = {
 }
 
 export default defineComponent({
-  components: { SideDrawer },
+  components: { SideDrawer, LoggingDialog },
   props: {
     show: {
       type: Boolean,

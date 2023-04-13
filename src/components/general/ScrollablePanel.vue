@@ -113,7 +113,7 @@ export default defineComponent({
           scrollTop: this.scroll_ele.scrollTop,
           scrollTopMax: scrollTopMax,
           scrollLeft: this.scroll_ele.scrollLeft,
-          atBottom: this.scroll_ele.scrollTop === this.scroll_ele.scrollTopMax,
+          atBottom: this.scroll_ele.scrollTop === scrollTopMax,
           atTop: this.scroll_ele.scrollTop === 0,
           isScrollable: this.scroll_ele.scrollHeight < this.scroll_ele.clientHeight
         });

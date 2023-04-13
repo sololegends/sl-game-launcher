@@ -39,4 +39,4 @@ Mics:
   ☐ Graphical download page 
   ☐ New layout with games list and details page ala-steam
   ☐ Add Steam games to the UI
-  ☐ Backend log viewer in the GUI (Dev Mode only)
+  ✔ Backend log viewer in the GUI (Dev Mode only) @done(23-04-13 18:41)
