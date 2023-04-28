@@ -8,6 +8,10 @@ import { win } from ".";
 function processParams(params: any[]){ // eslint-disable-line @typescript-eslint/no-explicit-any
   for(const i in params){
     if(typeof params[i] === "object"){
+      if(params[i].message && params[i].stack){
+        params[i] = params[i].message + "\n" + params[i].stack;
+        continue;
+      }
       params[i] = JSON.stringify(params[i]);
     }
   }

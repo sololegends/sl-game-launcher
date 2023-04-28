@@ -154,12 +154,25 @@ export namespace GOG {
 				deleteSubkeys: boolean
 			}
 		}
+
+		export interface xmlData {
+			action: "xmlData"
+			no_uninstall: boolean
+			arguments: {
+				target: string
+				type: "insert" | "delete"
+				path: string
+				id?: string
+				data: Record<string, string>
+			}
+		}
 	}
 
 	export type ScriptInstallAction =
 		ScriptInstall.savePath
 		| ScriptInstall.setRegistry
 		| ScriptInstall.supportData
+		| ScriptInstall.xmlData
 
 	export type ScriptAction = {
 		install: ScriptInstallAction

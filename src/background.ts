@@ -111,6 +111,7 @@ async function createWindow(){
   // Create the browser window.
   const win = new BrowserWindow({
     width: 1000,
+    minWidth: 450,
     height: 800,
     frame: false,
     backgroundColor: "#424242",

@@ -6,7 +6,7 @@ import { ensureDir, getFolderSize, normalizeFolder } from "../tools/files";
 import { game_folder_size, game_iter_id, game_name_file, game_version } from "../../json/files.json";
 import { notify, win } from "..";
 import zip, { ZipEntry } from "node-stream-zip";
-import filters from "@/js/filters";
+import filters from "../../js/filters";
 import fs from "fs";
 import { getConfig } from "../config";
 import { getLocalGameData } from "../game_loader";
