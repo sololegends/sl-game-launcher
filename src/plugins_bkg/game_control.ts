@@ -141,7 +141,8 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       game.root_dir + "\\" + the_task.path,
       procArgs(the_task?.arguments),
       {
-        cwd: game.root_dir + (the_task?.workingDir ? "/" + the_task?.workingDir : "")
+        cwd: game.root_dir + (the_task?.workingDir ? "/" + the_task?.workingDir : ""),
+        maxBuffer: undefined
       },
       function(err, data){
         if(err){
