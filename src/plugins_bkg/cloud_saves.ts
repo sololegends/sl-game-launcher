@@ -5,12 +5,57 @@ import { downloadFile, initWebDav, mutateFolder, webDavConfig } from "./nc_webda
 import { ErrorStats, Stats } from "node-downloader-helper";
 import { FileStat, WebDAVClient } from "webdav";
 import { getConfig, getOS, REMOTE_FILE_BASE, REMOTE_FOLDER } from "./config";
+import { loadFromDataCache, saveToDataCache } from "./cache";
 import fs from "fs";
 import { Globals } from ".";
 import { globAsync } from "./tools/files";
 import { GOG } from "@/types/gog/game_info";
 import os from "os";
 
+// ================================================
+// SAVE TRACKING
+// ================================================
+
+type Saves = {
+  [key: string]: number
+}
+
+let SAVES = undefined as undefined | Saves;
+
+function slug(slug: string){
+  slug = slug.toLowerCase();
+  slug = slug.replaceAll(/[^a-z0-9_]/g, "_");
+  while(slug.includes("__")){
+    slug = slug.replaceAll("__", "_");
+  }
+  return slug;
+}
+
+function saves(): Saves{
+  if(SAVES === undefined){
+    const str = loadFromDataCache("saves.json", "$$internal$$");
+    if(str === undefined){
+      SAVES = {};
+      return SAVES;
+    }
+    SAVES = JSON.parse(str) as Saves;
+  }
+  return SAVES;
+}
+
+export function updateSaveTime(game: GOG.GameInfo, time: Date){
+  saves()[slug(game.name)] = time.getTime();
+  // Save the saves data
+  saveToDataCache("saves.json", Buffer.from(JSON.stringify(SAVES, null, 2)), "$$internal$$");
+}
+
+export function getSaveTime(game: GOG.GameInfo): number{
+  return saves()[slug(game.name)] | 0;
+}
+
+// ================================================
+// END SAVE TRACKING
+// ================================================
 
 let win = undefined as undefined | BrowserWindow;
 let globals = undefined as undefined | Globals;
@@ -128,14 +173,7 @@ async function packGameSave(game: GOG.GameInfo, saves: GOG.GameSave): Promise<st
   // Update folder time
   for(const save in saves){
     try{
-      if(isGlob(saves[save])){
-        const files = await globAsync(saves[save]);
-        for(const s of files){
-          fs.utimesSync(s, new Date(), new Date());
-        }
-        continue;
-      }
-      fs.utimesSync(saves[save], new Date(), new Date());
+      updateSaveTime(game, new Date());
     }catch(e){
       console.log("Saves folder [" + save + "] not found");
     }
@@ -234,12 +272,6 @@ export async function uploadGameSave(game: GOG.GameInfo){
     return;
   }
   if(!await saveGamesExists(game, save_files)){
-    // Globals?.notify({
-    //   Title: "Cloud Save",
-    //   Text: "Failed to locate saves for game " + game.remote_name,
-    //   Type: "warning",
-    //   Sticky: true
-    // });
     console.log("Failed to find local game save folder!");
     return;
   }
@@ -289,13 +321,20 @@ export async function pullSaveFromCloud(name: string, web_dav: WebDAVClient, rem
   const tmp_download = gog_path + "\\.temp\\";
   const save_download = remote_folder + "-save.zip";
   const remote_save_folder = getRemoteSaveDirectory(remote_folder);
-  const remove_save_file = remote_save_folder + "/" + remote_file;
+  const remote_save_file = remote_save_folder + "/" + remote_file;
   if(fs.existsSync(tmp_download + "/" + save_download)){
     fs.rmSync(tmp_download + "/" + save_download);
   }
+  // Check for the same existing in the remote
+  const remote_save_stats = await web_dav.stat(remote_save_file) as FileStat;
+  if(remote_save_stats.size === undefined || remote_save_stats.size === 0){
+    return new Promise<string>((resolve, reject) => {
+      reject(undefined);
+    });
+  }
   return new Promise<string>((resolve, reject) => {
-    console.log("Looking for save file: ", remove_save_file);
-    const active_dl = downloadFile(web_dav.getFileDownloadLink(remove_save_file), save_download);
+    console.log("Looking for save file: ", remote_save_file);
+    const active_dl = downloadFile(web_dav.getFileDownloadLink(remote_save_file), save_download);
     active_dl.on("end", async() => {
       if(loud){
         win?.webContents.send("save-game-sync-state", name, "Cloud save downloaded");
@@ -324,7 +363,7 @@ export async function pullSaveFromCloud(name: string, web_dav: WebDAVClient, rem
       }
       reject(undefined);
     });
-    console.log("Downloading save file: ", remove_save_file, " => ", save_download);
+    console.log("Downloading save file: ", remote_save_file, " => ", save_download);
     active_dl.start();
   });
 }
@@ -367,30 +406,33 @@ async function newerInCloud(
     return false;
   }
   // Check each folder for earliest date
-  let oldest = -1;
-  for(const s in save_files){
-    if(isGlob(save_files[s])){
-      const files = await globAsync(save_files[s]);
-      for(const f of files){
-        // If nothing is there, then clearly it is not newer
-        if(!fs.existsSync(f)){
-          oldest = 0;
-          break;
+  let oldest = getSaveTime(game);
+  // Fall back to old method now
+  if(oldest === 0){
+    for(const s in save_files){
+      if(isGlob(save_files[s])){
+        const files = await globAsync(save_files[s]);
+        for(const f of files){
+          // If nothing is there, then clearly it is not newer
+          if(!fs.existsSync(f)){
+            oldest = 0;
+            break;
+          }
+          const fstat = fs.statSync(f);
+          if(oldest === -1 || oldest > fstat.mtimeMs){
+            oldest = fstat.mtimeMs;
+          }
         }
-        const fstat = fs.statSync(f);
-        if(oldest === -1 || oldest > fstat.mtimeMs){
-          oldest = fstat.mtimeMs;
-        }
+        continue;
       }
-      continue;
-    }
-    if(!fs.existsSync(save_files[s])){
-      oldest = 0;
-      break;
-    }
-    const f = fs.statSync(save_files[s]);
-    if(oldest === -1 || oldest > f.mtimeMs){
-      oldest = f.mtimeMs;
+      if(!fs.existsSync(save_files[s])){
+        oldest = 0;
+        break;
+      }
+      const f = fs.statSync(save_files[s]);
+      if(oldest === -1 || oldest > f.mtimeMs){
+        oldest = f.mtimeMs;
+      }
     }
   }
   // If the folder or file doesn't exist remote there is clearly no newer saves

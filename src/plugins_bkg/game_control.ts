@@ -4,7 +4,6 @@ import { acquireLock, LAUNCH_GAME_LOCK, releaseLock } from "./tools/locks";
 import { BrowserWindow, IpcMain } from "electron";
 import { syncGameSave, uploadGameSave } from "./cloud_saves";
 import { checkForUpdates } from "./update_check";
-import { ensureRemote } from "./game_loader";
 import { Globals } from ".";
 import { GOG } from "@/types/gog/game_info";
 import tk from "tree-kill";
@@ -85,9 +84,6 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       color: "warning",
       cancel_event: cancel_launch_evt
     });
-    win?.webContents.send("save-game-sync-state", game.name, "Syncing Remote Data");
-    game.remote = await ensureRemote(game, false);
-    win?.webContents.send("save-game-stopped", game);
     if(lock.aborted()){
       releaseLock(LAUNCH_GAME_LOCK);
       win?.webContents.send("progress-banner-hide");
@@ -96,6 +92,8 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     // Check for new cloud sync
     const cloud_sync = new Promise<boolean>((resolver)=>{
       syncGameSave(game, resolver);
+    }).catch(()=>{
+      console.log("Failed to sync game save file");
     });
     await cloud_sync;
     if(lock.aborted()){
@@ -103,7 +101,9 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       win?.webContents.send("progress-banner-hide");
       return false;
     }
+    win?.webContents.send("save-game-sync-state", game.name, "Checking for Updates");
     await checkForUpdates(game, true, false);
+    win?.webContents.send("save-game-stopped", game);
     win?.webContents.send("progress-banner-hide");
     ipcMain.off(cancel_launch_evt, haltfn);
     if(lock.aborted()){
