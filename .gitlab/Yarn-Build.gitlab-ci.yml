@@ -41,5 +41,5 @@ build-beta:
       - dist_electron
     expire_in: 1d
   rules:
-    - if: '$CI_COMMIT_BRANCH == "beta-.*"'
+    - if: '$CI_COMMIT_BRANCH =~ /^beta-.+$/'
       when: always
