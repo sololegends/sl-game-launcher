@@ -4,6 +4,7 @@ import { BrowserWindow, ipcMain, IpcMain } from "electron";
 import { cli_options } from "../background";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import filters from "../js/filters";
+import { getConfig } from "./config";
 
 export default function init(ipcMain: IpcMain, splash: BrowserWindow){
 
@@ -11,7 +12,8 @@ export default function init(ipcMain: IpcMain, splash: BrowserWindow){
   if(cli_options.alt_feed){
     autoUpdater.setFeedURL({
       provider: "generic",
-      url: cli_options.alt_feed
+      url: cli_options.alt_feed,
+      channel: getConfig("update_channel") || "latest"
     });
   }
 

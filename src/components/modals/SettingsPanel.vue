@@ -107,6 +107,15 @@
         <v-list-item v-if="dev_mode">
           <LoggingDialog />
         </v-list-item>
+
+        <v-list-item v-if="dev_mode">
+          <v-select
+            :items="[{text: 'stable', value: 'latest'}, {text: 'beta', value: 'beta'}]"
+            label="Release Branch"
+            v-model="update_channel"
+            @change="channelChange"
+          />
+        </v-list-item>
       </v-list>
 
 
@@ -191,7 +200,8 @@ export default defineComponent({
       },
       show_uninstalled: true,
       show_repacked_only: true,
-      auto_dlc: true
+      auto_dlc: true,
+      update_channel: "stable"
     };
   },
   mounted(){
@@ -211,6 +221,9 @@ export default defineComponent({
     ipc.invoke("cfg-get", "auto_dlc").then((res) => {
       this.auto_dlc = res || false;
     });
+    ipc.invoke("cfg-get", "update_channel").then((res) => {
+      this.update_channel = res || "stable";
+    });
     this.reloadCacheData();
     this.show_uninstalled = this.$store.getters.showUninstalled;
     this.show_repacked_only = this.$store.getters.showRepackedOnly;
@@ -221,6 +234,10 @@ export default defineComponent({
     }
   },
   methods: {
+    channelChange(){
+      ipc.send("cfg-set", "update_channel", this.update_channel);
+      ipc.send("release-channel-changed", this.update_channel);
+    },
     toggleOffline(){
       this.$store.dispatch("set_offline", !this.$store.getters.offline);
       // Relaunch app

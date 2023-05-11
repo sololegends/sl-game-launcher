@@ -1,9 +1,8 @@
 
 import { loadFromDataCache, saveToDataCache } from "./cache";
-import { getRemoteSaveDirectory } from "./cloud_saves";
 import { GOG } from "@/types/gog/game_info";
-import { initWebDav } from "./nc_webdav";
 import { IpcMain } from "electron";
+import { saves } from "./backplane";
 import { win } from ".";
 
 type Playtime = {
@@ -23,15 +22,7 @@ function asSlug(slug: string){
 
 async function pushPlaytimeToCloud(){
   if(PLAYTIME === undefined){ return; }
-  const web_dav = await initWebDav();
-  if(web_dav){
-    const remote_save_folder = getRemoteSaveDirectory("$$internal$$");
-    const remove_save_file = remote_save_folder + "/playtime.json";
-    if(!await web_dav.exists(remote_save_folder)){
-      await web_dav.createDirectory(remote_save_folder, {recursive: true});
-    }
-    await web_dav.putFileContents(remove_save_file, Buffer.from(JSON.stringify(PLAYTIME, null, 2)));
-  }
+  await saves.upload("$$internal$$", "playtime.json", Buffer.from(JSON.stringify(PLAYTIME, null, 2)));
 }
 
 function savePlaytime(push_to_cloud = true){
@@ -44,34 +35,28 @@ function savePlaytime(push_to_cloud = true){
 }
 
 async function pullPlaytimeFromCloud(){
-  const web_dav = await initWebDav();
-  if(web_dav){
-    const remote_save_folder = getRemoteSaveDirectory("$$internal$$");
-    const remote_save_file = remote_save_folder + "/playtime.json";
-    console.log("await web_dav.exists(remote_save_file)", await web_dav.exists(remote_save_file));
-    if(await web_dav.exists(remote_save_file)){
-      console.log("Pulling playtime data from cloud...");
-      const file = await web_dav.getFileContents(remote_save_file);
-      const result = file instanceof Buffer ? file.toString() : file as string;
-      try{
-        const playtime = JSON.parse(result);
-        PLAYTIME = playtime;
-        console.log("New playtime data retrieved");
-        savePlaytime(false);
-        // Trigger refresh
-        win()?.webContents.send("gog-game-reload");
-      } catch(e){
-        console.error("Failed to pull playtime data from cloud", e);
-      }
-    }
+  console.log("Pulling playtime data from cloud...");
+  const result = await saves.downloadAsString("$$internal$$", "playtime.json");
+  if(result === undefined){
+    return;
+  }
+  try{
+    const playtime = JSON.parse(result);
+    PLAYTIME = playtime;
+    console.log("New playtime data retrieved");
+    savePlaytime(false);
+    // Trigger refresh
+    win()?.webContents.send("gog-game-reload");
+  } catch(e){
+    console.error("Failed to pull playtime data from cloud", e);
   }
 }
 
 function loadData(): Playtime{
   const str = loadFromDataCache("playtime.json", "$$internal$$");
-  pullPlaytimeFromCloud();
   if(str === undefined){
-    return {};
+    pullPlaytimeFromCloud();
+    return PLAYTIME || {};
   }
   return JSON.parse(str);
 }

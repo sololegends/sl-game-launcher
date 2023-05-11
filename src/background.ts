@@ -2,10 +2,10 @@
 import { app, BrowserWindow, ipcMain, protocol } from "electron";
 import initConfig, { APP_URL_HANDLER, getConfig, setAppDataDir } from "./plugins_bkg/config";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
+import load, { notify } from "./plugins_bkg";
 import { parsePE, ParsePEResponse} from "pe-exe-parser";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import { createSplashWindow } from "./plugins_bkg/auto_update";
-import load from "./plugins_bkg";
 import logging from "./plugins_bkg/logging";
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -162,6 +162,19 @@ async function createWindow(){
 
   ipcMain.on("window-progress", (e, progress) => {
     win?.setProgressBar(progress);
+  });
+
+  ipcMain.on("release-channel-changed", (e, channel) => {
+    notify({
+      title: "Release Channel Changed",
+      text: "You changed the release channel to " + channel + ", restart to complete change",
+      type: "info",
+      sticky: true,
+      action: {
+        name: "Restart",
+        event: "relaunch"
+      }
+    });
   });
 
   // Load all the modules

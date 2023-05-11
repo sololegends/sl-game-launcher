@@ -5,7 +5,7 @@
       <v-text-field v-model="filter" clearable placeholder="Search..." @input="resetSelectedGame" />
     </div>
     <div
-      v-if="filtered_games.length <= 0 && (games.length > 0 || remote_games) && !loading_remote_games"
+      v-if="filtered_games.length <= 0 && (games.length > 0 || remote_games.length > 0) && !loading_remote_games"
       class="flex h100" style="flex-direction: column;text-align: center;"
     >
       <div class="text-h6">No Games <fa-icon icon="sad-tear" size="lg" /></div>
@@ -379,7 +379,7 @@ export default mixin(gamepad).extend({
           this.games = res;
           if(this.games.length > 0){
             // Run the update check
-            ipc.send("check-for-updates", this.games);
+            ipc.send("check-for-updates", this.games, false);
             this.filterGames();
             resolve(this.games);
             if(this.loading_remote_games === false){

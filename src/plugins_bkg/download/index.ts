@@ -1,9 +1,9 @@
 
 
 import { acquireLock, DOWNLOAD, DOWNLOAD_SEQUENCE, LockAbortToken, releaseLock } from "../tools/locks";
-import { downloadFile, initWebDav } from "../nc_webdav";
 import { notify, win } from "..";
 import { dlcDataFromSlug } from "../game_loader_fns";
+import { download } from "../backplane";
 import { ensureDir } from "../tools/files";
 import { ensureRemote } from "../game_loader";
 import fs from "fs";
@@ -12,7 +12,7 @@ import { GOG } from "@/types/gog/game_info";
 import { Stats } from "node-downloader-helper";
 
 export type DownloadResult = {
-  status: "success" | "webdav_error" | "canceled" | "token_failed" | "remote_failed" | "dlc_not_found" | "unknown",
+  status: "success" | "backplane_error" | "canceled" | "token_failed" | "remote_failed" | "dlc_not_found" | "unknown",
   links?: string[]
 };
 
@@ -43,14 +43,6 @@ export function cleanupDownloaded(dl_link_set: string[]){
 export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: string[], token: LockAbortToken): Promise<DownloadResult>{
   const promise_array = [] as Promise<DownloadResult>[];
   // General init
-  const game_remote = await ensureRemote(game);
-
-  const webdav = await initWebDav();
-  if(!webdav){
-    return new Promise<DownloadResult>((r, reject) => {
-      reject({status: "webdav_error"});
-    });
-  }
   const gog_path = getConfig("gog_path");
   const tmp_download = gog_path + "\\.temp\\";
   ensureDir(tmp_download);
@@ -79,43 +71,47 @@ export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: str
           fs.rmSync(save_loc);
         }
         // Perform download
-        const active_dl = downloadFile(webdav.getFileDownloadLink(game_remote.folder + "/" + dl_link), dl_link);
-        active_dl.on("end", () => {
-          done();
-          win()?.setProgressBar(-1);
+        download.installer(game.remote_name, dl_link).then((active_dl) => {
+          if(active_dl === undefined){
+            reject({status: "backplane_error"});return;
+          }
+          active_dl.on("end", () => {
+            done();
+            win()?.setProgressBar(-1);
+          });
+          active_dl.on("stop", () => {
+            cleanupDownloaded(dl_link_set);
+            win()?.setProgressBar(-1);
+          });
+          active_dl.on("progress.throttled", (p: Stats) => {
+            const prog = {
+              total: p.total,
+              progress: p.downloaded,
+              speed: p.speed
+            };
+            win()?.webContents.send("game-dl-progress", game, prog);
+            win()?.webContents.send("progress-banner-progress", prog);
+            win()?.setProgressBar(p.downloaded / p.total);
+          });
+          active_dl.on("error", (e) => {
+            win()?.webContents.send("game-dl-error", game, e);
+            win()?.setProgressBar(-1);
+            win()?.webContents.send("progress-banner-error", "Failed to download game: " + game.name);
+          });
+          token.on("abort", () => {
+            console.log("Aborting download");
+            active_dl.stop();
+            releaseLock(DOWNLOAD_SEQUENCE);
+            reject("canceled");
+          });
+          if(token.aborted()){
+            console.log("Aborting download");
+            releaseLock(DOWNLOAD_SEQUENCE);
+            reject("canceled");
+            return;
+          }
+          active_dl.start();
         });
-        active_dl.on("stop", () => {
-          cleanupDownloaded(dl_link_set);
-          win()?.setProgressBar(-1);
-        });
-        active_dl.on("progress.throttled", (p: Stats) => {
-          const prog = {
-            total: p.total,
-            progress: p.downloaded,
-            speed: p.speed
-          };
-          win()?.webContents.send("game-dl-progress", game, prog);
-          win()?.webContents.send("progress-banner-progress", prog);
-          win()?.setProgressBar(p.downloaded / p.total);
-        });
-        active_dl.on("error", (e) => {
-          win()?.webContents.send("game-dl-error", game, e);
-          win()?.setProgressBar(-1);
-          win()?.webContents.send("progress-banner-error", "Failed to download game: " + game.name);
-        });
-        token.on("abort", () => {
-          console.log("Aborting download");
-          active_dl.stop();
-          releaseLock(DOWNLOAD_SEQUENCE);
-          reject("canceled");
-        });
-        if(token.aborted()){
-          console.log("Aborting download");
-          releaseLock(DOWNLOAD_SEQUENCE);
-          reject("canceled");
-          return;
-        }
-        active_dl.start();
       });
     }));
   }

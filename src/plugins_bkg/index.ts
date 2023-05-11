@@ -11,7 +11,6 @@ import z_game_loader from "./game_loader";
 import z_gc_init from "./game_control";
 import z_misc_os from "./misc_os";
 import z_play_time_tracker from "./play_time_tracker";
-import z_process_cloud from "./process_cloud";
 import z_sys_notifications from "./sys_notifications";
 import z_update_check from "./update_check";
 import z_webdav_init from "./nc_webdav";
@@ -23,7 +22,6 @@ const fns = [
   z_gc_init,
   z_webdav_init,
   z_game_loader,
-  z_process_cloud,
   z_game_dl_install,
   z_cloud_saves,
   z_update_check,

@@ -11,7 +11,7 @@ function flattenName(name: string): string{
   return name.trim().toLowerCase().replace(/[^-a-z0-9_]/gm, "_");
 }
 
-export function loadPresentDLC(game: GOG.GameInfo, remote: GOG.RemoteGameData): GOG.RemoteGameData{
+export function loadPresentDLC(game: GOG.GameInfo, remote: GOG.RemoteGameData): GOG.RemoteGameData | undefined{
   if(remote === undefined || game.root_dir === "remote"){
     return remote;
   }

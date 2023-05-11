@@ -12,6 +12,9 @@ function ver_replace_date {
   sed -E "s/^(window.BUILD_DATE[[:blank:]]*=[[:blank:]]*).*/\1\"$DATE\";/" "src/main.ts" -i
 }
 
+# Get git branch
+GIT_BRANCH=$(git branch --show-current)
+
 # Copy the pre-commit hook into the git folder 
 cp pre-commit.git-hook .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
@@ -43,6 +46,9 @@ elif [ "$1" == "version" ]; then
   elif [ "$ver" == "" ]; then
     echo -n "Enter new version: "
     read ver
+  fi
+  if [[ "$GIT_BRANCH" != "master" ]]; then
+    ver=$ver-beta
   fi
   ver_replace $ver
   exit

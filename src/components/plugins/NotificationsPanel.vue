@@ -77,7 +77,7 @@ export default defineComponent({
     },
     position: {
       type: Object as () => Notify.Position,
-      default: function(){ return {left: 15, bottom: 15}; }
+      default: function(){ return {left: 15, bottom: 15} as Notify.Position; }
     },
     fixed: {
       type: Boolean,
