@@ -41,9 +41,15 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     runningGameChanged();
   }
 
-  function procArgs(args?: string){
+  function procArgs(args?: string | string[]){
     const regex = / (?=(?:[^"]|"[^"]*")*$)/gm;
     if(args){
+      if(Array.isArray(args)){
+        return args;
+      }
+      if(!args.includes("\"")){
+        return [args];
+      }
       const args_a = [];
       for(const e of args.split(regex)){
         args_a.push(e.replaceAll("\"", ""));

@@ -9,7 +9,7 @@ export namespace GOG {
 		"sidebarIcon" | "sidebarIcon2x" | "menuNotificationAv" | "menuNotificationAv2"
 
 	export type PlayTasks = {
-			arguments?: string
+			arguments?: string | string[]
 			workingDir?: string
 			category: string
 			isPrimary: boolean
