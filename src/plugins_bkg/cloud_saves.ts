@@ -327,12 +327,12 @@ export async function pullSaveFromCloud(name: string, web_dav: WebDAVClient, rem
   }
   // Check for the same existing in the remote
   const remote_save_stats = await web_dav.stat(remote_save_file) as FileStat;
-  if(remote_save_stats.size === undefined || remote_save_stats.size === 0){
-    return new Promise<string>((resolve, reject) => {
-      reject(undefined);
+  if(remote_save_stats?.size === undefined || remote_save_stats.size === 0){
+    return new Promise<string | undefined>((resolve) => {
+      resolve(undefined);
     });
   }
-  return new Promise<string>((resolve, reject) => {
+  return new Promise<string | undefined>((resolve) => {
     console.log("Looking for save file: ", remote_save_file);
     const active_dl = downloadFile(web_dav.getFileDownloadLink(remote_save_file), save_download);
     active_dl.on("end", async() => {
@@ -345,7 +345,7 @@ export async function pullSaveFromCloud(name: string, web_dav: WebDAVClient, rem
       if(loud){
         win?.webContents.send("save-game-stopped", name);
       }
-      reject(undefined);
+      resolve(undefined);
     });
     if(loud){
       active_dl.on("progress.throttled", (p: Stats) => {
@@ -361,7 +361,7 @@ export async function pullSaveFromCloud(name: string, web_dav: WebDAVClient, rem
       if(loud){
         win?.webContents.send("save-game-dl-error", e);
       }
-      reject(undefined);
+      resolve(undefined);
     });
     console.log("Downloading save file: ", remote_save_file, " => ", save_download);
     active_dl.start();
@@ -379,7 +379,6 @@ async function deployCloudSave(
     return;
   }
   win?.webContents.send("save-game-dl-progress", game.name, "Downloading", {total: 100, progress: 0});
-
   const save_file = await pullSaveFromCloud(game.name, web_dav, game.remote_name, REMOTE_FILE_BASE + ".zip");
   if(save_file === undefined){
     return resolver(false, true);

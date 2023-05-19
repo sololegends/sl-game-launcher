@@ -44,6 +44,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   function procArgs(args?: string | string[]){
     const regex = / (?=(?:[^"]|"[^"]*")*$)/gm;
     if(args){
+      console.log("args", args);
       if(Array.isArray(args)){
         return args;
       }
@@ -96,18 +97,21 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       return false;
     }
     // Check for new cloud sync
+    console.log("checking save game sync status");
     const cloud_sync = new Promise<boolean>((resolver)=>{
       syncGameSave(game, resolver);
     }).catch(()=>{
       console.log("Failed to sync game save file");
     });
     await cloud_sync;
+    console.log("save game sync complete", lock);
     if(lock.aborted()){
       releaseLock(LAUNCH_GAME_LOCK);
       win?.webContents.send("progress-banner-hide");
       return false;
     }
     win?.webContents.send("save-game-sync-state", game.name, "Checking for Updates");
+    console.log("checking for updates");
     await checkForUpdates(game, true, false);
     win?.webContents.send("save-game-stopped", game);
     win?.webContents.send("progress-banner-hide");
@@ -117,6 +121,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       win?.webContents.send("progress-banner-hide");
       return false;
     }
+    console.log("Getting playtask");
     const start = new Date().getTime();
     let the_task = play_task;
     if(the_task === undefined){
@@ -137,7 +142,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
     };
     console.log(
       "Running Game: " + game.root_dir + "\\" + the_task.path,
-      game.root_dir + (the_task?.workingDir ? "/" + the_task?.workingDir : ""),
+      game.root_dir + (the_task?.workingDir ? "/" + the_task?.workingDir : ""), the_task?.arguments,
       procArgs(the_task?.arguments)
     );
     // ============================================
