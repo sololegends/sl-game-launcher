@@ -9,7 +9,7 @@ export namespace GOG {
 		"sidebarIcon" | "sidebarIcon2x" | "menuNotificationAv" | "menuNotificationAv2"
 
 	export type PlayTasks = {
-			arguments?: string
+			arguments?: string | string[]
 			workingDir?: string
 			category: string
 			isPrimary: boolean
@@ -124,8 +124,16 @@ export namespace GOG {
 			action: "savePath"
 			no_uninstall: boolean
 			arguments: {
-				savePath: string,
+				savePath: string
 				type: "folder" | "file"
+			}
+		}
+
+		export interface ensureDirectory {
+			action: "ensureDirectory"
+			no_uninstall: boolean
+			arguments: {
+				target: string
 			}
 		}
 
@@ -134,10 +142,10 @@ export namespace GOG {
 			no_uninstall: boolean
 			arguments: {
 				// Mutate ONLY for file types
-				mutate?: boolean,
-				overwrite: boolean,
-				source: string,
-				target: string,
+				mutate?: boolean
+				overwrite: boolean
+				source: string
+				target: string
 				type: "folder" | "file" | "archive"
 			}
 		}
@@ -173,6 +181,7 @@ export namespace GOG {
 		| ScriptInstall.setRegistry
 		| ScriptInstall.supportData
 		| ScriptInstall.xmlData
+		| ScriptInstall.ensureDirectory
 
 	export type ScriptAction = {
 		install: ScriptInstallAction

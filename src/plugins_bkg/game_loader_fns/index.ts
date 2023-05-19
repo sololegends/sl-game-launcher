@@ -38,7 +38,7 @@ export function loadPresentDLC(game: GOG.GameInfo, remote?: GOG.RemoteGameData):
         const name = flattenName(l_info.name);
         dlc_found.push(name);
         dlc_ids[name] = l_info.gameId;
-        dlc_tasks[name] = l_info.playTasks;
+        dlc_tasks[l_info.gameId] = l_info.playTasks;
       }
     }
   }
@@ -46,8 +46,8 @@ export function loadPresentDLC(game: GOG.GameInfo, remote?: GOG.RemoteGameData):
     const dlc = remote.dlc[i];
     const name = dlc.slug.replace(remote.slug + "_", "");
     if(dlc.gameId && Object.values(dlc_ids).includes(dlc.gameId)){
-      if(dlc_tasks[name] !== undefined){
-        dlc.playTasks = dlc_tasks[name];
+      if(dlc_tasks[dlc.gameId] !== undefined){
+        dlc.playTasks = dlc_tasks[dlc.gameId];
       }
       dlc.present = true;
       continue;

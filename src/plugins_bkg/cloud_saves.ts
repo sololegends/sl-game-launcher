@@ -2,6 +2,7 @@
 import { BrowserWindow, ipcMain, IpcMain } from "electron";
 import { compressFile, compressFolder, compressGlob, CompressProgress, decompressFile, decompressFolder } from "./tools/compression";
 import { DownloaderHelper, ErrorStats, Stats } from "node-downloader-helper";
+import { Export, Import, KeyExists, needsAdmin } from "./as_admin/regedit/windows";
 import { getConfig, getOS, REMOTE_FILE_BASE } from "./config";
 import { loadFromDataCache, saveToDataCache } from "./cache";
 import fs from "fs";
@@ -66,7 +67,7 @@ export function procSaveFolder(save_file_raw: string, game: GOG.GameInfo): strin
     folder = os.homedir()  + save_file_raw.substring(1);
   }else if(save_file_raw.startsWith("./")){
     folder = game.root_dir  + save_file_raw.substring(1);
-  }else if(save_file_raw.startsWith("<steam>/")){
+  }else if(save_file_raw.startsWith("{steam}/")){
     folder = game.root_dir  + save_file_raw.substring(1);
   }
   if(save_file_raw.includes("*")){
@@ -88,7 +89,7 @@ export function procSaveFile(save_file_raw: string, game: GOG.GameInfo): string{
     return os.homedir()  + save_file_raw.substring(1);
   }else if(save_file_raw.startsWith("./")){
     return game.root_dir  + save_file_raw.substring(1);
-  }else if(save_file_raw.startsWith("<steam>/")){
+  }else if(save_file_raw.startsWith("{steam}/")){
     return game.root_dir  + save_file_raw.substring(1);
   }
   return save_file_raw;
@@ -114,9 +115,21 @@ export function getSavesLocation(game: GOG.GameInfo): undefined | GOG.GameSave{
 function isGlob(input: string): boolean{
   return input.includes("*");
 }
+function isReg(input: string): boolean{
+  return input.startsWith("REG:") || input.startsWith("REG32:") || input.startsWith("REG64:");
+}
+function isReg64(input: string): boolean{
+  return input.startsWith("REG:") || input.startsWith("REG64:");
+}
+
 
 async function saveGamesExists(game: GOG.GameInfo, saves: GOG.GameSave): Promise<boolean>{
   for(const save in saves){
+    if(isReg(saves[save])){
+      if(await KeyExists(saves[save].split(":", 2)[1], isReg64(saves[save]))){
+        return true;
+      }
+    }
     if(isGlob(saves[save])){
       const files = await globAsync(saves[save]);
       for(const s in files){
@@ -141,6 +154,16 @@ async function packGameSave(game: GOG.GameInfo, saves: GOG.GameSave): Promise<st
 
   let found = 0;
   for(const save in saves){
+    if(isReg(saves[save])){
+      if(await KeyExists(saves[save].split(":", 2)[1], isReg64(saves[save]))){
+        if(await Export(saves[save].split(":", 2)[1], save_tmp + save + ".reg", true, isReg64(saves[save]))){
+          await compressFile(save_tmp + save + ".reg", save_tmp + save + ".zip", (p: CompressProgress) =>{
+            win?.webContents.send("save-game-dl-progress", game.name, "Compressing save: " + save, p);
+          }, 6);
+          found++;
+        }
+      }
+    }
     if(isGlob(saves[save])){
       await compressGlob(saves[save], save_tmp + save + ".zip", (p: CompressProgress) =>{
         win?.webContents.send("save-game-dl-progress", game.name, "Compressing save: " + save, p);
@@ -196,6 +219,12 @@ async function unpackGameSave(game: GOG.GameInfo, saves: GOG.GameSave, save_pack
   for(const save in saves){
     if(fs.existsSync(save_tmp + save + ".zip")){
       let folder = saves[save];
+      if(isReg(saves[save])){
+        await decompressFile(save_tmp + save + ".zip", save_tmp + save + ".reg", (p: CompressProgress) =>{
+          win?.webContents.send("save-game-dl-progress", game.name, "Unpacking save: " + save, p);
+        });
+        await Import(save_tmp + save + ".reg", isReg64(saves[save]), needsAdmin(saves[save].split(":", 2)[1]));
+      }
       if(isGlob(saves[save])){
         folder = saves[save].substring(0, saves[save].replace("\\", "/").lastIndexOf("/"));
       }
@@ -260,7 +289,7 @@ export async function uploadGameSave(game: GOG.GameInfo){
     return;
   }
 
-  await pushSaveToCloud(save_zip, game.name, game.remote_name, REMOTE_FILE_BASE);
+  await pushSaveToCloud(save_zip, game.name, game.remote_name, REMOTE_FILE_BASE + ".zip");
 
   // Delete tmp save file
   fs.rmSync(save_zip);

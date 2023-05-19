@@ -1,7 +1,9 @@
 
 import { DownloaderHelper } from "node-downloader-helper";
+import { getConfig } from "../config";
 import { GOG } from "@/types/gog/game_info";
 import { IpcMain } from "electron";
+import sl_api_bp from "./sl_api_backplane";
 import webdav_bp from "./webdav_backplane";
 
 export interface AppBackPlane {
@@ -23,12 +25,13 @@ export interface AppBackPlane {
 	}
 }
 
-type PlaneType = "webdav" | "game_api";
+type PlaneType = "webdav" | "sl_api";
 
 const BACK_PLANE = {
-  webdav: webdav_bp
+  webdav: webdav_bp,
+  sl_api: sl_api_bp
 } as Record<PlaneType, AppBackPlane>;
-let use_bp = "webdav" as PlaneType;
+let use_bp =  (getConfig("backplane") || "webdav") as PlaneType;
 
 export const remote = {
   list(use_cache: boolean): Promise<Record<string, GOG.RemoteGameData>>{

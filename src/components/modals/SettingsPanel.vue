@@ -116,6 +116,23 @@
             @change="channelChange"
           />
         </v-list-item>
+
+        <v-list-item v-if="dev_mode">
+          <v-select
+            :items="[{text: 'API (new)', value: 'sl_api'}, {text: 'WebDAV (old)', value: 'webdav'}]"
+            label="Remote Data Backplane"
+            v-model="backplane"
+            @change="backplaneChange"
+          />
+        </v-list-item>
+
+        <v-list-item v-if="dev_mode && backplane === 'sl_api'">
+          <v-text-field
+            label="Remote Data API"
+            v-model="games_api"
+            @change="gamesApiChange"
+          />
+        </v-list-item>
       </v-list>
 
 
@@ -152,6 +169,7 @@
 
 <script lang="ts">
 import { ipcRenderer as ipc, OpenDialogReturnValue } from "electron";
+import { DEFAULT_API } from "@/plugins_bkg/config";
 import { defineComponent } from "@vue/composition-api";
 import filter from "@filters";
 import { GOG } from "@/types/gog/game_info";
@@ -201,7 +219,9 @@ export default defineComponent({
       show_uninstalled: true,
       show_repacked_only: true,
       auto_dlc: true,
-      update_channel: "stable"
+      update_channel: "stable",
+      backplane: "",
+      games_api: ""
     };
   },
   mounted(){
@@ -224,6 +244,12 @@ export default defineComponent({
     ipc.invoke("cfg-get", "update_channel").then((res) => {
       this.update_channel = res || "stable";
     });
+    ipc.invoke("cfg-get", "backplane").then((res) => {
+      this.backplane = res || "webdav";
+    });
+    ipc.invoke("cfg-get", "games_api").then((res) => {
+      this.games_api = res || DEFAULT_API;
+    });
     this.reloadCacheData();
     this.show_uninstalled = this.$store.getters.showUninstalled;
     this.show_repacked_only = this.$store.getters.showRepackedOnly;
@@ -237,6 +263,30 @@ export default defineComponent({
     channelChange(){
       ipc.send("cfg-set", "update_channel", this.update_channel);
       ipc.send("release-channel-changed", this.update_channel);
+    },
+    backplaneChange(){
+      ipc.send("cfg-set", "backplane", this.backplane);
+      this.$notify({
+        title: "Data Backplane Changed!",
+        text: "Restart required for changes to take effect",
+        type: "success",
+        action: {
+          name: "Restart",
+          event: "relaunch"
+        }
+      });
+    },
+    gamesApiChange(){
+      ipc.send("cfg-set", "remote_api", this.games_api);
+      this.$notify({
+        title: "Game API Changed!",
+        text: "Restart required for changes to take effect",
+        type: "success",
+        action: {
+          name: "Restart",
+          event: "relaunch"
+        }
+      });
     },
     toggleOffline(){
       this.$store.dispatch("set_offline", !this.$store.getters.offline);

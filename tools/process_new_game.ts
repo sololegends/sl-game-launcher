@@ -798,6 +798,7 @@ async function main(game_exe: string, options_arr: string[]){
     options.dlc = "proc/dlc";
   }
   const output_dir = options.output || "game_repacked";
+  ensureDir(output_dir);
   const dlc_folder = options.dlc || "NONE";
   if(options.clear){
     console.log("Clearing exe/bin and DLC");

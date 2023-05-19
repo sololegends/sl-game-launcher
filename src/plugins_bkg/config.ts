@@ -9,6 +9,7 @@ import os from "os";
 // GLOBAL CONFIGS ====>
 // App
 export const APP_URL_HANDLER = "slgame";
+export const DEFAULT_API = "https://updates.sololegends.com";
 
 // Game Saves
 export const REMOTE_FOLDER = ".game-saves";

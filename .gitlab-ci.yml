@@ -41,11 +41,12 @@ deploy_to_update_server-beta:
   variables:
     SERVER: https://updates.sololegends.com/electron/win/upload
     APP_NAME: SL Game Launcher
+    SL_VERSION: v0.11.7-beta
   dependencies: 
-    - build
+    - build-beta
   script:
     - chmod +x upload_dist.sh
-    - ./upload_dist.sh
+    - ./upload_beta.sh
   rules:
     - if: '$CI_COMMIT_BRANCH =~ /^beta-.+$/'
       when: always
