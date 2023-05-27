@@ -405,33 +405,29 @@ async function newerInCloud(
     return false;
   }
   // Check each folder for earliest date
-  let oldest = getSaveTime(game);
+  let oldest = -1;
   // Fall back to old method now
-  if(oldest === 0){
-    for(const s in save_files){
-      if(isGlob(save_files[s])){
-        const files = await globAsync(save_files[s]);
-        for(const f of files){
-          // If nothing is there, then clearly it is not newer
-          if(!fs.existsSync(f)){
-            oldest = 0;
-            break;
-          }
-          const fstat = fs.statSync(f);
-          if(oldest === -1 || oldest > fstat.mtimeMs){
-            oldest = fstat.mtimeMs;
-          }
+  for(const s in save_files){
+    if(isGlob(save_files[s])){
+      const files = await globAsync(save_files[s]);
+      for(const f of files){
+        // If nothing is there, then clearly it is not newer
+        if(!fs.existsSync(f)){
+          continue;
         }
-        continue;
+        const fstat = fs.statSync(f);
+        if(oldest === -1 || oldest > fstat.mtimeMs){
+          oldest = fstat.mtimeMs;
+        }
       }
-      if(!fs.existsSync(save_files[s])){
-        oldest = 0;
-        break;
-      }
-      const f = fs.statSync(save_files[s]);
-      if(oldest === -1 || oldest > f.mtimeMs){
-        oldest = f.mtimeMs;
-      }
+      continue;
+    }
+    if(!fs.existsSync(save_files[s])){
+      continue;
+    }
+    const f = fs.statSync(save_files[s]);
+    if(oldest === -1 || oldest > f.mtimeMs){
+      oldest = f.mtimeMs;
     }
   }
   // If the folder or file doesn't exist remote there is clearly no newer saves
