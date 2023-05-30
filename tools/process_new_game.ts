@@ -23,7 +23,7 @@ interface RepackCLIOptions extends CLIOptions {
   merge_info?: boolean
   clear?: boolean
   nocleanup?: boolean
-  dlc: string
+  dlc: string | true
 }
 interface DLCCLIOptions extends CLIOptions {
   input: string
@@ -794,10 +794,11 @@ async function main(game_exe: string, options_arr: string[]){
   if(options){
     console.debug(options);
   }
-  if(options.dlc === "default"){
+  if(options.dlc === true || options.dlc === "default"){
     options.dlc = "proc/dlc";
   }
   const output_dir = options.output || "game_repacked";
+  ensureDir(output_dir);
   const dlc_folder = options.dlc || "NONE";
   if(options.clear){
     console.log("Clearing exe/bin and DLC");

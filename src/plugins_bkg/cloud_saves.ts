@@ -12,6 +12,10 @@ import { globAsync } from "./tools/files";
 import { GOG } from "@/types/gog/game_info";
 import os from "os";
 
+function isGlob(input: string): boolean{
+  return input.includes("*");
+}
+
 // ================================================
 // SAVE TRACKING
 // ================================================
@@ -51,6 +55,17 @@ export function updateSaveTime(game: GOG.GameInfo, time: Date){
 
 export function getSaveTime(game: GOG.GameInfo): number{
   return saves()[slug(game.name)] | 0;
+}
+
+export async function updateLocalSaveTime(save: string, date: Date){
+  if(isGlob(save)){
+    const files = await globAsync(save);
+    for(const s of files){
+      fs.utimesSync(s, date, date);
+    }
+    return;
+  }
+  fs.utimesSync(save, date, date);
 }
 
 // ================================================
@@ -117,10 +132,6 @@ export function getSavesLocation(game: GOG.GameInfo): undefined | GOG.GameSave{
   return undefined;
 }
 
-function isGlob(input: string): boolean{
-  return input.includes("*");
-}
-
 async function saveGamesExists(game: GOG.GameInfo, saves: GOG.GameSave): Promise<boolean>{
   for(const save in saves){
     if(isGlob(saves[save])){
@@ -173,6 +184,7 @@ async function packGameSave(game: GOG.GameInfo, saves: GOG.GameSave): Promise<st
   // Update folder time
   for(const save in saves){
     try{
+      updateLocalSaveTime(saves[save], new Date());
       updateSaveTime(game, new Date());
     }catch(e){
       console.log("Saves folder [" + save + "] not found");
@@ -405,7 +417,7 @@ async function newerInCloud(
     return false;
   }
   // Check each folder for earliest date
-  let oldest = -1;
+  let oldest = 0;
   // Fall back to old method now
   for(const s in save_files){
     if(isGlob(save_files[s])){
@@ -426,7 +438,7 @@ async function newerInCloud(
       continue;
     }
     const f = fs.statSync(save_files[s]);
-    if(oldest === -1 || oldest > f.mtimeMs){
+    if(oldest === 0 || oldest > f.mtimeMs){
       oldest = f.mtimeMs;
     }
   }
