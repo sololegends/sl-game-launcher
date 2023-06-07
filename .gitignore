@@ -38,7 +38,10 @@ tools/new_game
 DID
 .cert-env
 /tmp
-game_repacked
+tools/game_repacked
+tools/dlc_repacked
+tools/to_upload
+tools/tmp
 src/js/pe-parser/*.js
 src/js/pe-parser/*/*.js
 rva

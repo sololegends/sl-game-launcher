@@ -493,7 +493,7 @@ export default defineComponent({
       return filters.formatSize(size, "iB");
     },
     formatTime(val: number){
-      return filters.betterSeconds(val);
+      return filters.betterSeconds(val, "hour", 1 );
     }
   }
 });
