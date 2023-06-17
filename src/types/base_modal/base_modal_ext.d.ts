@@ -65,7 +65,6 @@ declare module "base_modal_ext"{
 			params:{
 				username: string
 				message: string
-				successful: () => void
 			}
 		}
 	}

@@ -37,12 +37,14 @@
     <VersionSelectionModal />
     <SaveSyncStatus />
     <LaunchOptionsModal ref="launch_option_modal" />
+    <ChangePasswordModal require_current />
   </div>
 </template>
 
 <script lang="ts">
 import DownloadInstallBanner, { DIBanner } from "@components/inserts/gog/DownloadInstallBanner.vue";
 import GogGame, { GogGameEle } from "../components/inserts/gog/GogGame.vue";
+import ChangePasswordModal from "@modals/ChangePasswordModal.vue";
 import DLCSelectionModal from "@modals/DLCSelectionModal.vue";
 import gamepad from "@mixins/gamepad";
 import GenericCard from "../components/inserts/gog/GenericCard.vue";
@@ -59,6 +61,7 @@ import VersionSelectionModal from "@modals/VersionSelectionModal.vue";
 export default mixin(gamepad).extend({
   name: "GamesView",
   components: {
+    ChangePasswordModal,
     DLCSelectionModal,
     GenericCard,
     GogGame,
@@ -109,6 +112,7 @@ export default mixin(gamepad).extend({
   mounted(){
     window.launch_option_modal = this.$refs.launch_option_modal as LaunchOptionsN.LaunchOptionsModal;
     this.$store.dispatch("set_minimal_ui", false);
+    this.$store.dispatch("set_light_ui", false);
     this.store_subscription = this.$store.subscribe((mutation) => {
       if(mutation.type === "set_show_repacked_only" || mutation.type === "set_show_uninstalled"){
         this.filterGames();
@@ -158,7 +162,7 @@ export default mixin(gamepad).extend({
       }
       let game = undefined;
       for(const ele of this.games){
-        if(game_id === ele.gameId || game_id === ele.remote_name){
+        if(game_id === ele.gameId){
           game = ele;
           break;
         }
@@ -477,7 +481,7 @@ export default mixin(gamepad).extend({
       const updateActiveItem = (next: HTMLElement | null) => {
         if(next){
           const br = next.getBoundingClientRect();
-          if(br.y >= window.innerHeight - br.height || br.y < br.height){
+          if(this.disable_mouse && br.y >= window.innerHeight - br.height || br.y < br.height){
             next.scrollIntoView({behavior: "smooth", block: "nearest"});
           }
           this.active_game = parseInt(next.getAttribute("data-game") || "-1");

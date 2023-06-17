@@ -9,6 +9,7 @@ import fs from "fs";
 import { Globals } from ".";
 import { globAsync } from "./tools/files";
 import { GOG } from "@/types/gog/game_info";
+import { Notify } from "@/types/notification/notify";
 import os from "os";
 import { saves as saves_bp } from "./backplane";
 
@@ -252,14 +253,14 @@ async function unpackGameSave(game: GOG.GameInfo, saves: GOG.GameSave, save_pack
 }
 
 export async function pushSaveToCloud(
-  save_path: string, name: string, remote_folder: string, remote_file: string, loud = true): Promise<boolean>{
+  save_path: string, name: string, game_id: string, remote_file: string, loud = true): Promise<boolean>{
 
   if(loud){
     win?.webContents.send("save-game-dl-progress", name, "Uploading save", {total: -1, progress: -1});
   }
-  const result = await saves_bp.upload(remote_folder, remote_file, save_path);
+  const result = await saves_bp.upload(game_id, remote_file, save_path);
   console.log("Save file push"
-  + " remote_folder[" + remote_folder + "]"
+  + " game_id[" + game_id + "]"
   + " remote_file[" + remote_file + "]"
   + " save_path[" + save_path + "] result=", result);
   win?.webContents.send("save-game-stopped");
@@ -289,25 +290,32 @@ export async function uploadGameSave(game: GOG.GameInfo){
     return;
   }
 
-  await pushSaveToCloud(save_zip, game.name, game.remote_name, REMOTE_FILE_BASE + ".zip");
+
+  let text = "Saves for game " + game.remote_name + " synchronized to cloud";
+  let type = "success" as Notify.Type;
+
+  if(!await pushSaveToCloud(save_zip, game.name, game.gameId, REMOTE_FILE_BASE + ".zip")){
+    text = "Saves for game " + game.remote_name + " failed to synchronize";
+    type = "error";
+  }
 
   // Delete tmp save file
   fs.rmSync(save_zip);
   globals?.notify({
     title: "Cloud Save",
-    text: "Saves for game " + game.remote_name + " synchronized to cloud",
-    type: "success"
+    text: text,
+    type: type
   });
   win?.webContents.send("save-game-stopped", game);
 }
 
-export async function pullSaveFromCloud(name: string, remote_folder: string, remote_file: string, loud = true){
+export async function pullSaveFromCloud(name: string, game_id: string, remote_file: string, loud = true){
   if(loud){
     win?.webContents.send("save-game-dl-progress", name, "Downloading", {total: 100, progress: 0});
   }
 
   return new Promise<string>((resolve, reject) => {
-    saves_bp.download(remote_folder, remote_file).then((active_dl: DownloaderHelper | undefined) => {
+    saves_bp.download(game_id, remote_file).then((active_dl: DownloaderHelper | undefined) => {
       if(active_dl === undefined){
         reject(undefined);return;
       }
@@ -339,7 +347,7 @@ export async function pullSaveFromCloud(name: string, remote_folder: string, rem
         }
         reject(undefined);
       });
-      console.log("Downloading save file: ", remote_folder, " => ", active_dl.getDownloadPath());
+      console.log("Downloading save file: ", game_id, " => ", active_dl.getDownloadPath());
       active_dl.start();
     });
   });
@@ -355,7 +363,7 @@ async function deployCloudSave(
   }
   win?.webContents.send("save-game-dl-progress", game.name, "Downloading", {total: 100, progress: 0});
 
-  const save_file = await pullSaveFromCloud(game.name, game.remote_name, REMOTE_FILE_BASE + ".zip");
+  const save_file = await pullSaveFromCloud(game.name, game.gameId, REMOTE_FILE_BASE + ".zip");
   if(save_file === undefined){
     return resolver(false, true);
   }
@@ -372,7 +380,7 @@ async function deployCloudSave(
 
 async function newerInCloud(
   game: GOG.GameInfo,
-  remote_save_folder: string,
+  game_id: string,
   remote_save_file: string
 ): Promise<boolean | -1>{
   const save_files = getSavesLocation(game);
@@ -405,7 +413,7 @@ async function newerInCloud(
       oldest = f.mtimeMs;
     }
   }
-  const remote_latest = await saves_bp.latest(remote_save_folder, remote_save_file);
+  const remote_latest = await saves_bp.latest(game_id, remote_save_file);
   // If the folder or file doesn't exist remote there is clearly no newer saves
   if(remote_latest === undefined){
     return false;
@@ -426,7 +434,7 @@ export async function syncGameSave(game: GOG.GameInfo, resolver: (cloud: boolean
   win?.webContents.send("save-game-sync-start", game.name);
   // Check if newer in cloud
   win?.webContents.send("save-game-sync-search", game.name);
-  const newer_in_cloud = await newerInCloud(game, game.remote_name, REMOTE_FILE_BASE + ".zip");
+  const newer_in_cloud = await newerInCloud(game, game.gameId, REMOTE_FILE_BASE + ".zip");
   if(!newer_in_cloud){
     win?.webContents.send("save-game-stopped", game);
     return resolver(false, true);

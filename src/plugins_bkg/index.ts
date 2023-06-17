@@ -1,5 +1,5 @@
 
-import { BrowserWindow, dialog, IpcMain } from "electron";
+import { app, BrowserWindow, dialog, IpcMain } from "electron";
 import { ensureDir, getFolderSize, normalizeFolder } from "./tools/files";
 import { appDataDir } from "./config";
 import { GOG } from "@/types/gog/game_info";
@@ -51,17 +51,24 @@ export function undefinedOrNull(_var: BrowserWindow | BrowserWindow[]){
   return typeof _var === "undefined" || _var === null;
 }
 
-export function win(): BrowserWindow | null{
+export function isDev(){
+  return app === undefined || app.isPackaged !== true;
+}
+
+export function win(): BrowserWindow | undefined{
   // Main process
   const mainWindow = BrowserWindow.getAllWindows();
   if (
     undefinedOrNull(mainWindow) ||
     undefinedOrNull(mainWindow[mainWindow.length - 1])
   ){
-    return null;
+    return undefined;
   }
 
   return mainWindow[mainWindow.length - 1];
+}
+export function send(name: string, data?: unknown){
+  win()?.webContents.send(name, data);
 }
 
 export function triggerReload(game?: GOG.GameInfo){
@@ -72,6 +79,17 @@ export function notify(options: Notify.Alert){
   win()?.webContents.send("notify", options);
 }
 
+export function offlineNotice(message: string){
+  notify({
+    title: "You're in Offline mode!",
+    text: message,
+    type: "warning",
+    action: {
+      name: "Go Online",
+      event: "go-online"
+    }
+  });
+}
 export default function init(ipcMain: IpcMain, win: BrowserWindow){
   globals.notify = notify;
   globals.app_dir = appDataDir();

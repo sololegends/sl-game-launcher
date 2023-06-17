@@ -72,7 +72,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
     return new Promise<GOG.ImageResponse>((resolve, reject) => {
       removeFromDataCache("game-data.json", flattenName(game.remote_name));
       if(game.remote){
-        removeFromImageCache(game.remote.logo, game.remote.slug);
+        removeFromImageCache(game.remote.logo, game.gameId);
       }
       game.remote = undefined;
       getGameImage(game).then((image: GOG.ImageResponse) => {

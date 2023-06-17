@@ -86,14 +86,17 @@ export default function init(ipcMain: IpcMain){
   _ipcMain = ipcMain;
 
   ipcMain.on("check-for-updates", async(e, games: GOG.GameInfo[], loud?: boolean) => {
+    if(getConfig("offline")){
+      return;
+    }
     // Run update check for each one
     // Optimize for many installs
-    const remote_names = [];
+    const game_ids = [];
     for(const game of games){
-      remote_names.push(game.remote_name);
+      game_ids.push(game.gameId);
     }
 
-    const remotes = await remote.games(false, remote_names);
+    const remotes = await remote.games(false, game_ids);
 
     for(const game of games){
       checkForUpdates(game, false, false, loud, remotes[game.remote_name]);

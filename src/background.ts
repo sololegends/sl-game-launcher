@@ -1,9 +1,10 @@
 "use strict";
 import { app, BrowserWindow, ipcMain, protocol } from "electron";
-import initConfig, { APP_URL_HANDLER, getConfig, setAppDataDir } from "./plugins_bkg/config";
+import initConfig, { APP_URL_HANDLER, getConfig, setAppDataDir, setConfig } from "./plugins_bkg/config";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 import load, { notify } from "./plugins_bkg";
 import { parsePE, ParsePEResponse} from "pe-exe-parser";
+import { createLoginWindow } from "./plugins_bkg/login";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import { createSplashWindow } from "./plugins_bkg/auto_update";
 import logging from "./plugins_bkg/logging";
@@ -98,14 +99,18 @@ if (!got_lock){
   });
 }
 
-export function isDev(){
-  return app.isPackaged !== true;
-}
-
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
   { scheme: "app", privileges: { secure: true, standard: true } }
 ]);
+
+function relaunch(){
+  console.log("relaunching...");
+  app.relaunch();
+  app.quit();
+  app.exit();
+
+}
 
 async function createWindow(){
   // Create the browser window.
@@ -130,6 +135,16 @@ async function createWindow(){
 
   ipcMain.on("gog-path-change", (e, value) => {
     win?.webContents.send("gog-path-change", value);
+  });
+
+  ipcMain.on("go-offline", () => {
+    setConfig("offline", true);
+    relaunch();
+  });
+
+  ipcMain.on("go-online", () => {
+    setConfig("offline", false);
+    relaunch();
   });
 
   win.on("maximize", () => {
@@ -222,16 +237,26 @@ app.on("ready", async() => {
   // Load the config module
   logging(ipcMain);
   await initConfig(ipcMain);
-  if(isDevelopment || cli_options.skip_update || getConfig("offline")){
+  if(cli_options.skip_update || getConfig("offline")){
     createWindow();
     return;
   }
   // If not dev run the updater now
   const splash = createSplashWindow();
-  console.log("Awaiting go to main menu...");
+  console.log("Awaiting go to main...");
   ipcMain.on("goto-main-window", async() => {
+    console.log("Going to main window...");
     (await splash).close();
     createWindow();
+  });
+  ipcMain.on("show-login-window", async(e, msg: string) => {
+    console.log("Going to login window...", msg);
+    (await splash).close();
+    const login = createLoginWindow();
+    ipcMain.on("goto-main-window", async() => {
+      (await login).close();
+      createWindow();
+    });
   });
 });
 
@@ -241,12 +266,7 @@ ipcMain.on("quit", () => {
   app.quit();
   app.exit();
 });
-ipcMain.on("relaunch", () => {
-  console.log("relaunching...");
-  app.relaunch();
-  app.quit();
-  app.exit();
-});
+ipcMain.on("relaunch", relaunch);
 
 // Exit cleanly on request from parent process in development mode.
 if (isDevelopment){

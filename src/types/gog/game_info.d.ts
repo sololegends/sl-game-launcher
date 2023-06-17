@@ -76,7 +76,8 @@ export namespace GOG {
 	export type RemoteGameData = {
 		logo: string
 		folder?: string
-		game_id?: string
+		name?: string
+		game_id: string
 		logo_format: string
 		slug: string
 		download: string[]

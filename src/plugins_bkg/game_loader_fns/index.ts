@@ -64,7 +64,7 @@ export async function getRemoteGameData(game: GOG.GameInfo, use_cache = true): P
   if(use_cache && game.remote !== undefined){
     return game.remote;
   }
-  return loadPresentDLC(game, await remote.game(game.remote_name, use_cache));
+  return loadPresentDLC(game, await remote.game(game.gameId, use_cache));
 }
 
 export async function ensureRemote(game: GOG.GameInfo, use_cache = true): Promise<GOG.RemoteGameData>{
@@ -78,6 +78,7 @@ export async function ensureRemote(game: GOG.GameInfo, use_cache = true): Promis
       console.error(new Error("Failed to retrieve remote data for game: [" + game.name + " -- " + game.remote_name + "]"));
     }
     return {
+      game_id: game.gameId,
       logo: "logo.jpg",
       folder: "localonly",
       logo_format: "image/jpg",
@@ -173,23 +174,27 @@ export async function getLocalGamesFlat(): Promise<string[]>{
 }
 
 export async function getRemoteGamesList(use_cache = true, filter_installed = true): Promise<GOG.GameInfo[]>{
+  if(getConfig("offline")){
+    return [];
+  }
   const remote_games = [] as GOG.GameInfo[];
   const local_games = filter_installed ? await getLocalGamesFlat() : [];
   console.log("Remote load stage");
   const remote_game_data = await remote.list(use_cache);
-  for(const name in remote_game_data){
-    if(local_games.includes(name)){
+  for(const game_id in remote_game_data){
+    const name = remote_game_data[game_id].name;
+    if(name && local_games.includes(name)){
       continue;
     }
     // Get the remote data payload
     const game = {
       clientId: "remote",
-      gameId: name,
+      gameId: game_id,
       language: "remote",
       languages: ["remote"],
       name: name,
       remote_name: name,
-      remote: remote_game_data[name],
+      remote: remote_game_data[game_id],
       playTasks: [] as GOG.PlayTasks[],
       rootGameId: "remote",
       version: 0,
@@ -210,7 +215,7 @@ export async function getRemoteGameIcon(game: GOG.GameInfo): Promise<GOG.ImageRe
     return { icon: "404", remote: undefined };
   }
   // Check for cached data
-  const image = await remote.icon(game.remote_name, game.remote);
+  const image = await remote.icon(game.gameId, game.remote);
   return { icon: image, remote: game.remote };
 }
 
@@ -227,17 +232,28 @@ export async function getGameImage(game: GOG.GameInfo){
     return getRemoteGameIcon(game);
   }
   // Check for the local icon file
-  if(game.root_dir !== "remote" && fs.existsSync(game.root_dir + "/logo.jpg")){
-    const image = fs.readFileSync(game.root_dir + "/logo.jpg");
-    if(image instanceof Buffer){
-      return {
-        icon: "data:image/jpg;base64," + image.toString("base64"),
-        remote: game.remote
-      };
+  if(game.root_dir !== "remote"){
+    const searches = {
+      "icon.jpg": "jpg",
+      "icon.png": "png",
+      "logo.jpg": "jpg",
+      "logo.png": "png"
+    } as Record<string, string>;
+    for(const key in searches){
+      if(!fs.existsSync(game.root_dir + "/" + key)){
+        continue;
+      }
+      const image = fs.readFileSync(game.root_dir + "/" + key);
+      if(image instanceof Buffer){
+        return {
+          icon: "data:image/" + searches[key] + ";base64," + image.toString("base64"),
+          remote: game.remote
+        };
+      }
     }
   }
   if(game.remote){
-    const image = loadFromImageCache(game.remote.logo, game.remote.slug);
+    const image = loadFromImageCache(game.remote.logo, game.gameId);
     if(image){
       return {
         icon: "data:" + game.remote.logo_format + ";base64," + image.toString("base64"),
@@ -262,7 +278,7 @@ export async function getGameImage(game: GOG.GameInfo){
     }
     const img_data = await webcache.entryData(image);
     if(game.remote){
-      saveToImageCache(game.remote.logo, img_data, game.remote.slug);
+      saveToImageCache(game.remote.logo, img_data, game.gameId);
     }
     const ext = image.substr(image.lastIndexOf(".") + 1);
     await webcache.close();

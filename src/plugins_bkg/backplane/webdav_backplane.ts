@@ -7,6 +7,7 @@ import { AppBackPlane } from ".";
 import { DownloaderHelper } from "node-downloader-helper";
 import fs from "fs";
 import { GOG } from "@/types/gog/game_info";
+import { IpcMain } from "electron";
 
 
 type ShortCacheItem = {
@@ -20,20 +21,53 @@ const short_cache = {
 
 } as Record <string, ShortCacheItem>;
 
+let id_mapping = {
+
+} as Record <string, string>;
+const id_mapping_inv = {
+
+} as Record <string, string>;
+
 
 
 function flattenName(name: string): string{
   return name.trim().toLowerCase().replace(/[^-a-z0-9_]/gm, "_");
 }
 
-async function remote_game(remote_name: string, use_cache: boolean): Promise<GOG.RemoteGameData | undefined>{
-  if(short_cache[remote_name] && new Date().getTime() - short_cache[remote_name].cached.getTime() < SHORT_THRESHOLD){
-    return short_cache[remote_name].data;
+// Yes this is a hack for backwards compatibility
+async function loadIdMap(){
+  const web_dav_cfg = webDavConfig();
+  const web_dav = await initWebDav();
+  const remote_folder = mutateFolder(web_dav_cfg.folder);
+  const data_dir = remote_folder + "~internal/id_map.json";
+  if(web_dav && await web_dav?.exists(data_dir)){
+    id_mapping = JSON.parse((await web_dav.getFileContents(data_dir)).toString());
+    if(id_mapping){
+      for(const id in id_mapping){
+        id_mapping_inv[id_mapping[id]] = id;
+      }
+    }
   }
+}
+
+async function remote_game(game_id: string, use_cache: boolean): Promise<GOG.RemoteGameData | undefined>{
+  if(short_cache[game_id] && new Date().getTime() - short_cache[game_id].cached.getTime() < SHORT_THRESHOLD){
+    return short_cache[game_id].data;
+  }
+  if(!id_mapping[game_id]){
+    await loadIdMap();
+  }
+  if(!id_mapping[game_id]){
+    return undefined;
+  }
+  const remote_name = id_mapping[game_id];
   const cache_name = flattenName(remote_name);
   const remote_cache_data = loadFromDataCache("game-data.json", cache_name);
   if(use_cache && remote_cache_data){
     const remote_data = JSON.parse(remote_cache_data);
+    if(!remote_data.name){
+      remote_data.name = remote_name;
+    }
     return remote_data as GOG.RemoteGameData;
   }
   const web_dav_cfg = webDavConfig();
@@ -47,9 +81,12 @@ async function remote_game(remote_name: string, use_cache: boolean): Promise<GOG
     if(file_data instanceof Buffer){
       try{
         const remote_data = JSON.parse(file_data.toString());
+        if(!remote_data.name){
+          remote_data.name = remote_name;
+        }
         remote_data.folder = remote_folder;
         saveToDataCache("game-data.json", Buffer.from(JSON.stringify(remote_data)), cache_name);
-        short_cache[remote_name] = {
+        short_cache[remote_data.game_id] = {
           cached: new Date(),
           data: remote_data
         };
@@ -62,11 +99,14 @@ async function remote_game(remote_name: string, use_cache: boolean): Promise<GOG
   }
 }
 
-async function remote_list(use_cache: boolean, remote_names?: string[]): Promise<Record<string, GOG.RemoteGameData>>{
+async function remote_list(use_cache: boolean, game_ids?: string[]): Promise<Record<string, GOG.RemoteGameData>>{
   const remote_data = {} as Record<string, GOG.RemoteGameData>;
   const web_dav = await initWebDav();
   const nc_cfg = webDavConfig();
   const promises = [] as Promise<void>[];
+  if(Object.keys(id_mapping).length === 0){
+    await loadIdMap();
+  }
   if(nc_cfg !== undefined && web_dav !== undefined){
     const mutated_folder = mutateFolder(nc_cfg.folder);
     console.log("Reading games folder: ", mutated_folder);
@@ -74,18 +114,30 @@ async function remote_list(use_cache: boolean, remote_names?: string[]): Promise
     for(const i in contents){
       const file = contents[i] as FileStat;
       const name = file.filename.replace(mutated_folder, "");
-      if(file.type !== "directory" || name.startsWith("~") || (remote_names !== undefined && !remote_names.includes(name))){
+      if(!id_mapping_inv[name]){
+        await loadIdMap();
+      }
+      if(!id_mapping_inv[name]){
+        continue;
+      }
+      const game_id = id_mapping_inv[name];
+      if(file.type !== "directory" || name.startsWith("~") || (game_ids !== undefined && !game_ids.includes(game_id))){
         continue;
       }
       console.debug("Reading game folder: ", file);
       // Get the remote data payload
       promises.push(new Promise<void>((resolve) => {
-        remote_game(name, use_cache).then((remote) =>{
+        remote_game(game_id, use_cache).then((remote) =>{
           if(remote === undefined){
             resolve();
             return;
           }
-          remote_data[name] = remote;
+          remote.name = name;
+          if(!remote.game_id){
+            console.log("WARNING: ", name);
+            remote.game_id = game_id;
+          }
+          remote_data[remote.game_id] = remote;
           resolve();
         });
       }));
@@ -95,9 +147,16 @@ async function remote_list(use_cache: boolean, remote_names?: string[]): Promise
   return remote_data;
 }
 
-async function remote_icon(remote_name: string, game_remote: GOG.RemoteGameData): Promise<string>{
+async function remote_icon(game_id: string, game_remote: GOG.RemoteGameData): Promise<string>{
+  if(!id_mapping[game_id]){
+    await loadIdMap();
+  }
+  if(!id_mapping[game_id]){
+    return "404";
+  }
+  const remote_name = id_mapping[game_id];
   // Check for cached data
-  const image = loadFromImageCache(game_remote.logo, game_remote.slug);
+  const image = loadFromImageCache(game_remote.logo, game_id);
   if(image instanceof Buffer){
     return "data:" + game_remote.logo_format + ";base64," + image.toString("base64");
   }
@@ -112,14 +171,21 @@ async function remote_icon(remote_name: string, game_remote: GOG.RemoteGameData)
       return "nothing";
     });
     if(file_data instanceof Buffer){
-      saveToImageCache(game_remote.logo, file_data, game_remote.slug);
+      saveToImageCache(game_remote.logo, file_data, game_id);
       return "data:" + game_remote.logo_format + ";base64," + file_data.toString("base64");
     }
   }
   return "404";
 }
 
-async function remote_uninstall(remote_name: string, script: string): Promise<GOG.UninstallDef | undefined>{
+async function remote_uninstall(game_id: string, script: string): Promise<GOG.UninstallDef | undefined>{
+  if(!id_mapping[game_id]){
+    await loadIdMap();
+  }
+  if(!id_mapping[game_id]){
+    return undefined;
+  }
+  const remote_name = id_mapping[game_id];
   const web_dav_cfg = webDavConfig();
   const web_dav = await initWebDav();
   const remote_folder = mutateFolder(web_dav_cfg.folder) + remote_name;
@@ -144,7 +210,14 @@ type DL_shared_tmp = {
 	remote_save_file: string
 }
 
-async function saves_download_shared(remote_name: string, save_file: string): Promise<DL_shared_tmp | undefined>{
+async function saves_download_shared(game_id: string, save_file: string): Promise<DL_shared_tmp | undefined>{
+  if(!id_mapping[game_id]){
+    await loadIdMap();
+  }
+  if(!id_mapping[game_id]){
+    return undefined;
+  }
+  const remote_name = id_mapping[game_id];
   const rf = getConfig("remote_save_folder") as string;
   const remote_save_file = mutateFolder( rf ? rf : REMOTE_FOLDER) + remote_name + "/" + save_file;
 
@@ -164,6 +237,16 @@ async function saves_download_shared(remote_name: string, save_file: string): Pr
 }
 
 export default {
+  init: async(ipcMain: IpcMain) => {
+    ipcMain.removeHandler("login-username");
+    ipcMain.handle("login-username", () => {
+      return "webdav";
+    });
+    ipcMain.removeHandler("login");
+    ipcMain.handle("login", () => {
+      return true;
+    });
+  },
   remote: {
     list: remote_list,
     games: remote_list,
@@ -172,7 +255,14 @@ export default {
     icon: remote_icon
   },
   download: {
-    async installer(remote_name: string, dl_link: string): Promise<DownloaderHelper | undefined>{
+    async installer(game_id: string, dl_link: string): Promise<DownloaderHelper | undefined>{
+      if(!id_mapping[game_id]){
+        await loadIdMap();
+      }
+      if(!id_mapping[game_id]){
+        return undefined;
+      }
+      const remote_name = id_mapping[game_id];
       const web_dav = await initWebDav();
       if(web_dav === undefined){
         return undefined;
@@ -183,7 +273,14 @@ export default {
     }
   },
   saves: {
-    async upload(remote_name: string, remote_file: string, local_file: string | Buffer): Promise<boolean>{
+    async upload(game_id: string, remote_file: string, local_file: string | Buffer): Promise<boolean>{
+      if(!id_mapping[game_id]){
+        await loadIdMap();
+      }
+      if(!id_mapping[game_id]){
+        return false;
+      }
+      const remote_name = id_mapping[game_id];
       const web_dav = await initWebDav({maxBodyLength: 536870912}, true);
 
       if(web_dav !== undefined){
@@ -219,7 +316,14 @@ export default {
       }
       return false;
     },
-    async download(remote_name: string, save_file: string): Promise<DownloaderHelper | undefined>{
+    async download(game_id: string, save_file: string): Promise<DownloaderHelper | undefined>{
+      if(!id_mapping[game_id]){
+        await loadIdMap();
+      }
+      if(!id_mapping[game_id]){
+        return undefined;
+      }
+      const remote_name = id_mapping[game_id];
       // Setup the variables we need
       const save_download = remote_name + "-save.zip";
       const tmp_download = getConfig("gog_path") + "\\.temp\\";
@@ -237,7 +341,14 @@ export default {
 
       return downloadFile(web_dav.getFileDownloadLink(remote_save_file), save_download);
     },
-    async downloadAsString(remote_name: string, save_file: string): Promise<string | undefined>{
+    async downloadAsString(game_id: string, save_file: string): Promise<string | undefined>{
+      if(!id_mapping[game_id]){
+        await loadIdMap();
+      }
+      if(!id_mapping[game_id]){
+        return undefined;
+      }
+      const remote_name = id_mapping[game_id];
       const result = await saves_download_shared(remote_name, save_file);
       if(result === undefined){
         return undefined;
@@ -250,7 +361,14 @@ export default {
       }
       return buffer as string;
     },
-    async latest(remote_name: string, save_file: string): Promise<string | undefined>{
+    async latest(game_id: string, save_file: string): Promise<string | undefined>{
+      if(!id_mapping[game_id]){
+        await loadIdMap();
+      }
+      if(!id_mapping[game_id]){
+        return undefined;
+      }
+      const remote_name = id_mapping[game_id];
       // Setup the variables we need
       const rf = getConfig("remote_save_folder") as string;
       const remote_save_folder = mutateFolder( rf ? rf : REMOTE_FOLDER) + remote_name;

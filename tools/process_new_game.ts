@@ -6,6 +6,7 @@ import fs from "fs";
 import {getRemoteGamesList} from "../src/plugins_bkg/game_loader_fns";
 import {GOG} from "../src/types/gog/game_info";
 import initConfig from "../src/plugins_bkg/config";
+import UUIDv4 from "../src/js/uuid";
 import zip from "node-stream-zip";
 
 // TYPES
@@ -14,17 +15,35 @@ type ZipLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 interface CLIOptions {
   output: string
   zip_level?: ZipLevel
+  nopack: boolean
 
   [key: string]: string | number | boolean | ZipLevel | undefined
 }
+const obj_CLIOptions = {
+  output: "[./game_repacked] Output folder for the operation",
+  zip_level: "[7] Zip compressions level to use for packing",
+  nopack: "[false] Set to skip the packing stage of the repack"
+} as Record<string, string>;
 
 interface RepackCLIOptions extends CLIOptions {
   merge_data?: boolean
   merge_info?: boolean
   clear?: boolean
   nocleanup?: boolean
-  dlc: string
+  dlc: string | true
+  skippackgame: boolean
 }
+
+const obj_RepackCLIOptions = {
+  ...obj_CLIOptions,
+  merge_data: "[false] Merge game data with remote data",
+  merge_info: "[false] Alias for merge_data",
+  clear: "[false] Only clear the output directory, no processing",
+  nocleanup: "[false] Skip the cleanup stage, will fully repack and leave unpacked files",
+  dlc: "[none] Set the dlc path for the game packing, use 'default' or true for ./proc/dlc",
+  skippackgame: "[false] Skips the packing of the game, but still generated all other files"
+} as Record<string, string>;
+
 interface DLCCLIOptions extends CLIOptions {
   input: string
   gameid: string
@@ -34,6 +53,19 @@ interface DLCCLIOptions extends CLIOptions {
   version?: string
   iter_id?: number
 }
+
+const obj_DLCCLIOptions = {
+  ...obj_CLIOptions,
+  input: "input folder for packaging",
+  gameid: "GameId for the parent game",
+  dlcid: "GamId for the DLC",
+  dlc_name: "Name of th DLC",
+  zip_name: "Name of the output zip file",
+  version: "[auto_id] The DLC version, if unset it will try and figure it out (unlikely)",
+  iter_id: "[auto_id] The DLC iteration id, if unset it will try and figure it out (unlikely)"
+} as Record<string, string>;
+
+
 type PathComponents = {
   dir: string
   file: string
@@ -618,20 +650,21 @@ async function repackGame(game_exe: string, output_dir: string, options: RepackC
   if(fs.existsSync(props.unpack_folder + "/install_script.iss")){
     redist = await redistFromInnoScript(props.unpack_folder + "/install_script.iss", game_folder);
   }
-  const game_id = readGameInfo(props.output_folder)?.gameId;
+  const game_id = readGameInfo(props.output_folder)?.gameId || "unknown-" + UUIDv4();
   // Get the install size metric
   const install_size = await getFolderSize(game_folder);
   // Compress game data
   const zip_name = path.file.replace("setup_", "").replace(".exe", ".zip");
   const zip_output = output_dir + "/" + zip_name;
-  if(!options.nopack){
+  let dl_size = 0;
+  if(!options.nopack && !options.skippackgame){
     await compressFolder(game_folder, zip_output, options.zip_level);
+    dl_size = await getFileSize(zip_output);
   }
-  const dl_size = await getFileSize(zip_output);
   const slug = await getSlug(props, FORMAT);
   const version_data = await getVersion(game_exe, props, FORMAT);
   // Clean up left overs
-  if(!options.nocleanup){
+  if(!options.nocleanup && !options.nopack){
     removeDir(unpack_folder);
     removeDir(game_folder);
   }
@@ -676,10 +709,11 @@ async function repackDLC(dlc_exe: string, output_dir: string, options: RepackCLI
   // Compress game data
   const zip_name = path.file.replace("setup_", "").replace(".exe", ".zip");
   const zip_output = output_dir + "/" + zip_name;
+  let dl_size = 0;
   if(!options.nopack){
     await compressFolder(dlc_folder, zip_output, options.zip_level);
+    dl_size = await getFileSize(zip_output);
   }
-  const dl_size = await getFileSize(zip_output);
 
   // Make uninstall script
   const version_data = await getVersion(dlc_exe, props, FORMAT);
@@ -740,7 +774,9 @@ async function freshPackDLC(output_dir: string, options: DLCCLIOptions): Promise
   // Compress game data
   const zip_name = options.zip_name;
   const zip_output = output_dir + "/" + zip_name;
-  await compressFolder(dlc_folder, zip_output, options.zip_level);
+  if(!options.nopack){
+    await compressFolder(dlc_folder, zip_output, options.zip_level);
+  }
   const dl_size = await getFileSize(zip_output);
 
   // Make uninstall script
@@ -770,7 +806,7 @@ async function freshPackDLC(output_dir: string, options: DLCCLIOptions): Promise
   return dlc_frag;
 }
 
-async function main(game_exe: string, options_arr: string[]){
+async function packGame(game_exe: string, options_arr: string[]){
   const options = {
     output: "game_repacked",
     zip_level: 8,
@@ -778,6 +814,7 @@ async function main(game_exe: string, options_arr: string[]){
     merge_data: false,
     merge_info: false,
     nopack: false,
+    skippackgame: false,
     nocleanup: false,
     dlc: "NONE"
   } as RepackCLIOptions;
@@ -794,7 +831,7 @@ async function main(game_exe: string, options_arr: string[]){
   if(options){
     console.debug(options);
   }
-  if(options.dlc === "default"){
+  if(options.dlc === true || options.dlc === "default"){
     options.dlc = "proc/dlc";
   }
   const output_dir = options.output || "game_repacked";
@@ -831,7 +868,7 @@ async function main(game_exe: string, options_arr: string[]){
     return;
   }
 
-  // Process the main game
+  // Process the packGame game
   let game = game_exe === "NONE" ? {} as GOG.RemoteGameData : await repackGame(game_exe, output_dir, options);
   const dlc = [] as GOG.RemoteGameDLCBuilding[];
   if(dlc_folder !== "NONE"){
@@ -858,6 +895,72 @@ async function main(game_exe: string, options_arr: string[]){
   }
 }
 
+async function batchPack(file_path: string, root_path: string){
+  if(file_path !== "auto" && !fs.existsSync(file_path)){
+    console.log("Could not find file_path [" + file_path + "]");
+    return;
+  }
+  if(!fs.existsSync(root_path)){
+    console.log("Could not find root_path [" + root_path + "]");
+    return;
+  }
+
+  type AutoJSON = {
+    folder: string
+    exe: string
+    dlc: boolean
+    output?: string
+  }
+
+  let json = [] as AutoJSON[];
+  if(file_path === "auto"){
+    // Scan the root directory for folder and exes
+    const folder_listing = fs.readdirSync(root_path);
+    for(const file_frag of folder_listing){
+      const file = root_path + "/" + file_frag;
+      try{
+        if(fs.statSync(file).isDirectory()){
+          const game_folder_list = fs.readdirSync(file);
+          for(const game_file_frag of game_folder_list){
+            if(game_file_frag.endsWith(".exe")){
+              const game_file = file + "/" + game_file_frag;
+              // Found game file :D
+              json.push({
+                folder: file_frag,
+                exe: game_file_frag.substring(0, game_file_frag.length - 4),
+                dlc: fs.existsSync(game_file + "/dlc")
+              });
+            }
+          }
+          console.log(file);
+
+        }
+      }catch(e){
+        console.error("Failed to load folder [" + file + "]");
+      }
+    }
+    console.log("Found games", json);
+  } else{
+    json = JSON.parse(fs.readFileSync(file_path).toString()) as AutoJSON[];
+  }
+
+  for(const game of json){
+    console.log("Processing game exe [" + game.exe + "] in [" + game.folder + "]");
+
+    const options = [
+      game.output ? game.output : ("output=game_repacked/out_" + game.folder),
+      "merge_data=true"
+    ];
+
+    if(game.dlc){
+      options.push("dlc=proc/" + game.folder + "/dlc");
+    }
+
+    await packGame(root_path + "/"  + game.folder + "/" + game.exe + ".exe", options);
+  }
+
+}
+
 async function packDLC(options_arr: string[]){
   const options = {
     output: "dlc_repacked",
@@ -866,7 +969,8 @@ async function packDLC(options_arr: string[]){
     zip_name: "REPLACE_ME",
     input: "REPLACE_ME",
     dlc_name: "REPLACE_ME",
-    zip_level: 8
+    zip_level: 8,
+    nopack: false
   } as DLCCLIOptions;
   if(options_arr){
     for(const part of options_arr){
@@ -910,12 +1014,32 @@ async function packDLC(options_arr: string[]){
 
 /* global process */
 const args = process.argv.slice(2);
-if(args[0] === "packdlc"){
+if(args[0] === "help"){
+  console.log("Help: "
+  + "\n example: repack $exe_file [$options]"
+  + "\n - packdlc $options: Packs the given dlc for a game separate to the game ");
+
+  for(const key in obj_DLCCLIOptions){
+    console.log("    | - ", key, ":", obj_DLCCLIOptions[key]);
+  }
+
+  console.log(" - batch ($batch_json_file | 'auto') $root_path: Batch process elements in the batch_json"
+  + "\n    | Json must be a list of objects"
+  + "\n    | objects must have folder:string, exe:string, dlc:boolean, [output:string]"
+  + "\n    | batch json setting to auto, will scan the root folder for folders containing exes"
+  + "\n - [exe_file] [$repack_options]: Process the given EXE as a game to repack"
+  );
+  for(const key in obj_RepackCLIOptions){
+    console.log("    | - ", key, ":", obj_RepackCLIOptions[key]);
+  }
+}else if(args[0] === "packdlc"){
   packDLC(args.slice(1));
+}else if(args[0] === "batch"){
+  batchPack(args[1], args[2]);
 }else{
-  main(args[0], args.slice(1));
+  packGame(args[0], args.slice(1));
 }
 
 /* global exports */
-exports.main = main;
+exports.packGame = packGame;
 Object.defineProperty(exports, "__esModule", { value: true });

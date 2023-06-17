@@ -4,6 +4,7 @@ import { ensureDir } from "./tools/files";
 import fs from "fs";
 import { GOG } from "@/types/gog/game_info";
 import { IpcMain } from "electron";
+import { isDev } from ".";
 import os from "os";
 
 // GLOBAL CONFIGS ====>
@@ -87,11 +88,11 @@ export function getConfig(key: string){
   }
   return value;
 }
-export function setConfig(key: string, value: unknown, conf_file: string, encrypt?: boolean){
+function setConfig0(key: string, value: unknown, conf_file: string, encrypt?: boolean){
   getLock().then(() => {
     const crypto_key = cryptoInit();
     config[key] = encrypt === true ? "$$ENC:" + crypt.encrypt(JSON.stringify(value), crypto_key, key) : value;
-    fs.writeFile(conf_file, JSON.stringify(config), function(err){
+    fs.writeFile(conf_file, isDev() ? JSON.stringify(config, null, 2) : JSON.stringify(config), function(err){
       unlock();
       if (err){
         return console.log(err);
@@ -99,6 +100,10 @@ export function setConfig(key: string, value: unknown, conf_file: string, encryp
       console.log("Config was saved!");
     });
   });
+}
+
+export function setConfig(key: string, value: unknown, encrypt?: boolean){
+  setConfig0(key, value, getConfig("config_file"), encrypt);
 }
 
 export default function init(ipcMain?: IpcMain){
@@ -109,7 +114,7 @@ export default function init(ipcMain?: IpcMain){
       return getConfig(key);
     });
     ipcMain.on("cfg-set", (e, key: string, value: unknown, encrypt?: boolean) => {
-      setConfig(key, value, conf_file, encrypt);
+      setConfig0(key, value, conf_file, encrypt);
     });
   }
 
@@ -123,6 +128,7 @@ export default function init(ipcMain?: IpcMain){
       }
       fs.readFile(conf_file, "utf8", function(err, data){
         config = JSON.parse(data);
+        setConfig0("config_file", conf_file, conf_file);
         resolve();
       });
     });

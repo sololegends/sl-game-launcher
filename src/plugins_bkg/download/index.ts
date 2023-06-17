@@ -68,18 +68,21 @@ export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: str
         const save_loc = tmp_download + "/" + dl_link;
         // Remove on start if left over
         if(fs.existsSync(save_loc)){
+          console.log("Removing old download file");
           fs.rmSync(save_loc);
         }
         // Perform download
-        download.installer(game.remote_name, dl_link).then((active_dl) => {
+        download.installer(game.gameId, dl_link).then((active_dl) => {
           if(active_dl === undefined){
             reject({status: "backplane_error"});return;
           }
           active_dl.on("end", () => {
+            console.log("Download end triggered");
             done();
             win()?.setProgressBar(-1);
           });
           active_dl.on("stop", () => {
+            console.log("Download Stop triggered");
             cleanupDownloaded(dl_link_set);
             win()?.setProgressBar(-1);
           });
@@ -94,6 +97,7 @@ export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: str
             win()?.setProgressBar(p.downloaded / p.total);
           });
           active_dl.on("error", (e) => {
+            console.log("Download error triggered");
             win()?.webContents.send("game-dl-error", game, e);
             win()?.setProgressBar(-1);
             win()?.webContents.send("progress-banner-error", "Failed to download game: " + game.name);

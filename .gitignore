@@ -34,6 +34,7 @@ tools/temp_install
 tools/all_output
 tools/exes
 tools/new_game
+tools/tmp/*
 
 DID
 .cert-env
