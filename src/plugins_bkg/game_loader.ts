@@ -70,7 +70,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
 
   ipcMain.handle("reload-cache-data", async(e, game: GOG.GameInfo): Promise<GOG.ImageResponse> => {
     return new Promise<GOG.ImageResponse>((resolve, reject) => {
-      removeFromDataCache("game-data.json", flattenName(game.remote_name));
+      removeFromDataCache("game-data.json", game.gameId);
       if(game.remote){
         removeFromImageCache(game.remote.logo, game.gameId);
       }

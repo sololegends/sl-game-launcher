@@ -151,7 +151,7 @@ export default {
     for(const i in parts){
       parts[i] = parts[i].replaceAll(">", "-");
       if(!ucase_exemption.includes(parts[i].toLowerCase())
-        && (parts[i].length < 3 || parts[i].toUpperCase() === "API" || parts[i].toUpperCase() === "AWRAP")){
+        && (parts[i].length < 3 || parts[i].toUpperCase() === "API")){
         value += parts[i].toUpperCase() + " ";
         continue;
       }
