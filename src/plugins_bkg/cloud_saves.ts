@@ -13,6 +13,10 @@ import { Notify } from "@/types/notification/notify";
 import os from "os";
 import { saves as saves_bp } from "./backplane";
 
+function isGlob(input: string): boolean{
+  return input.includes("*");
+}
+
 // ================================================
 // SAVE TRACKING
 // ================================================
@@ -52,6 +56,17 @@ export function updateSaveTime(game: GOG.GameInfo, time: Date){
 
 export function getSaveTime(game: GOG.GameInfo): number{
   return saves()[slug(game.name)] | -1;
+}
+
+export async function updateLocalSaveTime(save: string, date: Date){
+  if(isGlob(save)){
+    const files = await globAsync(save);
+    for(const s of files){
+      fs.utimesSync(s, date, date);
+    }
+    return;
+  }
+  fs.utimesSync(save, date, date);
 }
 
 // ================================================
@@ -113,9 +128,6 @@ export function getSavesLocation(game: GOG.GameInfo): undefined | GOG.GameSave{
   return undefined;
 }
 
-function isGlob(input: string): boolean{
-  return input.includes("*");
-}
 function isReg(input: string): boolean{
   return input.startsWith("REG:") || input.startsWith("REG32:") || input.startsWith("REG64:");
 }
@@ -191,6 +203,7 @@ async function packGameSave(game: GOG.GameInfo, saves: GOG.GameSave): Promise<st
   // Update folder time
   for(const save in saves){
     try{
+      updateLocalSaveTime(saves[save], new Date());
       updateSaveTime(game, new Date());
     }catch(e){
       console.log("Saves folder [" + save + "] not found");

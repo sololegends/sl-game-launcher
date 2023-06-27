@@ -90,17 +90,17 @@ export default {
     return (neg ? "-" : "") + Math.max(number, 0.1).toFixed(precision) + " " + units[i];
   },
 
-  betterSeconds: (seconds: number) =>{
+  betterSeconds: (seconds: number, max = "day" as "day" | "hour" | "minute" | "second", precision = 1) =>{
     if(typeof seconds == "string"){
       seconds = parseInt(seconds);
     }
     if(isNaN(seconds)){ return "-"; }
-    if(seconds > 86400){
-      return (seconds / 86400).toFixed(1) + "d";
-    }else if(seconds > 3600){
-      return (seconds / 3600).toFixed(1) + "h";
-    }else if(seconds > 60){
-      return (seconds / 60).toFixed(1) + "m";
+    if(seconds > 86400 && max === "day"){
+      return (seconds / 86400).toFixed(precision) + "d";
+    }else if(seconds > 3600 && (max === "day" || max === "hour")){
+      return (seconds / 3600).toFixed(precision) + "h";
+    }else if(seconds > 60 && (max === "day" || max === "hour" || max === "minute")){
+      return (seconds / 60).toFixed(precision) + "m";
     }
     return seconds.toFixed(0) + "s";
   },
