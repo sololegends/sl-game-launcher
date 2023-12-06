@@ -6,6 +6,7 @@ import fs from "fs";
 import {getRemoteGamesList} from "../src/plugins_bkg/game_loader_fns";
 import {GOG} from "../src/types/gog/game_info";
 import initConfig from "../src/plugins_bkg/config";
+import UUIDv4 from "../src/js/uuid";
 import zip from "node-stream-zip";
 
 // TYPES
@@ -649,7 +650,7 @@ async function repackGame(game_exe: string, output_dir: string, options: RepackC
   if(fs.existsSync(props.unpack_folder + "/install_script.iss")){
     redist = await redistFromInnoScript(props.unpack_folder + "/install_script.iss", game_folder);
   }
-  const game_id = readGameInfo(props.output_folder)?.gameId;
+  const game_id = readGameInfo(props.output_folder)?.gameId || "unknown-" + UUIDv4();
   // Get the install size metric
   const install_size = await getFolderSize(game_folder);
   // Compress game data
@@ -894,8 +895,8 @@ async function packGame(game_exe: string, options_arr: string[]){
   }
 }
 
-async function batchPack(file_path: string, root_path: string){
-  if(!fs.existsSync(file_path)){
+async function batchPack(file_path: string, root_path: string, options_arr: string[]){
+  if(file_path !== "auto" && !fs.existsSync(file_path)){
     console.log("Could not find file_path [" + file_path + "]");
     return;
   }
@@ -908,20 +909,51 @@ async function batchPack(file_path: string, root_path: string){
     folder: string
     exe: string
     dlc: boolean
+    output?: string
   }
 
-  const json = JSON.parse(fs.readFileSync(file_path).toString()) as AutoJSON[];
+  let json = [] as AutoJSON[];
+  if(file_path === "auto"){
+    // Scan the root directory for folder and exes
+    const folder_listing = fs.readdirSync(root_path);
+    for(const file_frag of folder_listing){
+      const file = root_path + "/" + file_frag;
+      try{
+        if(fs.statSync(file).isDirectory()){
+          const game_folder_list = fs.readdirSync(file);
+          for(const game_file_frag of game_folder_list){
+            if(game_file_frag.endsWith(".exe")){
+              // Found game file :D
+              json.push({
+                folder: file_frag,
+                exe: game_file_frag.substring(0, game_file_frag.length - 4),
+                dlc: fs.existsSync(file + "/dlc")
+              });
+            }
+          }
+          console.log(file);
+
+        }
+      }catch(e){
+        console.error("Failed to load folder [" + file + "]");
+      }
+    }
+    console.log("Found games", json);
+  } else{
+    json = JSON.parse(fs.readFileSync(file_path).toString()) as AutoJSON[];
+  }
 
   for(const game of json){
     console.log("Processing game exe [" + game.exe + "] in [" + game.folder + "]");
 
     const options = [
-      "output=game_repacked/out_" + game.folder,
-      "merge_data=true"
+      game.output ? game.output : ("output=game_repacked/out_" + game.folder),
+      "merge_data=true",
+      ...options_arr
     ];
 
     if(game.dlc){
-      options.push("dlc=proc/" + game.folder + "/dlc");
+      options.push("dlc=" + root_path + "/" + game.folder + "/dlc");
     }
 
     await packGame(root_path + "/"  + game.folder + "/" + game.exe + ".exe", options);
@@ -991,9 +1023,10 @@ if(args[0] === "help"){
     console.log("    | - ", key, ":", obj_DLCCLIOptions[key]);
   }
 
-  console.log(" - batch $batch_json $root_path: Batch process elements in the batch_json"
+  console.log(" - batch ($batch_json_file | 'auto') $root_path: Batch process elements in the batch_json"
   + "\n    | Json must be a list of objects"
-  + "\n    | objects must have folder:string, exe:string, dlc:boolean"
+  + "\n    | objects must have folder:string, exe:string, dlc:boolean, [output:string]"
+  + "\n    | batch json setting to auto, will scan the root folder for folders containing exes"
   + "\n - [exe_file] [$repack_options]: Process the given EXE as a game to repack"
   );
   for(const key in obj_RepackCLIOptions){
@@ -1002,7 +1035,7 @@ if(args[0] === "help"){
 }else if(args[0] === "packdlc"){
   packDLC(args.slice(1));
 }else if(args[0] === "batch"){
-  batchPack(args[1], args[2]);
+  batchPack(args[1], args[2], args.slice(3));
 }else{
   packGame(args[0], args.slice(1));
 }

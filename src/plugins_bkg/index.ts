@@ -1,5 +1,5 @@
 
-import { BrowserWindow, dialog, IpcMain } from "electron";
+import { app, BrowserWindow, dialog, IpcMain } from "electron";
 import { ensureDir, getFolderSize, normalizeFolder } from "./tools/files";
 import { appDataDir } from "./config";
 import { GOG } from "@/types/gog/game_info";
@@ -11,7 +11,6 @@ import z_game_loader from "./game_loader";
 import z_gc_init from "./game_control";
 import z_misc_os from "./misc_os";
 import z_play_time_tracker from "./play_time_tracker";
-import z_process_cloud from "./process_cloud";
 import z_sys_notifications from "./sys_notifications";
 import z_update_check from "./update_check";
 import z_webdav_init from "./nc_webdav";
@@ -23,7 +22,6 @@ const fns = [
   z_gc_init,
   z_webdav_init,
   z_game_loader,
-  z_process_cloud,
   z_game_dl_install,
   z_cloud_saves,
   z_update_check,
@@ -53,17 +51,24 @@ export function undefinedOrNull(_var: BrowserWindow | BrowserWindow[]){
   return typeof _var === "undefined" || _var === null;
 }
 
-export function win(): BrowserWindow | null{
+export function isDev(){
+  return app === undefined || app.isPackaged !== true;
+}
+
+export function win(): BrowserWindow | undefined{
   // Main process
   const mainWindow = BrowserWindow.getAllWindows();
   if (
     undefinedOrNull(mainWindow) ||
     undefinedOrNull(mainWindow[mainWindow.length - 1])
   ){
-    return null;
+    return undefined;
   }
 
   return mainWindow[mainWindow.length - 1];
+}
+export function send(name: string, data?: unknown){
+  win()?.webContents.send(name, data);
 }
 
 export function triggerReload(game?: GOG.GameInfo){
@@ -74,6 +79,17 @@ export function notify(options: Notify.Alert){
   win()?.webContents.send("notify", options);
 }
 
+export function offlineNotice(message: string){
+  notify({
+    title: "You're in Offline mode!",
+    text: message,
+    type: "warning",
+    action: {
+      name: "Go Online",
+      event: "go-online"
+    }
+  });
+}
 export default function init(ipcMain: IpcMain, win: BrowserWindow){
   globals.notify = notify;
   globals.app_dir = appDataDir();

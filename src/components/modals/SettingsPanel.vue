@@ -39,29 +39,49 @@
 
         <v-divider></v-divider>
 
-        <v-card-title class="primary header" style="padding: 0px 12px;margin-bottom:18px">
-          <div class="subtitle-1 white--text">WebDAV Configuration</div>
-        </v-card-title>
-        <v-list-item>
-          <v-text-field dense v-model="webdav.url" label="WebDAV Url" />
-        </v-list-item>
-        <v-list-item>
-          <v-text-field dense v-model="webdav.user" label="WebDAV User" />
-        </v-list-item>
-        <v-list-item>
-          <v-text-field dense type="password" v-model="webdav.pass" label="WebDAV Pass" />
-        </v-list-item>
-        <v-list-item>
-          <v-text-field dense v-model="webdav.folder" label="WebDAV Folder" />
-        </v-list-item>
-        <v-list-item>
-          <v-text-field dense v-model="remote_save_folder" label="Cloud Save Folder" />
-        </v-list-item>
-        <v-list-item>
-          <v-btn class="primary" @click="saveWebDav">
-            Save Config
-          </v-btn>
-        </v-list-item>
+        <template v-if="backplane === 'webdav'">
+          <v-card-title class="primary header" style="padding: 0px 12px;margin-bottom:18px">
+            <div class="subtitle-1 white--text">WebDAV Configuration</div>
+          </v-card-title>
+          <v-list-item>
+            <v-text-field dense v-model="webdav.url" label="WebDAV Url" />
+          </v-list-item>
+          <v-list-item>
+            <v-text-field dense v-model="webdav.user" label="WebDAV User" />
+          </v-list-item>
+          <v-list-item>
+            <v-text-field dense type="password" v-model="webdav.pass" label="WebDAV Pass" />
+          </v-list-item>
+          <v-list-item>
+            <v-text-field dense v-model="webdav.folder" label="WebDAV Folder" />
+          </v-list-item>
+          <v-list-item>
+            <v-text-field dense v-model="remote_save_folder" label="Cloud Save Folder" />
+          </v-list-item>
+          <v-list-item>
+            <v-btn class="primary" @click="saveWebDav">
+              Save Config
+            </v-btn>
+          </v-list-item>
+        </template>
+
+        <template v-else-if="backplane === 'sl_api'">
+          <v-card-title class="primary header" style="padding: 0px 12px;margin-bottom:18px">
+            <div class="subtitle-1 white--text">User Account</div>
+          </v-card-title>
+          <v-list-item>
+            Logged in as: &nbsp;<b> {{ $store.getters.offline ? "offline" : api.user }}</b>
+          </v-list-item>
+          <v-list-item v-if="!$store.getters.offline">
+            <v-btn class="primary" @click="logInOut">
+              Sign {{ !api.user ? "In" : "Out"}}
+            </v-btn>
+            <v-spacer />
+            <v-btn class="warning" @click="changePassword">
+              Change Password
+            </v-btn>
+          </v-list-item>
+        </template>
 
         <v-divider style="margin-top:20px;"></v-divider>
 
@@ -107,6 +127,32 @@
         <v-list-item v-if="dev_mode">
           <LoggingDialog />
         </v-list-item>
+
+        <v-list-item v-if="dev_mode">
+          <v-select
+            :items="[{text: 'stable', value: 'latest'}, {text: 'beta', value: 'beta'}]"
+            label="Release Branch"
+            v-model="update_channel"
+            @change="channelChange"
+          />
+        </v-list-item>
+
+        <v-list-item v-if="dev_mode">
+          <v-select
+            :items="[{text: 'API (new)', value: 'sl_api'}, {text: 'WebDAV (old)', value: 'webdav'}]"
+            label="Remote Data Backplane"
+            v-model="backplane"
+            @change="backplaneChange"
+          />
+        </v-list-item>
+
+        <v-list-item v-if="dev_mode && backplane === 'sl_api'">
+          <v-text-field
+            label="Remote Data API"
+            v-model="games_api"
+            @change="gamesApiChange"
+          />
+        </v-list-item>
       </v-list>
 
 
@@ -143,10 +189,12 @@
 
 <script lang="ts">
 import { ipcRenderer as ipc, OpenDialogReturnValue } from "electron";
+import { DEFAULT_API } from "@/plugins_bkg/config";
 import { defineComponent } from "@vue/composition-api";
 import filter from "@filters";
 import { GOG } from "@/types/gog/game_info";
 import LoggingDialog from "../dialogs/LoggingDialog.vue";
+import { PlaneType } from "@/plugins_bkg/backplane";
 import SideDrawer from "@modals/SideDrawer.vue";
 
 type VersionData = {
@@ -182,6 +230,10 @@ export default defineComponent({
         pass: "",
         folder: ""
       } as GOG.WebDavConfig,
+      api: {
+        user: "",
+        pass: ""
+      },
       remote_save_folder: ".game-saves",
       version_copy_color: "white--text",
       cache: {
@@ -191,7 +243,10 @@ export default defineComponent({
       },
       show_uninstalled: true,
       show_repacked_only: true,
-      auto_dlc: true
+      auto_dlc: true,
+      update_channel: "stable",
+      backplane: "" as PlaneType,
+      games_api: ""
     };
   },
   mounted(){
@@ -208,8 +263,22 @@ export default defineComponent({
         this.webdav = res;
       }
     });
+    ipc.invoke("cfg-get", "api").then((res) => {
+      if(res !== undefined){
+        this.api = res;
+      }
+    });
     ipc.invoke("cfg-get", "auto_dlc").then((res) => {
       this.auto_dlc = res || false;
+    });
+    ipc.invoke("cfg-get", "update_channel").then((res) => {
+      this.update_channel = res || "stable";
+    });
+    ipc.invoke("cfg-get", "backplane").then((res) => {
+      this.backplane = res || "webdav";
+    });
+    ipc.invoke("cfg-get", "remote_api").then((res) => {
+      this.games_api = res || DEFAULT_API;
     });
     this.reloadCacheData();
     this.show_uninstalled = this.$store.getters.showUninstalled;
@@ -221,6 +290,35 @@ export default defineComponent({
     }
   },
   methods: {
+    channelChange(){
+      ipc.send("cfg-set", "update_channel", this.update_channel);
+      ipc.send("release-channel-changed", this.update_channel);
+    },
+    backplaneChange(){
+      ipc.send("cfg-set", "backplane", this.backplane);
+      this.$notify({
+        title: "Data Backplane Changed!",
+        text: "Restart required for changes to take effect",
+        type: "success",
+        sticky: true,
+        action: {
+          name: "Restart",
+          event: "relaunch"
+        }
+      });
+    },
+    gamesApiChange(){
+      ipc.send("cfg-set", "remote_api", this.games_api);
+      this.$notify({
+        title: "Game API Changed!",
+        text: "Restart required for changes to take effect",
+        type: "success",
+        action: {
+          name: "Restart",
+          event: "relaunch"
+        }
+      });
+    },
     toggleOffline(){
       this.$store.dispatch("set_offline", !this.$store.getters.offline);
       // Relaunch app
@@ -278,7 +376,22 @@ export default defineComponent({
       ipc.send("cfg-set", "webdav", this.webdav, true);
       ipc.send("cfg-set", "remote_save_folder", this.remote_save_folder);
     },
-    copyVersionInfo(): void{
+    logInOut(){
+      if(!this.api.user){
+        ipc.send("login");
+        return;
+      }
+      ipc.send("cfg-set", "api", {}, true);
+      ipc.send("cfg-set", "sl_api_key", "", true);
+      ipc.send("relaunch");
+    },
+    changePassword(){
+      this.$modal.show("change_password", {
+        message: "",
+        username: this.api.user
+      });
+    },
+    copyVersionInfo(){
       let string = "APP Versions";
       for(const key in this.version_data){
         string += "\n- " + key + ": " + this.version_data[key].version + " - " + this.version_data[key].build_date;
@@ -294,10 +407,10 @@ export default defineComponent({
     toggleDevMode(){
       this.$store.dispatch("set_dev_mode", this.dev_mode);
     },
-    loadDevMode(): void{
+    loadDevMode(){
       this.dev_mode = this.$store.getters.dev_mode;
     },
-    toggleTheme(): void{
+    toggleTheme(){
       this.theme.dark_mode = !this.theme.dark_mode;
       this.$vuetify.theme.dark = this.theme.dark_mode;
       localStorage.setItem("theme", this.$vuetify.theme.dark ? "dark" : "light");

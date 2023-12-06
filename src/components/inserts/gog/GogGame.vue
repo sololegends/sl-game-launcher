@@ -281,7 +281,13 @@ export default defineComponent({
     },
     async checkForUpdates(){
       this.loading_update = true;
-      await ipc.invoke("check-update-game", this.game, true);
+      const result = await ipc.invoke("check-update-game", this.game, true);
+      if(!result){
+        this.$notify({
+          title: "No updates found for " + this.game.name,
+          type: "success"
+        });
+      }
       this.loading_update = false;
     },
     async executeUpdates(){
@@ -403,7 +409,6 @@ export default defineComponent({
       ipc.off("game-dl-error", this.loadingOff);
       ipc.off("game-uns-start", this.loadingOff);
       ipc.off("game-uns-error", this.loadingOff);
-      ipc.off("zip-package-done", this.loadingOff);
     },
     getAllPlayTasks(): GOG.PlayTasks[]{
       const play_tasks = [...this.game.playTasks];

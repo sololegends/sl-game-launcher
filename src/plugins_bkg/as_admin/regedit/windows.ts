@@ -46,7 +46,13 @@ async function exec(command: string, as_admin = true): Promise<Regedit.RedEditRe
   });
 }
 
-function valueCheck(value?: string){
+export function needsAdmin(key: string): boolean{
+  key = key.toUpperCase();
+  return key.startsWith("HKLM") || key.startsWith("HKCR") || key.startsWith("HKU")
+  || key.startsWith(HKLM) || key.startsWith(HKCR) || key.startsWith(HKU);
+}
+
+function valueCheck(value?: string): string{
   let command = "";
   if(value){
     if(value === ""){
@@ -58,7 +64,7 @@ function valueCheck(value?: string){
   return command;
 }
 
-function separatorCheck(separator?: string, type?: Regedit.Type){
+function separatorCheck(separator?: string, type?: Regedit.Type): string{
   let command = "";
   if(separator && type === NEEDS_SEPARATOR && separator.length === 1){
     command += " /s " + separator;
@@ -114,11 +120,18 @@ export function buildQuery(key: string, value?: string, query_subkeys?: boolean,
   return command;
 }
 
+export async function KeyExists(key: string, bit_64?: boolean): Promise<boolean>{
+  const result = await exec(
+    buildQuery(key, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, bit_64),
+    false);
+  return result.success;
+}
+
 export async function Query(key: string, value?: string, query_subkeys?: boolean,
   data?: string, target?: "key_names" | "data", case_sensitive?: boolean, exact?: boolean,
   type?: Regedit.Type, separator?: string, bit_64?: boolean): Promise<Regedit.RedEditResponse>{
 
-  return exec(buildQuery(key, value, query_subkeys, data, target, case_sensitive, exact, type, separator, bit_64), false);
+  return exec(buildQuery(key, value, query_subkeys, data, target, case_sensitive, exact, type, separator, bit_64), needsAdmin(key));
 }
 
 export function buildAdd(key: string, value: string | undefined, type?: Regedit.Type, data?: string,
@@ -154,7 +167,7 @@ export function buildAdd(key: string, value: string | undefined, type?: Regedit.
 
 export async function Add(key: string, value: string | undefined, type: Regedit.Type, data: string,
   separator?: string, force?: boolean, bit_64?: boolean): Promise<Regedit.RedEditResponse>{
-  return exec(buildAdd(key, value, type, data, separator, force, bit_64));
+  return exec(buildAdd(key, value, type, data, separator, force, bit_64), needsAdmin(key));
 }
 
 export function buildDelete(key: string, value?: string, force?: boolean, bit_64?: boolean): string{
@@ -176,7 +189,7 @@ export function buildDelete(key: string, value?: string, force?: boolean, bit_64
 }
 
 export async function Delete(key: string, value?: string, force?: boolean, bit_64?: boolean){
-  return exec(buildDelete(key, value, force, bit_64));
+  return exec(buildDelete(key, value, force, bit_64), needsAdmin(key));
 }
 
 export async function Copy(){
@@ -209,14 +222,32 @@ export async function Compare(){
   return "NYI";
 }
 
-export async function Export(){
-  // TODO: implement this
-  return "NYI";
+export function buildExport(key: string, export_file: string, overwrite_file = false, bit_64?: boolean): string{
+  let command = "reg export \"" + key.replaceAll("\"", "\\\"") + "\" \"" + export_file + "\"";
+
+  if(overwrite_file){
+    command += " /y";
+  }
+
+  command += b64Check(bit_64);
+  return command;
 }
 
-export async function Import(){
-  // TODO: implement this
-  return "NYI";
+export async function Export(key: string, export_file: string, overwrite_file = false, bit_64?: boolean): Promise<Regedit.RedEditResponse>{
+  return exec(buildExport(key, export_file, overwrite_file, bit_64), needsAdmin(key));
+}
+
+
+export function buildImport(import_file: string, bit_64?: boolean): string{
+  let command = "reg import \"" + import_file + "\"";
+
+  command += b64Check(bit_64);
+
+  return command;
+}
+
+export async function Import(import_file: string, bit_64?: boolean, needs_admin = false): Promise<Regedit.RedEditResponse>{
+  return exec(buildImport(import_file, bit_64), needs_admin);
 }
 
 export async function Flags(){
@@ -233,7 +264,11 @@ const export_data = {
   HKU,
   HKCR,
 
+  // Helpers
+  needsAdmin,
+
   // Functions
+  KeyExists,
   buildQuery,
   Query,
   buildAdd,
@@ -246,7 +281,9 @@ const export_data = {
   Unload,
   Restore,
   Compare,
+  buildExport,
   Export,
+  buildImport,
   Import,
   Flags
 };

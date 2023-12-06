@@ -140,6 +140,7 @@ async function installGameZip(
         if(token.aborted()){
           console.log("Closing archive in extraxt -> then");
           archive.close();
+          sendInstallEnd(game);
           return;
         }
         console.log("Extracted:" + count);

@@ -12,6 +12,7 @@ module.exports = {
       nodeIntegration: true,
       extends: null,
       builderOptions: {
+        generateUpdatesFilesForAllChannels: true,
         appId: "com.sololegends.launcher",
         productName: "SL Game Launcher",
         win: {

@@ -44,7 +44,6 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   function procArgs(args?: string | string[]){
     const regex = / (?=(?:[^"]|"[^"]*")*$)/gm;
     if(args){
-      console.log("args", args);
       if(Array.isArray(args)){
         return args;
       }

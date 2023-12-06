@@ -11,7 +11,7 @@ function flattenName(name: string): string{
   return name.trim().toLowerCase().replace(/[^-a-z0-9_]/gm, "_");
 }
 
-export function loadPresentDLC(game: GOG.GameInfo, remote: GOG.RemoteGameData): GOG.RemoteGameData{
+export function loadPresentDLC(game: GOG.GameInfo, remote: GOG.RemoteGameData): GOG.RemoteGameData | undefined{
   if(remote === undefined || game.root_dir === "remote"){
     return remote;
   }
@@ -70,9 +70,9 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
 
   ipcMain.handle("reload-cache-data", async(e, game: GOG.GameInfo): Promise<GOG.ImageResponse> => {
     return new Promise<GOG.ImageResponse>((resolve, reject) => {
-      removeFromDataCache("game-data.json", flattenName(game.remote_name));
+      removeFromDataCache("game-data.json", game.gameId);
       if(game.remote){
-        removeFromImageCache(game.remote.logo, game.remote.slug);
+        removeFromImageCache(game.remote.logo, game.gameId);
       }
       game.remote = undefined;
       getGameImage(game).then((image: GOG.ImageResponse) => {

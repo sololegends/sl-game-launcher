@@ -6,11 +6,15 @@ function ver_replace {
   sed -E "s/^(window.APP_VERSION[[:blank:]]*=[[:blank:]]*).*/\1\"$VAL\";/" "src/main.ts" -i
   sed -E "s/^(window.BUILD_DATE[[:blank:]]*=[[:blank:]]*).*/\1\"$DATE\";/" "src/main.ts" -i
   sed -E "s/^(  \"version\"[[:blank:]]*:[[:blank:]]*).*/\1\"$VAL\",/" "package.json" -i
+  sed -E "s/^([[:blank:]]*SL_VERSION[[:blank:]]*:[[:blank:]]*).*/\1\"$VAL\",/" ".gitlab-ci.yml" -i
 }
 function ver_replace_date {
   DATE=$(date '+%Y-%m-%d %T')
   sed -E "s/^(window.BUILD_DATE[[:blank:]]*=[[:blank:]]*).*/\1\"$DATE\";/" "src/main.ts" -i
 }
+
+# Get git branch
+GIT_BRANCH=$(git branch --show-current)
 
 # Copy the pre-commit hook into the git folder 
 cp pre-commit.git-hook .git/hooks/pre-commit
@@ -43,6 +47,9 @@ elif [ "$1" == "version" ]; then
   elif [ "$ver" == "" ]; then
     echo -n "Enter new version: "
     read ver
+  fi
+  if [[ "$GIT_BRANCH" != "master" ]]; then
+    ver=$ver-beta
   fi
   ver_replace $ver
   exit

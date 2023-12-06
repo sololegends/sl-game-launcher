@@ -18,10 +18,10 @@
       <NotificationsPanel v-if="isFull" :position="{left:10,bottom:10}" style="z-index:9999;" />
       <span v-if="$store.getters.offline" class="text-centered">OFFLINE</span>
       <v-app-bar v-if="isFull" app color="primary elevation-3" dense>
-        <v-avatar size="40" />
+        <v-avatar size="40" v-if="!$store.getters.light_ui" />
         <h2 class="does-window-drag no-sel white--text">{{$properties.app}}</h2>
         <v-spacer class="does-window-drag h100" />
-        <v-btn id="open_alert_drawer" icon @click="show_side_notify=true">
+        <v-btn id="open_alert_drawer" icon @click="show_side_notify=true" style="display:none" v-if="!$store.getters.light_ui">
           <v-tab>
             <v-badge
               color="red"
@@ -34,13 +34,13 @@
             </v-badge>
           </v-tab>
         </v-btn>
-        <v-btn @click="show_side_settings=true" exact tip-title="Options" icon>
+        <v-btn @click="show_side_settings=true" exact tip-title="Options" icon v-if="!$store.getters.light_ui">
           <fa-icon icon="cog" size="2x" style="color:white" />
         </v-btn>
-        <v-btn @click="minimize" exact tip-title="Minimize" icon>
+        <v-btn @click="minimize" exact tip-title="Minimize" icon v-if="!$store.getters.light_ui">
           <fa-icon icon="minus" size="2x" style="color:white" />
         </v-btn>
-        <v-btn @click="doMaxRestore" exact :tip-title="win_max_restore_title" icon>
+        <v-btn @click="doMaxRestore" exact :tip-title="win_max_restore_title" icon v-if="!$store.getters.light_ui">
           <fa-icon :icon="win_max_restore" size="2x" style="color:white" />
         </v-btn>
         <v-btn @click="exit" exact tip-title="Exit" icon>
@@ -48,8 +48,8 @@
         </v-btn>
       </v-app-bar>
       <v-app-bar v-else app color="primary elevation-3" height="30">
-        <h3 class="no-sel white--text">{{$properties.app}}</h3>
-        <v-spacer class="h100" />
+        <h3 class="does-window-drag no-sel white--text">{{$properties.app}}</h3>
+        <v-spacer class="does-window-drag h100" />
         <v-btn @click="exit" exact tip-title="Exit" icon>
           <fa-icon icon="times" size="2x" style="color:white" />
         </v-btn>
@@ -62,7 +62,7 @@
           </div>
         </div>
         <GameBanner :game="running_game"  v-if="running_game !== undefined" />
-        <div :class="'app-view' + (isFull ? '' : ' minimal')">
+        <div :class="'app-view' + (!$store.getters.light_ui && isFull ? '' : ' minimal')">
           <router-view />
         </div>
       </v-main>

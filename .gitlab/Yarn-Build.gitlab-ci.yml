@@ -22,24 +22,24 @@ build:
     - if: '$CI_COMMIT_BRANCH == "ci"'
       when: always
 
-# build-dev:
-#   stage: build
-#   image: electronuserland/builder:16-wine
-#   before_script:
-#     - yarn
-#   script:
-#     - yarn exe-build-ci
-#     - rm -rf dist_electron/mac
-#     - rm -rf dist_electron/win-unpacked
-#     - rm -rf dist_electron/linux-unpacked
-#     - mv dist_electron ../dist_electron
-#   artifacts:
-#     paths:
-#       - dist_electron
-#     expire_in: 1w
-#   rules:
-#     - if: '$CI_COMMIT_BRANCH == "master"'
-#       when: never
-#     - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
-#       when: never
-#     - if: '$CI_COMMIT_BRANCH'
+build-beta:
+  stage: build
+  image: electronuserland/builder:16-wine
+  before_script:
+    - ls -la
+    - wine --version
+  script:
+    - yarn
+    - yarn exe-build-ci
+    - rm -rf dist_electron/mac
+    - rm -rf dist_electron/win-unpacked
+    - rm -rf dist_electron/linux-unpacked
+    # Build the index for pages
+    - node tools/build_pages_html.js --folder=dist_electron --template=tools/templates/file_list.html --recursive
+  artifacts:
+    paths:
+      - dist_electron
+    expire_in: 1d
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^beta-.+$/'
+      when: always

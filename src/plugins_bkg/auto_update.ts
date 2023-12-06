@@ -4,6 +4,9 @@ import { BrowserWindow, ipcMain, IpcMain } from "electron";
 import { cli_options } from "../background";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import filters from "../js/filters";
+import { getConfig } from "./config";
+import { init as initBackplane} from "./backplane";
+import { isDev } from ".";
 
 export default function init(ipcMain: IpcMain, splash: BrowserWindow){
 
@@ -11,7 +14,8 @@ export default function init(ipcMain: IpcMain, splash: BrowserWindow){
   if(cli_options.alt_feed){
     autoUpdater.setFeedURL({
       provider: "generic",
-      url: cli_options.alt_feed
+      url: cli_options.alt_feed,
+      channel: getConfig("update_channel") || "latest"
     });
   }
 
@@ -49,8 +53,15 @@ export default function init(ipcMain: IpcMain, splash: BrowserWindow){
     splash.webContents.send("update-downloaded", info);
   });
 
-  ipcMain.handle("check-for-update", (): Promise<UpdateCheckResult | null> => {
+  ipcMain.handle("check-for-update", async(): Promise<UpdateCheckResult | null> => {
     console.log("Check for update triggered...");
+    // Check for dev mode
+    if(isDev() || await getConfig("offline") === true){
+      splash.webContents.send("update-not-available");
+      return new Promise<null>((resolve) => {
+        resolve(null);
+      });
+    }
     return autoUpdater.checkForUpdates();
   });
   ipcMain.handle("download-update", (): Promise<UpdateCheckResult | null> => {
@@ -88,6 +99,11 @@ export async function createSplashWindow(){
 
   // Init the handlers
   init(ipcMain, splash);
+  try{
+    initBackplane(ipcMain, splash);
+  }catch(e){
+    console.log("Failed to initialize backplane", e);
+  }
 
   if (process.env.WEBPACK_DEV_SERVER_URL){
     // Load the url of the dev server if in development mode

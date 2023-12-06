@@ -81,7 +81,8 @@ export default defineComponent({
         this.downloadUpdate(e, update_info);
       }, 2000);
     },
-    checkForUpdate(){
+    async checkForUpdate(){
+      // Check if in dev or offline mode
       this.message = "Checking for updates...";
       this.dl_progress = "";
       this.indeterminate = true;
@@ -121,8 +122,31 @@ export default defineComponent({
       console.log("Go to main window");
       ipc.send("goto-main-window");
     },
-    upToDate(){
+    async login(): Promise<boolean>{
+      this.message = "Starting login...";
+      this.indeterminate = true;
+      const login_user = await ipc.invoke("login-username");
+      if(login_user === undefined){
+        ipc.send("show-login-window", "no_credentials");
+        return false;
+      }
+      this.message = "Logging in as " + login_user + "...";
+      const login_result = await ipc.invoke("login");
+      if(login_result === true){
+        this.message = "Login in successful!";
+        this.indeterminate = false;
+        return true;
+      } else {
+        ipc.send("show-login-window", login_result);
+        return false;
+      }
+    },
+    async upToDate(){
+      // Attempt login through backplane
       this.$store.dispatch("set_offline", false);
+      if(!await this.login()){
+        return;
+      }
       console.log("Go to main window");
       ipc.send("goto-main-window");
     }

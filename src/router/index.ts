@@ -18,6 +18,11 @@ const routes: Array<RouteConfig> = [
     name: "splash",
     component: () => import("../views/LoadingSplash.vue")
   },
+  {
+    path: "/login",
+    name: "login",
+    component: () => import("../views/LoginView.vue")
+  },
   // Generic page catch all for 404 error
   {
     path: "/:pathMatch(.*)*",

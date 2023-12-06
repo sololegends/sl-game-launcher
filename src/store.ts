@@ -8,6 +8,7 @@ Vue.use(Vuex);
 export default new Vuex.Store({
   state: {
     minimal_ui: false,
+    light_ui: false,
     minimal_ui_title: "",
     dev_mode: localStorage.getItem("dev_mode") === "true",
     offline: false,
@@ -18,6 +19,9 @@ export default new Vuex.Store({
   mutations: {
     set_minimal_ui(state, minimal_ui){
       state.minimal_ui = minimal_ui;
+    },
+    set_light_ui(state, light_ui){
+      state.light_ui = light_ui;
     },
     set_minimal_ui_title(state, minimal_ui_title){
       state.minimal_ui_title = minimal_ui_title;
@@ -47,6 +51,9 @@ export default new Vuex.Store({
     set_minimal_ui({ commit }, minimal_ui: boolean){
       commit("set_minimal_ui", minimal_ui);
     },
+    set_light_ui({ commit }, light_ui: boolean){
+      commit("set_light_ui", light_ui);
+    },
     set_minimal_ui_title({ commit }, minimal_ui_title: string){
       commit("set_minimal_ui_title", minimal_ui_title);
     },
@@ -68,6 +75,7 @@ export default new Vuex.Store({
   },
   getters: {
     minimal_ui: (state): boolean  => state.minimal_ui,
+    light_ui: (state): boolean  => state.light_ui,
     minimal_ui_title: (state): string  => state.minimal_ui_title,
     dev_mode: (state): boolean  => state.dev_mode,
     offline: (state): boolean  => state.offline,

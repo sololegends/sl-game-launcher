@@ -6,8 +6,8 @@ import { ensureRemote } from "../game_loader";
 import filters from "../../js/filters";
 import fs from "fs";
 import { GOG } from "@ctypes/gog/game_info";
-import { initWebDav } from "../nc_webdav";
 import { processScriptReverse } from "../script";
+import { remote } from "../backplane";
 import tk from "tree-kill";
 
 let active_uns = undefined as undefined | child.ChildProcess;
@@ -95,19 +95,15 @@ export async function uninstallDLC(game: GOG.GameInfo, dlc: GOG.RemoteGameDLC): 
     if(dlc.uninstall){
       let uninstall = dlc.uninstall;
       if(typeof uninstall === "string"){
-        ensureRemote(game).then((remote) => {
-          initWebDav().then((webdav) => {
-            webdav?.getFileContents(remote.folder + "/.data/" + uninstall).then((uninstall_dat) => {
-              if(uninstall_dat === undefined){
-                sendUninstallFailed(game, "DLC: " + filters.procKey(dlc.slug));
-                return;
-              }
-              uninstall = JSON.parse(uninstall_dat.toString()) as GOG.DLCUninstall;
-              performUninstall(game, uninstall);
-              sendUninstallEnd(game, "DLC: " + filters.procKey(dlc.slug));
-              resolve(game);
-            }).catch(() => { reject(game); });
-          }).catch(() => { reject(game); });
+        remote.uninstall(game.gameId, uninstall as string).then((uninstall_dat) => {
+          if(uninstall_dat === undefined){
+            sendUninstallFailed(game, "DLC: " + filters.procKey(dlc.slug));
+            return;
+          }
+          uninstall = JSON.parse(uninstall_dat.toString()) as GOG.DLCUninstall;
+          performUninstall(game, uninstall);
+          sendUninstallEnd(game, "DLC: " + filters.procKey(dlc.slug));
+          resolve(game);
         }).catch(() => { reject(game); });
         return;
       }
@@ -245,14 +241,14 @@ export async function uninstallGame(game: GOG.GameInfo): Promise<GOG.GameInfo>{
       if(lock.aborted()){
         return;
       }
-      if(game.remote.is_zip || (download.length > 0 && download[0].endsWith(".zip"))){
+      if(game.remote === undefined || game.remote.is_zip || download.length === 0 || (download.length > 0 && download[0].endsWith(".zip"))){
         uninstallGameZip(game, lock).then((game) => {
           resolve(game);
         }).catch((game) => {
           reject(game);
         });
         return;
-      }else if(game.remote === undefined || !game.remote.is_zip){
+      }else if(!game.remote.is_zip){
         uninstallGameExe(game, "game: " + game.name, "unins000.exe", lock).then((game) => {
           resolve(game);
         }).catch((game) => {

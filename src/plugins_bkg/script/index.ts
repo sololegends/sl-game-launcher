@@ -3,6 +3,7 @@
 import { constants, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import elevate from "../as_admin/elevate";
+import { ensureDir } from "../tools/files";
 import { GOG } from "@/types/gog/game_info";
 import os from "os";
 import Reg from "../as_admin/regedit/windows";
@@ -23,6 +24,7 @@ function mutatePath(path: string, game: GOG.GameInfo){
     .replace("{deployDir}", game.root_dir + "/__deploy")
     .replace("{redistDir}", game.root_dir + "/__redist")
     .replace("{userdocs}", os.homedir() + "/Documents")
+    .replace("{userpics}", os.homedir() + "/Pictures")
     .replace("{userappdata}", os.homedir() + "/ApData/Roaming");
 }
 
@@ -34,6 +36,7 @@ function mutateFile(path: string, game: GOG.GameInfo){
     .replaceAll("{deployDir}", game.root_dir + "/__deploy")
     .replaceAll("{redistDir}", game.root_dir + "/__redist")
     .replaceAll("{userdocs}", os.homedir() + "/Documents")
+    .replaceAll("{userpics}", os.homedir() + "/Pictures")
     .replaceAll("{userappdata}", os.homedir() + "/ApData/Roaming");
 }
 
@@ -104,6 +107,18 @@ async function action_setRegistry(game: GOG.GameInfo, action: GOG.ScriptInstall.
       game.osBitness?.includes("64") ? true : false
     )
   };
+}
+
+async function action_ensureDirectory(game: GOG.GameInfo, action: GOG.ScriptInstall.ensureDirectory, undo: boolean): Promise<ActionResult>{
+  if(undo){
+    return {};
+  }
+  const args = action.arguments;
+  if(!args.target){
+    return {};
+  }
+  ensureDir(mutatePath(args.target, game));
+  return {};
 }
 
 async function action_supportData(game: GOG.GameInfo, action: GOG.ScriptInstall.supportData, undo: boolean): Promise<ActionResult>{
@@ -332,6 +347,8 @@ async function installAction(game: GOG.GameInfo, action: GOG.ScriptInstallAction
     return await action_setRegistry(game, action, undo);
   case "supportData":
     return await action_supportData(game, action, undo);
+  case "ensureDirectory":
+    return await action_ensureDirectory(game, action, undo);
   case "xmlData":
     return await action_xmlData(game, action, undo);
   default:

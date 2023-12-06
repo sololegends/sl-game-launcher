@@ -3,7 +3,7 @@
 echo "Finding exe and blockmap"
 exe=$(find dist_electron/ -maxdepth 1 -name 'SL*.exe')
 blockmap=$(find dist_electron/ -maxdepth 1 -name 'SL*.blockmap')
-version_v=${CI_COMMIT_TAG:-$1}
+version_v=${SL_VERSION:-$1}
 echo "EXE: $exe, BLOCKMAP: $blockmap, version_v: $version_v"
 version=${version_v:1}
 
