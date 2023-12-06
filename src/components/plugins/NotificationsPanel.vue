@@ -317,7 +317,7 @@ export default defineComponent({
   }
   .bottom-data{
     display:flex;
-     position:absolute;
+    position:absolute;
     bottom:2px;
     right:5px;
   }

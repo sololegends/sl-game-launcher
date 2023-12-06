@@ -895,7 +895,7 @@ async function packGame(game_exe: string, options_arr: string[]){
   }
 }
 
-async function batchPack(file_path: string, root_path: string){
+async function batchPack(file_path: string, root_path: string, options_arr: string[]){
   if(file_path !== "auto" && !fs.existsSync(file_path)){
     console.log("Could not find file_path [" + file_path + "]");
     return;
@@ -923,12 +923,11 @@ async function batchPack(file_path: string, root_path: string){
           const game_folder_list = fs.readdirSync(file);
           for(const game_file_frag of game_folder_list){
             if(game_file_frag.endsWith(".exe")){
-              const game_file = file + "/" + game_file_frag;
               // Found game file :D
               json.push({
                 folder: file_frag,
                 exe: game_file_frag.substring(0, game_file_frag.length - 4),
-                dlc: fs.existsSync(game_file + "/dlc")
+                dlc: fs.existsSync(file + "/dlc")
               });
             }
           }
@@ -949,11 +948,12 @@ async function batchPack(file_path: string, root_path: string){
 
     const options = [
       game.output ? game.output : ("output=game_repacked/out_" + game.folder),
-      "merge_data=true"
+      "merge_data=true",
+      ...options_arr
     ];
 
     if(game.dlc){
-      options.push("dlc=proc/" + game.folder + "/dlc");
+      options.push("dlc=" + root_path + "/" + game.folder + "/dlc");
     }
 
     await packGame(root_path + "/"  + game.folder + "/" + game.exe + ".exe", options);
@@ -1035,7 +1035,7 @@ if(args[0] === "help"){
 }else if(args[0] === "packdlc"){
   packDLC(args.slice(1));
 }else if(args[0] === "batch"){
-  batchPack(args[1], args[2]);
+  batchPack(args[1], args[2], args.slice(3));
 }else{
   packGame(args[0], args.slice(1));
 }
