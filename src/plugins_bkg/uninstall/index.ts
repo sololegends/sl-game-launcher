@@ -93,21 +93,19 @@ export async function uninstallDLC(game: GOG.GameInfo, dlc: GOG.RemoteGameDLC): 
   }
   return new Promise<GOG.GameInfo>((resolve, reject) => {
     if(dlc.uninstall){
-      let uninstall = dlc.uninstall;
-      if(typeof uninstall === "string"){
-        remote.uninstall(game.gameId, uninstall as string).then((uninstall_dat) => {
-          if(uninstall_dat === undefined){
+      if(typeof dlc.uninstall === "string"){
+        remote.uninstall(game.gameId, dlc.uninstall).then((uninstall) => {
+          if(uninstall === undefined){
             sendUninstallFailed(game, "DLC: " + filters.procKey(dlc.slug));
             return;
           }
-          uninstall = JSON.parse(uninstall_dat.toString()) as GOG.DLCUninstall;
           performUninstall(game, uninstall);
           sendUninstallEnd(game, "DLC: " + filters.procKey(dlc.slug));
           resolve(game);
         }).catch(() => { reject(game); });
         return;
       }
-      performUninstall(game, uninstall);
+      performUninstall(game, dlc.uninstall);
       sendUninstallEnd(game, "DLC: " + filters.procKey(dlc.slug));
       resolve(game);
       return;

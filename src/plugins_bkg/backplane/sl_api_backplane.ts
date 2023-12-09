@@ -244,7 +244,8 @@ export default {
           .then(() => {
             resolve(true);
           })
-          .catch(() => {
+          .catch((e) => {
+            console.error(e);
             resolve(false);
           });
       });

@@ -36,6 +36,7 @@ interface RepackCLIOptions extends CLIOptions {
 
 const obj_RepackCLIOptions = {
   ...obj_CLIOptions,
+  output: "[./dlc_repacked] Output folder for the operation",
   merge_data: "[false] Merge game data with remote data",
   merge_info: "[false] Alias for merge_data",
   clear: "[false] Only clear the output directory, no processing",
