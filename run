@@ -6,7 +6,7 @@ function ver_replace {
   sed -E "s/^(window.APP_VERSION[[:blank:]]*=[[:blank:]]*).*/\1\"$VAL\";/" "src/main.ts" -i
   sed -E "s/^(window.BUILD_DATE[[:blank:]]*=[[:blank:]]*).*/\1\"$DATE\";/" "src/main.ts" -i
   sed -E "s/^(  \"version\"[[:blank:]]*:[[:blank:]]*).*/\1\"$VAL\",/" "package.json" -i
-  sed -E "s/^([[:blank:]]*SL_VERSION[[:blank:]]*:[[:blank:]]*).*/\1\"$VAL\",/" ".gitlab-ci.yml" -i
+  sed -E "s/^([[:blank:]]*SL_VERSION[[:blank:]]*:[[:blank:]]*).*/\1\"$VAL\"/" ".gitlab-ci.yml" -i
 }
 function ver_replace_date {
   DATE=$(date '+%Y-%m-%d %T')
