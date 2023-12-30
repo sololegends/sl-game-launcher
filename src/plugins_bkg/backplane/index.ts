@@ -33,7 +33,7 @@ const BACK_PLANE = {
   webdav: webdav_bp,
   sl_api: sl_api_bp
 } as Record<PlaneType, AppBackPlane>;
-let use_bp =  "webdav" as PlaneType;
+let use_bp =  "sl_api" as PlaneType;
 
 export const remote = {
   list(use_cache: boolean): Promise<Record<string, GOG.RemoteGameData>>{
@@ -185,7 +185,7 @@ export function changeBackPlane(back_plane: PlaneType, ipcMain: IpcMain, window?
 }
 
 export function init(ipcMain: IpcMain, window: BrowserWindow){
-  changeBackPlane((getConfig("backplane") || "webdav") as PlaneType, ipcMain, window);
+  changeBackPlane((getConfig("backplane") || "sl_api") as PlaneType, ipcMain, window);
 
   console.log("Using Backplane: ", use_bp, getConfig("backplane"));
   ipcMain.on("change-back-plane", (e, back_plane: PlaneType) =>{
