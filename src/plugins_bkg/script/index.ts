@@ -25,7 +25,7 @@ function mutatePath(path: string, game: GOG.GameInfo){
     .replace("{redistDir}", game.root_dir + "/__redist")
     .replace("{userdocs}", os.homedir() + "/Documents")
     .replace("{userpics}", os.homedir() + "/Pictures")
-    .replace("{userappdata}", os.homedir() + "/ApData/Roaming");
+    .replace("{userappdata}", os.homedir() + "/AppData/Roaming");
 }
 
 function mutateFile(path: string, game: GOG.GameInfo){
@@ -37,7 +37,7 @@ function mutateFile(path: string, game: GOG.GameInfo){
     .replaceAll("{redistDir}", game.root_dir + "/__redist")
     .replaceAll("{userdocs}", os.homedir() + "/Documents")
     .replaceAll("{userpics}", os.homedir() + "/Pictures")
-    .replaceAll("{userappdata}", os.homedir() + "/ApData/Roaming");
+    .replaceAll("{userappdata}", os.homedir() + "/AppData/Roaming");
 }
 
 type ActionResult = {
