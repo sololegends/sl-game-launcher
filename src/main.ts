@@ -117,8 +117,8 @@ Vue.prototype.$app = {
   }
 };
 
-window.APP_VERSION = "v0.12.3";
-window.BUILD_DATE = "2024-01-03 21:57:00";
+window.APP_VERSION = "v0.12.4";
+window.BUILD_DATE = "2024-01-03 21:57:15";
 export default createApp({
   router,
   render: (h: ((app: VueConstructor) => void)) => h(App),
