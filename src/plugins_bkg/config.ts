@@ -118,18 +118,18 @@ export default function init(ipcMain?: IpcMain){
     });
   }
 
-  return new Promise<void>((resolve) => {
+  return new Promise<Object>((resolve) => {
     // CONFIGS
     fs.stat(conf_file, (error) => {
       if(error){
         console.log("No config found");
-        resolve();
+        resolve({});
         return;
       }
       fs.readFile(conf_file, "utf8", function(err, data){
         config = JSON.parse(data);
         setConfig0("config_file", conf_file, conf_file);
-        resolve();
+        resolve(config);
       });
     });
   });

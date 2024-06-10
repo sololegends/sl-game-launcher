@@ -156,6 +156,16 @@ async function loginListener(e: unknown, creds?: Credentials): Promise<string | 
   return await login(api_creds);
 }
 
+export async function cliInit(){
+  console.log("Initializing SL API Backplane");
+  BASE_URL = getConfig("remote_api") || DEFAULT_API;
+  console.log("Using API Backend: ", BASE_URL);
+  $API = axios.create({
+    baseURL: BASE_URL
+  });
+  return loginListener(undefined);
+}
+
 async function init(ipcMain: IpcMain){
   BASE_URL = getConfig("remote_api") || DEFAULT_API;
   console.log("Using API Backend: ", BASE_URL);

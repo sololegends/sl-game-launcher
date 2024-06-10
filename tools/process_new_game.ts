@@ -5,9 +5,10 @@ import child from "child_process";
 import fs from "fs";
 import {getRemoteGamesList} from "../src/plugins_bkg/game_loader_fns";
 import {GOG} from "../src/types/gog/game_info";
-import initConfig from "../src/plugins_bkg/config";
+import initConfig, { getConfig } from "../src/plugins_bkg/config";
 import UUIDv4 from "../src/js/uuid";
 import zip from "node-stream-zip";
+import { cliInit } from "../src/plugins_bkg/backplane/sl_api_backplane";
 
 // TYPES
 type ZipLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
@@ -570,7 +571,7 @@ async function getVersion(game_exe: string, props: PackProperties, format = "gam
 }
 
 async function mergeGameInfo(new_info: GOG.RemoteGameData): Promise<GOG.RemoteGameData>{
-  await initConfig();
+  await loadConfig();
   // Try and find the remote data
   const remotes = await getGameRemoteData();
   let old_info = undefined;
@@ -1013,11 +1014,30 @@ async function packDLC(options_arr: string[]){
   }
 }
 
+async function loadConfig(){
+  console.log("Initializing Config");
+  await initConfig();
+  // Init the api IF needed
+  if(getConfig("backplane") === "sl_api"){
+    return cliInit();
+  }
+}
+
+async function testBackplane(){
+  const result = await loadConfig();
+  if(result){
+    const data = await getRemoteGamesList();
+    console.log("Remote Games: ", data.length)
+  }
+}
+
 /* global process */
 const args = process.argv.slice(2);
 if(args[0] === "help"){
   console.log("Help: "
   + "\n example: repack $exe_file [$options]"
+  + "\n - test_config: loads and prints the config"
+  + "\n - test_backplane: loads and tests the backplane"
   + "\n - packdlc $options: Packs the given dlc for a game separate to the game ");
 
   for(const key in obj_DLCCLIOptions){
@@ -1037,6 +1057,13 @@ if(args[0] === "help"){
   packDLC(args.slice(1));
 }else if(args[0] === "batch"){
   batchPack(args[1], args[2], args.slice(3));
+}else if(args[0] === "test_config"){
+  initConfig().then((config) => {
+    console.log(config);
+    console.log("backplane: ", getConfig("backplane"));
+  });
+}else if(args[0] === "test_backplane"){
+  testBackplane();
 }else{
   packGame(args[0], args.slice(1));
 }
