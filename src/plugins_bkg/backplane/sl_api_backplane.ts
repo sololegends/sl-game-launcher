@@ -243,7 +243,12 @@ export default {
   saves: {
     async upload(game_id: string, remote_file: string, local_file: string | Buffer): Promise<boolean>{
       const form = new FormData();
-      form.append("save_file", fs.createReadStream(local_file), remote_file);
+      if(local_file instanceof Buffer){
+        // Initialize stream
+        form.append("save_file", local_file, remote_file);
+      }else{
+        form.append("save_file", fs.createReadStream(local_file), remote_file);
+      }
       return new Promise<boolean>((resolve) => {
         $API.put("/games/" + game_id + "/save", form, {
           maxBodyLength: 209715200,
