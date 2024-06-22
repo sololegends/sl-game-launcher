@@ -23,8 +23,11 @@ function mutatePath(path: string, game: GOG.GameInfo){
     .replace("{supportDir}", game.root_dir + "/__support")
     .replace("{deployDir}", game.root_dir + "/__deploy")
     .replace("{redistDir}", game.root_dir + "/__redist")
+    .replace("{user}", os.homedir())
     .replace("{userdocs}", os.homedir() + "/Documents")
     .replace("{userpics}", os.homedir() + "/Pictures")
+    .replace("{userlocal}", os.homedir() + "/AppData/Local")
+    .replace("{userlocallow}", os.homedir() + "/AppData/LocalLow")
     .replace("{userappdata}", os.homedir() + "/AppData/Roaming");
 }
 
@@ -35,8 +38,11 @@ function mutateFile(path: string, game: GOG.GameInfo){
     .replaceAll("{supportDir}", game.root_dir + "/__support")
     .replaceAll("{deployDir}", game.root_dir + "/__deploy")
     .replaceAll("{redistDir}", game.root_dir + "/__redist")
+    .replaceAll("{user}", os.homedir())
     .replaceAll("{userdocs}", os.homedir() + "/Documents")
     .replaceAll("{userpics}", os.homedir() + "/Pictures")
+    .replaceAll("{userlocal}", os.homedir() + "/AppData/Local")
+    .replaceAll("{userlocallow}", os.homedir() + "/AppData/LocalLow")
     .replaceAll("{userappdata}", os.homedir() + "/AppData/Roaming");
 }
 
