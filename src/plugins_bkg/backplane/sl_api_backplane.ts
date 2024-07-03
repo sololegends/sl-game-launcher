@@ -296,11 +296,11 @@ export default {
           });
       });
     },
-    async latest(game_id: string, save_file: string): Promise<string | undefined>{
-      return new Promise<string | undefined>((resolve) => {
+    async latest(game_id: string, save_file: string): Promise<number | undefined>{
+      return new Promise<number | undefined>((resolve) => {
         $API.get("/games/" + game_id + "/save/lastmod", {params: {file_name: save_file}})
           .then((response) => {
-            resolve(response.data?.lastmod);
+            resolve(isNaN(response.data?.lastmod) ? parseInt(response.data?.lastmod) : response.data?.lastmod);
           })
           .catch(() => {
             resolve(undefined);

@@ -361,7 +361,7 @@ export default {
       }
       return buffer as string;
     },
-    async latest(game_id: string, save_file: string): Promise<string | undefined>{
+    async latest(game_id: string, save_file: string): Promise<number | undefined>{
       if(!id_mapping[game_id]){
         await loadIdMap();
       }
@@ -380,7 +380,7 @@ export default {
         return undefined;
       }
       const stat = await web_dav.stat(remote_save_file) as FileStat;
-      return stat.lastmod;
+      return Date.parse(stat.lastmod);
     }
   }
 } as AppBackPlane;

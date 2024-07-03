@@ -23,7 +23,7 @@ export interface AppBackPlane {
 		upload: (game_id: string, remote_file: string, local_file: string | Buffer) => Promise<boolean>
 		download: (game_id: string, save_file: string) => Promise<DownloaderHelper | undefined>
 		downloadAsString: (game_id: string, save_file: string) => Promise<string | undefined>
-		latest: (game_id: string, save_file: string) => Promise<string | undefined>
+		latest: (game_id: string, save_file: string) => Promise<number | undefined>
 	}
 }
 
@@ -156,15 +156,15 @@ export const saves = {
     }
     return BACK_PLANE[use_bp].saves.downloadAsString(game_id, save_file);
   },
-  latest(game_id: string, save_file: string): Promise<string | undefined>{
+  latest(game_id: string, save_file: string): Promise<number | undefined>{
     if(getConfig("offline")){
       offlineNotice("Cannot check saves in offline mode");
-      return new Promise<string | undefined>((resolve) =>{
+      return new Promise<number | undefined>((resolve) =>{
         resolve(undefined);
       });
     }
     if(BACK_PLANE[use_bp] === undefined){
-      return new Promise<string | undefined>((resolve, reject) => {
+      return new Promise<number | undefined>((resolve, reject) => {
         reject("Back plane invalid: " + use_bp + " installed: [" + Object.keys(BACK_PLANE) + "]");
       });
     }

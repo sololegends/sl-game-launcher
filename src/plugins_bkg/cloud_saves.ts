@@ -432,8 +432,8 @@ async function newerInCloud(
     return false;
   }
   // Get save age in cloud
-  console.log("oldest:", oldest, "Date.parse(remote_latest):", Date.parse(remote_latest));
-  return oldest === 0 ? -1 : oldest + 15000 < Date.parse(remote_latest);
+  console.log("oldest:", oldest, "remote_latest:", remote_latest);
+  return oldest === 0 ? -1 : oldest + 15000 < remote_latest;
 }
 
 export async function syncGameSave(game: GOG.GameInfo, resolver: (cloud: boolean, local_present: boolean) => void){
