@@ -53,7 +53,7 @@ function clearAwaitSaveSync(){
 }
 
 async function awaitSaveSync(game: GOG.GameInfo, cancel_note = ""){
-  const sync_token_n = "await-save-sync-" + new Date().getTime();
+  const sync_token_n = "await-save-sync-" + game.gameId;
   const sync_token = await acquireLock(sync_token_n);
   if(sync_token === undefined){
     return false;
@@ -74,12 +74,8 @@ async function awaitSaveSync(game: GOG.GameInfo, cancel_note = ""){
     }
   });
   clearAwaitSaveSync();
-  if(sync_token.aborted()){
-    releaseLock(sync_token_n);
-    return false;
-  }
   releaseLock(sync_token_n);
-  return true;
+  return !sync_token.aborted();
 }
 
 export async function downloadAndInstallDLC(game: GOG.GameInfo, dlc_slug: string): Promise<string>{
@@ -227,6 +223,7 @@ export async function downloadAndInstall(game: GOG.GameInfo): Promise<boolean>{
       cleanupDownloaded(dl_files);
       await awaitSaveSync(game, "install");
     }
+    releaseLock(ACTION_LOCK);
     triggerReload(game);
   }catch(e){
     insDlFinish(game);
@@ -234,7 +231,6 @@ export async function downloadAndInstall(game: GOG.GameInfo): Promise<boolean>{
     releaseLock(ACTION_LOCK);
     return false;
   }
-  releaseLock(ACTION_LOCK);
   return true;
 }
 

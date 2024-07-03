@@ -87,11 +87,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
 
   // GAMES BITS
   ipcMain.handle("read-games", async(e, remote = true) => {
-    return new Promise<GOG.GameInfo[]>((resolve) => {
-      getLocalGames(remote).then((games: GOG.GameInfo[]) => {
-        resolve(games);
-      });
-    });
+    return getLocalGames(remote);
   });
 
   ipcMain.handle("get-image", async(e, type: GOG.ImageType, game: GOG.GameInfo) => {

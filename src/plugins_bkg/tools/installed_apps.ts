@@ -9,6 +9,25 @@ export type Software = {
 	version: string
 };
 
+let software_cache = [] as Software[];
+let software_cache_set = -1;
+const software_cache_timeout = 300_000;
+
+function setCache(software: Software[]){
+  if(software.length == 0){
+    return;
+  }
+  software_cache = software;
+  software_cache_set = new Date().getTime();
+}
+
+function getCache(){
+  if(new Date().getTime() - software_cache_set < software_cache_timeout){
+    return software_cache;
+  }
+  return undefined;
+}
+
 export type SoftwareCallback = (software: Software[]) => void
 
 function parseSoftware(str_data: string): Software[]{
@@ -46,6 +65,10 @@ function versionEqualOrGreater(version1: string, version2: string): boolean{
 }
 
 export async function getInstalled(callback?: SoftwareCallback): Promise<Software[]>{
+  const cache = getCache();
+  if(cache){
+    return cache;
+  }
   // * Get the list of installed apps
   const key = "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
   const result = await Query(
@@ -79,7 +102,7 @@ export async function getInstalled(callback?: SoftwareCallback): Promise<Softwar
   if(result_32.success && result_32.stdout !== undefined){
     final_software.push(...parseSoftware(result_32.stdout));
   }
-
+  setCache(final_software);
   //* Parse list
   if(callback){
     callback(final_software);

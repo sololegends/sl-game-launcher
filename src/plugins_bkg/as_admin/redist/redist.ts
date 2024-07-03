@@ -42,7 +42,7 @@ async function installRedist(redist_exes: string[]): Promise<RedistInstallResult
 async function isInstalledExe(exe_path: string){
   try{
     const exe_data = (await parsePE(exe_path, {})).metadata();
-    if(exe_data.ProductName === undefined || exe_data.ProductVersion === undefined){
+    if(exe_data?.ProductName === undefined || exe_data?.ProductVersion === undefined){
       return false;
     }
     return await isInstalled(exe_data.ProductName, exe_data.ProductVersion);

@@ -7,7 +7,7 @@ import { getConfig, getOS, REMOTE_FILE_BASE } from "./config";
 import { loadFromDataCache, saveToDataCache } from "./cache";
 import fs from "fs";
 import { Globals } from ".";
-import { globAsync } from "./tools/files";
+import { globAsync, mutatePath } from "./tools/files";
 import { GOG } from "@/types/gog/game_info";
 import { Notify } from "@/types/notification/notify";
 import os from "os";
@@ -95,20 +95,13 @@ export function procSaveFolder(save_file_raw: string, game: GOG.GameInfo): strin
     folder = folder.substring(0, folder.lastIndexOf("/"));
   }
   if(!fs.existsSync(folder)){
-    return folder;
+    return mutatePath(folder, game);
   }
-  return folder;
+  return mutatePath(folder, game);
 }
 
 export function procSaveFile(save_file_raw: string, game: GOG.GameInfo): string{
-  if(save_file_raw.startsWith("~")){
-    return os.homedir()  + save_file_raw.substring(1);
-  }else if(save_file_raw.startsWith("./")){
-    return game.root_dir  + save_file_raw.substring(1);
-  }else if(save_file_raw.startsWith("{steam}/")){
-    return game.root_dir  + save_file_raw.substring(1);
-  }
-  return save_file_raw;
+  return mutatePath(save_file_raw, game);
 }
 
 

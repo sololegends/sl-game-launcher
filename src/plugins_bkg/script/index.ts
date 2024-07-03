@@ -2,8 +2,8 @@
 
 import { constants, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
+import { ensureDir, mutatePath, mutateFile } from "../tools/files";
 import elevate from "../as_admin/elevate";
-import { ensureDir } from "../tools/files";
 import { GOG } from "@/types/gog/game_info";
 import os from "os";
 import Reg from "../as_admin/regedit/windows";
@@ -15,36 +15,6 @@ const REG_TYPE_MUTATE = {
   string: "REG_SZ",
   dword: "REG_DWORD"
 } as Record<string, Regedit.Type>;
-
-function mutatePath(path: string, game: GOG.GameInfo){
-  return path
-    .replace("{app}", game.root_dir)
-    .replace("{appDir}", game.root_dir)
-    .replace("{supportDir}", game.root_dir + "/__support")
-    .replace("{deployDir}", game.root_dir + "/__deploy")
-    .replace("{redistDir}", game.root_dir + "/__redist")
-    .replace("{user}", os.homedir())
-    .replace("{userdocs}", os.homedir() + "/Documents")
-    .replace("{userpics}", os.homedir() + "/Pictures")
-    .replace("{userlocal}", os.homedir() + "/AppData/Local")
-    .replace("{userlocallow}", os.homedir() + "/AppData/LocalLow")
-    .replace("{userappdata}", os.homedir() + "/AppData/Roaming");
-}
-
-function mutateFile(path: string, game: GOG.GameInfo){
-  return path
-    .replaceAll("{app}", game.root_dir)
-    .replaceAll("{appDir}", game.root_dir)
-    .replaceAll("{supportDir}", game.root_dir + "/__support")
-    .replaceAll("{deployDir}", game.root_dir + "/__deploy")
-    .replaceAll("{redistDir}", game.root_dir + "/__redist")
-    .replaceAll("{user}", os.homedir())
-    .replaceAll("{userdocs}", os.homedir() + "/Documents")
-    .replaceAll("{userpics}", os.homedir() + "/Pictures")
-    .replaceAll("{userlocal}", os.homedir() + "/AppData/Local")
-    .replaceAll("{userlocallow}", os.homedir() + "/AppData/LocalLow")
-    .replaceAll("{userappdata}", os.homedir() + "/AppData/Roaming");
-}
 
 type ActionResult = {
   command?: string

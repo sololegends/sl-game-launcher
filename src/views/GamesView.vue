@@ -17,7 +17,7 @@
     <ScrollablePanel :max_height="maxScrollable" @scroll="onScroll" v-else>
       <div class="games-container" id="game_flex" @mouseout="clearSelectedGame">
         <GogGame
-          v-for="val, i in filtered_games" :key="val.gameId" :game="val"
+          v-for="val, i in filtered_games" :key="val.gameId + (val.webcache == 'remote'? '-remote' : '')" :game="val"
           class="flex"
           :ref="'game' + i"
           :running="val.name === active"
@@ -86,7 +86,7 @@ export default mixin(gamepad).extend({
       filtered_games: [] as GOG.GameInfo[],
       active: undefined as undefined | string,
       timer: -1,
-      filter: null as null | string,
+      filter: "" as string,
       banner_on: false,
       active_game: -1,
       flex_id: "#game_flex",
@@ -348,10 +348,10 @@ export default mixin(gamepad).extend({
     },
 
     filterGames(): void{
-      const is_filtered = this.filter !== null && this.filter.trim() !== "";
-      const installed_only = is_filtered && this.filter?.startsWith("installed:");
-      const uninstalled_only = is_filtered && this.filter?.startsWith("uninstalled:");
-      const actual_filter = installed_only ? this.filter?.substring(10) : (uninstalled_only ? this.filter?.substring(12) : this.filter);
+      const is_filtered = this.filter.trim() !== "";
+      const installed_only = is_filtered && this.filter.startsWith("installed:");
+      const uninstalled_only = is_filtered && this.filter.startsWith("uninstalled:");
+      const actual_filter = installed_only ? this.filter.substring(10) : (uninstalled_only ? this.filter?.substring(12) : this.filter);
       let games = [...this.games];
       if(this.$store.getters.showUninstalled && !installed_only){
         games = [ ...this.games, ...this.remote_games ];
@@ -367,7 +367,7 @@ export default mixin(gamepad).extend({
           return false;
         }
         // If the filter is populated
-        if(actual_filter && actual_filter.trim() !== ""){
+        if(actual_filter.trim() !== ""){
           return game.name.toLowerCase().includes(actual_filter.trim().toLowerCase());
         }
         return true;
