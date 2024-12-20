@@ -41,7 +41,7 @@ deploy_to_update_server-beta:
   variables:
     SERVER: https://updates.sololegends.com/electron/win/upload
     APP_NAME: SL Game Launcher
-    SL_VERSION: "v0.12.7"
+    SL_VERSION: "v0.12.8"
   dependencies: 
     - build-beta
   script:
