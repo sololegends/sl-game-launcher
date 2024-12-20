@@ -14,7 +14,7 @@
           <v-chip dense color="primary">
             <fa-icon
               style="height:20px"
-              :icon="item.isPrimary?'play':(item.category === 'RESET' ? 'trash-alt' : 'plus')"
+              :icon="itemIcon(item)"
               size="xs"
             />
           </v-chip>
@@ -80,6 +80,16 @@ export default defineComponent({
     }
   },
   methods: {
+    itemIcon(task: GOG.PlayTasks){
+      if(task.isPrimary){
+        return "play";
+      }else if(task.category === "RESET"){
+        return "trash-alt";
+      }else if(task.category === "pdf"){
+        return "file-pdf";
+      }
+      return "plus";
+    },
     playTaskID(task: GOG.PlayTasks){
       return task.path + ":" + task.type + ":" + task.arguments + ":" + task.isPrimary + ":" + task.link;
     },

@@ -74,8 +74,9 @@ async function awaitSaveSync(game: GOG.GameInfo, cancel_note = ""){
     }
   });
   clearAwaitSaveSync();
+  const aborted = !sync_token.aborted();
   releaseLock(sync_token_n);
-  return !sync_token.aborted();
+  return aborted;
 }
 
 export async function downloadAndInstallDLC(game: GOG.GameInfo, dlc_slug: string): Promise<string>{

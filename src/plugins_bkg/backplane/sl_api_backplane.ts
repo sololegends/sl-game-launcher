@@ -1,5 +1,5 @@
 
-import axios, { AxiosError, AxiosResponse } from "axios";
+import axios, { AxiosError, AxiosInstance, AxiosResponse } from "axios";
 import { DEFAULT_API, getConfig, setConfig } from "../config";
 import { loadFromDataCache, loadFromImageCache, saveToDataCache, saveToImageCache } from "../cache";
 import { AppBackPlane } from ".";
@@ -129,6 +129,7 @@ async function login(api_creds: Credentials): Promise<boolean | string>{
       if(response.data.token){
         setConfig("sl_api_key", response.data.token, true);
         $API.defaults.headers.common.Authorization = "Bearer " + response.data.token;
+        console.log("Successfully Logged in!");
         resolve(true);
       }
       resolve("Failed to login");
@@ -156,22 +157,47 @@ async function loginListener(e: unknown, creds?: Credentials): Promise<string | 
   return await login(api_creds);
 }
 
+function setupAuthDeniedHandler(API: AxiosInstance){
+  API.interceptors.response.use(function(response: AxiosResponse){
+    return response;
+  }, function(error: AxiosError){
+    // If Auth has been invalidated
+    if(error.response !== undefined && error.response.status === 401){
+      // Attempt login again
+      return loginListener(undefined);
+    }
+    return Promise.reject(error);
+  });
+  return API;
+}
+
+function createAPIInstance(){
+  const token = $API?.defaults?.headers?.common?.Authorization;
+  if(token !== undefined){
+    return setupAuthDeniedHandler(axios.create({
+      baseURL: BASE_URL,
+      headers:{
+        Authorization: token
+      }
+    }));
+  }
+  return setupAuthDeniedHandler(axios.create({
+    baseURL: BASE_URL
+  }));
+}
+
 export async function cliInit(){
   console.log("Initializing SL API Backplane");
   BASE_URL = getConfig("remote_api") || DEFAULT_API;
   console.log("Using API Backend: ", BASE_URL);
-  $API = axios.create({
-    baseURL: BASE_URL
-  });
+  $API = createAPIInstance();
   return loginListener(undefined);
 }
 
 async function init(ipcMain: IpcMain){
   BASE_URL = getConfig("remote_api") || DEFAULT_API;
   console.log("Using API Backend: ", BASE_URL);
-  $API = axios.create({
-    baseURL: BASE_URL
-  });
+  $API = createAPIInstance();
   ipcMain.removeHandler("login");
   ipcMain.handle("login", loginListener);
   ipcMain.handleOnce("login-username", () => {

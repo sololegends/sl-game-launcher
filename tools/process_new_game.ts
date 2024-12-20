@@ -1056,7 +1056,10 @@ if(args[0] === "help"){
 }else if(args[0] === "packdlc"){
   packDLC(args.slice(1));
 }else if(args[0] === "batch"){
-  batchPack(args[1], args[2], args.slice(3));
+  batchPack(
+    args.length < 2 ? "auto" : args[1], 
+    args.length < 3 ? "proc/auto" : args[2], 
+    args.slice(3));
 }else if(args[0] === "test_config"){
   initConfig().then((config) => {
     console.log(config);
