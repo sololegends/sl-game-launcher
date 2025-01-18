@@ -273,6 +273,10 @@ export default {
         // Initialize stream
         form.append("save_file", local_file, remote_file);
       }else{
+        // If file size over 200MB, just stop here no reason to try and upload
+        if(fs.statSync(local_file).size > 209715200){
+          return new Promise<boolean>((resolve) => {resolve(false)});
+        }
         form.append("save_file", fs.createReadStream(local_file), remote_file);
       }
       return new Promise<boolean>((resolve) => {

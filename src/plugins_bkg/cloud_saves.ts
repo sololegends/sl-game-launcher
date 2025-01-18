@@ -295,6 +295,15 @@ export async function uploadGameSave(game: GOG.GameInfo){
     });
     return;
   }
+  if(fs.statSync(save_zip).size > 209715200){
+    globals?.notify({
+      title: "Cloud Save",
+      text: game.remote_name + " save files over 200MB cannot sync to cloud. Remove some save data to be able to cloud sync again.",
+      type: "error",
+      sticky: true
+    });
+    return;
+  }
 
 
   let text = "Saves for game " + game.remote_name + " synchronized to cloud";
