@@ -10515,7 +10515,7 @@
 
 "sl-gog-viewer@file:":
   "resolved" "file:"
-  "version" "v0.12.8"
+  "version" "v0.12.9"
   dependencies:
     "@fortawesome/fontawesome-svg-core" "6.1.2"
     "@fortawesome/free-brands-svg-icons" "6.1.2"
