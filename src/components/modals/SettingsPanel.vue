@@ -19,6 +19,10 @@
           <v-switch dense v-model="show_repacked_only" label="Show Repacked Only" @click="toggleShowRepackedOnly"></v-switch>
         </v-list-item>
 
+        <v-list-item @click="toggleShowHiddenGames">
+          <v-switch dense v-model="show_hidden_games" label="Show Hidden Games" @click="toggleShowHiddenGames"></v-switch>
+        </v-list-item>
+
         <v-list-item @click="toggleOffline">
           <v-btn color="primary">Go {{ $store.getters.offline? "Online": "Offline" }}</v-btn>
         </v-list-item>
@@ -243,6 +247,7 @@ export default defineComponent({
       },
       show_uninstalled: true,
       show_repacked_only: true,
+      show_hidden_games: false,
       auto_dlc: true,
       update_channel: "stable",
       backplane: "" as PlaneType,
@@ -329,6 +334,9 @@ export default defineComponent({
     },
     toggleAutoDLC(){
       this.$store.dispatch("set_auto_dlc", this.auto_dlc);
+    },
+    toggleShowHiddenGames(){
+      this.$store.dispatch("set_show_hidden_games", this.show_hidden_games);
     },
     toggleShowRepackedOnly(){
       this.$store.dispatch("set_show_repacked_only", this.show_repacked_only);

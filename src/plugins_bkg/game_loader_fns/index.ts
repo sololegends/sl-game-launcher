@@ -8,6 +8,8 @@ import {
 import fs from "fs";
 import { getConfig } from "../config";
 import { getFolderSize } from "../tools/files";
+import { getGameHidden } from "../game_hidden_tracker";
+import { getLastPlayed } from "../recent_play_tracker";
 import { getPlaytime } from "../play_time_tracker";
 import { GOG } from "@/types/gog/game_info";
 import { remote } from "../backplane";
@@ -123,6 +125,8 @@ export async function getLocalGameData(game_dir: string, heavy = true): Promise<
         l_info.root_dir = game_dir;
         if(heavy){
           l_info.play_time = getPlaytime(l_info);
+          l_info.last_played = getLastPlayed(l_info);
+          l_info.is_hidden = getGameHidden(l_info);
           // Load remote data
           try{
             l_info.remote = await ensureRemote(l_info);
@@ -200,7 +204,10 @@ export async function getRemoteGamesList(use_cache = true, filter_installed = tr
       version: 0,
       webcache: "remote",
       root_dir: "remote",
-      is_installed: false
+      is_installed: false,
+      play_time: getPlaytime(name || ""),
+      last_played: getLastPlayed(name || ""),
+      is_hidden: getGameHidden(name || "")
     } as GOG.GameInfo;
     remote_games.push(game);
   }

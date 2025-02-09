@@ -1,8 +1,20 @@
 <template>
   <div>
     <DownloadInstallBanner ref="dl_banner" />
-    <div style="margin:0px 20px">
-      <v-text-field v-model="filter" clearable placeholder="Search..." @input="resetSelectedGame" />
+    <div style="margin:0px 20px; display: flex;">
+      <v-text-field
+        v-model="filter" label="Game Search"
+        clearable placeholder="Search..." @input="resetSelectedGame"
+      />
+      <v-select
+        label="Game Sorting"
+        style="margin-left: 10px; width: 100px"
+        v-model="sort_order"
+        :items="sortOptions"
+        @input="resetSelectedGame"
+        @change="saveSortOrder"
+      />
+      <v-switch v-model="installed_first" label="Installed First" @change="saveInstalledFirst" />
     </div>
     <div
       v-if="filtered_games.length <= 0 && (games.length > 0 || remote_games.length > 0) && !loading_remote_games"
@@ -17,7 +29,7 @@
     <ScrollablePanel :max_height="maxScrollable" @scroll="onScroll" v-else>
       <div class="games-container" id="game_flex" @mouseout="clearSelectedGame">
         <GogGame
-          v-for="val, i in filtered_games" :key="val.gameId + (val.webcache == 'remote'? '-remote' : '')" :game="val"
+          v-for="val, i in sortedGames" :key="val.gameId + (val.webcache == 'remote'? '-remote' : '')" :game="val"
           class="flex"
           :ref="'game' + i"
           :running="val.name === active"
@@ -57,6 +69,7 @@ import SaveSyncStatus from "@/components/inserts/gog/SaveSyncStatus.vue";
 import ScrollablePanel from "@/components/general/ScrollablePanel.vue";
 import VersionSelectionModal from "@modals/VersionSelectionModal.vue";
 
+type SortOrder = "ALPHA" | "PLAYTIME" | "RECENT_PLAYED" | "RECENT_ADDED" | "RECENT_UPDATED";
 
 export default mixin(gamepad).extend({
   name: "GamesView",
@@ -96,12 +109,108 @@ export default mixin(gamepad).extend({
       game_running: false,
       window_blurred: false,
       store_subscription: undefined as (() => void) | undefined,
-      select_on_reload: undefined  as string | undefined
+      select_on_reload: undefined  as string | undefined,
+      sort_order: "ALPHA" as SortOrder,
+      installed_first: true
     };
   },
   computed: {
+    sortOptions(){
+      // Check for offline mode
+      if(this.$store.getters.offline){
+        if(this.sort_order === "RECENT_ADDED" || this.sort_order === "RECENT_UPDATED"){
+          this.sort_order = "ALPHA";
+        }
+        return [
+          { text: "Alphabetic", value: "ALPHA" },
+          { text: "Recently Played", value: "RECENT_PLAYED" },
+          { text: "Playtime", value: "PLAYTIME" }
+        ];
+      }
+      return [
+        { text: "Alphabetic", value: "ALPHA" },
+        { text: "Recently Played", value: "RECENT_PLAYED" },
+        { text: "Playtime", value: "PLAYTIME" },
+        { text: "Recently Added", value: "RECENT_ADDED" },
+        { text: "Recently Updated", value: "RECENT_UPDATED" }
+      ];
+    },
     maxScrollable(): string{
       return this.banner_on ? "calc(100vh - 160px)" : "calc(100vh - 130px)";
+    },
+    sortedGames(): GOG.GameInfo[]{
+      switch(this.sort_order){
+      case "ALPHA":
+        return this.filtered_games.sort((a: GOG.GameInfo, b: GOG.GameInfo) => {
+          if(this.installed_first){
+            const res = (b.is_installed ? 1 : 0) - (a.is_installed ? 1 : 0);
+            if(res !== 0){
+              return res;
+            }
+          }
+          return a.name.localeCompare(b.name);
+        });
+      case "RECENT_PLAYED":
+        return this.filtered_games.sort((a: GOG.GameInfo, b: GOG.GameInfo) => {
+          if(this.installed_first){
+            const res = (b.is_installed ? 1 : 0) - (a.is_installed ? 1 : 0);
+            if(res !== 0){
+              return res;
+            }
+          }
+          if((a.last_played === undefined  && b.last_played === undefined)
+                    || (a.last_played === 0  && b.last_played === 0)){
+            return a.name.localeCompare(b.name);
+          }
+          return (b.last_played === undefined ? 0 : b.last_played) - (a.last_played === undefined ? 0 : a.last_played);
+        });
+      case "PLAYTIME":
+        return this.filtered_games.sort((a: GOG.GameInfo, b: GOG.GameInfo) => {
+          if(this.installed_first){
+            const res = (b.is_installed ? 1 : 0) - (a.is_installed ? 1 : 0);
+            if(res !== 0){
+              return res;
+            }
+          }
+          if((a.play_time === undefined  && b.play_time === undefined)
+                    || (a.play_time === 0  && b.play_time === 0)){
+            return a.name.localeCompare(b.name);
+          }
+          return (b.play_time === undefined ? 0 : b.play_time) - (a.play_time === undefined ? 0 : a.play_time);
+        });
+      case "RECENT_UPDATED":
+        return this.filtered_games.sort((a: GOG.GameInfo, b: GOG.GameInfo) => {
+          if(this.installed_first){
+            const res = (b.is_installed ? 1 : 0) - (a.is_installed ? 1 : 0);
+            if(res !== 0){
+              return res;
+            }
+          }
+          if((a.remote?.last_updated === undefined  && b.remote?.last_updated === undefined)
+                    || (a.remote?.last_updated === 0  && b.remote?.last_updated === 0)){
+            return a.name.localeCompare(b.name);
+          }
+          return (b.remote?.last_updated === undefined ? 0 : b.remote?.last_updated)
+                  - (a.remote?.last_updated === undefined ? 0 : a.remote?.last_updated);
+        });
+      case "RECENT_ADDED":
+        return this.filtered_games.sort((a: GOG.GameInfo, b: GOG.GameInfo) => {
+          if(this.installed_first){
+            const res = (b.is_installed ? 1 : 0) - (a.is_installed ? 1 : 0);
+            if(res !== 0){
+              return res;
+            }
+          }
+          if((a.remote?.date_added === undefined  && b.remote?.date_added === undefined)
+                    || (a.remote?.date_added === 0  && b.remote?.date_added === 0)){
+            return a.name.localeCompare(b.name);
+          }
+          return (b.remote?.date_added === undefined ? 0 : b.remote?.date_added)
+                  - (a.remote?.date_added === undefined ? 0 : a.remote?.date_added);
+        });
+      default:
+        return this.filtered_games;
+      }
     }
   },
   updated(){
@@ -114,10 +223,20 @@ export default mixin(gamepad).extend({
     this.$store.dispatch("set_minimal_ui", false);
     this.$store.dispatch("set_light_ui", false);
     this.store_subscription = this.$store.subscribe((mutation) => {
-      if(mutation.type === "set_show_repacked_only" || mutation.type === "set_show_uninstalled"){
+      if(mutation.type === "set_show_repacked_only"
+        || mutation.type === "set_show_uninstalled"
+        || mutation.type === "set_show_hidden_games"){
         this.filterGames();
       }
     });
+
+    ipc.invoke("cfg-get", "sort_order").then((sort_order) => {
+      this.sort_order = sort_order;
+    });
+    ipc.invoke("cfg-get", "installed_first").then((installed_first) => {
+      this.installed_first = installed_first;
+    });
+
     const that = this;
     ipc.on("progress-banner-init", () => {
       this.banner_on = true;
@@ -151,8 +270,34 @@ export default mixin(gamepad).extend({
       for(const g of this.games){
         if(g.name === game.name){
           g.play_time = playtime;
+          break;
         }
       }
+    });
+
+    ipc.on("game-last-played-update", (e, game: GOG.GameInfo, last_played: number) => {
+      for(const g of this.games){
+        if(g.name === game.name){
+          g.last_played = last_played;
+          break;
+        }
+      }
+    });
+
+    ipc.on("game-hidden-update", (e, game: GOG.GameInfo, hidden: boolean) => {
+      for(const g of this.games){
+        if(g.name === game.name){
+          g.is_hidden = hidden;
+          break;
+        }
+      }
+      for(const g of this.remote_games){
+        if(g.name === game.name){
+          g.is_hidden = hidden;
+          break;
+        }
+      }
+      this.filterGames();
     });
 
     ipc.on("launch-game-from-url",  async(e, game_id: string) => {
@@ -239,6 +384,12 @@ export default mixin(gamepad).extend({
     window.removeEventListener("keydown", this.keyHandler);
   },
   methods: {
+    saveSortOrder(){
+      ipc.send("cfg-set", "sort_order", this.sort_order);
+    },
+    saveInstalledFirst(){
+      ipc.send("cfg-set", "installed_first", this.installed_first);
+    },
     async awaitLoad(){
       while(this.games.length <= 0 && !this.force_done_loading){
         console.log("Awaiting load: calling read-games");
@@ -348,7 +499,7 @@ export default mixin(gamepad).extend({
     },
 
     filterGames(): void{
-      const is_filtered = this.filter.trim() !== "";
+      const is_filtered = this.filter != null && this.filter.trim() !== "";
       const installed_only = is_filtered && this.filter.startsWith("installed:");
       const uninstalled_only = is_filtered && this.filter.startsWith("uninstalled:");
       const actual_filter = installed_only ? this.filter.substring(10) : (uninstalled_only ? this.filter?.substring(12) : this.filter);
@@ -366,8 +517,11 @@ export default mixin(gamepad).extend({
           && this.$store.getters.showRepackedOnly && !this.isRepacked(game)){
           return false;
         }
+        if(!this.$store.getters.showHiddenGames && game.is_hidden){
+          return false;
+        }
         // If the filter is populated
-        if(actual_filter.trim() !== ""){
+        if(actual_filter != null && actual_filter.trim() !== ""){
           return game.name.toLowerCase().includes(actual_filter.trim().toLowerCase());
         }
         return true;

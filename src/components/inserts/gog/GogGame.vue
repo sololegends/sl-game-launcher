@@ -23,7 +23,10 @@
     </div>
 
     <!-- Installed only stuffs -->
-    <div v-else>
+    <div v-if="isRemote && game.play_time" class="left-padding">
+      <!-- Nothing here just visual -->
+    </div>
+    <div v-else-if="!isRemote">
       <div class="uninstall-btn" tip-title="Uninstall" @click="uninstall">
         <v-progress-circular v-if="loading" indeterminate size="20"></v-progress-circular>
         <fa-icon size="lg" icon="trash-alt" v-else />
@@ -232,6 +235,19 @@ export default defineComponent({
           });
         }
       }
+      if(this.game.is_hidden){
+        items.push({
+          title: "Unhide Game",
+          click: this.toggleGameHide,
+          icon: "eye"
+        });
+      } else{
+        items.push({
+          title: "Hide Game",
+          click: this.toggleGameHide,
+          icon: "eye-slash"
+        });
+      }
       if(this.$store.getters.dev_mode){
         items.push({
           title: "Reload Cache",
@@ -294,6 +310,9 @@ export default defineComponent({
       this.loading_update = true;
       await ipc.invoke("update-game", this.game);
       this.loading_update = false;
+    },
+    toggleGameHide(){
+      ipc.invoke("set-game-hidden", this.game, !this.game.is_hidden);
     },
     reinstallGame(){
       ipc.send("reinstall-game", this.game);
@@ -575,7 +594,7 @@ export default defineComponent({
 		opacity: 0.75;
 	}
 
-  .install-btn, .uninstall-btn, .package-btn, .size-note, .playtime-note{
+  .install-btn, .uninstall-btn, .package-btn, .size-note, .playtime-note, .left-padding{
     width: 35px;
     height: 35px;
     display: flex;
@@ -599,6 +618,14 @@ export default defineComponent({
 		border-bottom-left-radius: 0px;
 		border-top-left-radius: 5px;
 		border-bottom-right-radius: 5px;
+  }
+  .left-padding {
+    height: 19px;
+    left:0px;
+		border-top-right-radius: 0px;
+		border-bottom-left-radius: 0px;
+		border-top-left-radius: 5px;
+		border-bottom-right-radius: 0px;
   }
   .size-note{
     left: 0px;

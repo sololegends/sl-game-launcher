@@ -8,6 +8,7 @@ import { Globals } from ".";
 import { GOG } from "@/types/gog/game_info";
 import tk from "tree-kill";
 import { updatePlayTime } from "./play_time_tracker";
+import { updateLastPlayed } from "./recent_play_tracker";
 
 // GAME CONTROL
 let running_game = undefined as undefined | GOG.RunningGame;
@@ -169,6 +170,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       return false;
     }
     console.log("Game started: " + running_game.process.pid);
+    updateLastPlayed(game);
     running_game.process.addListener("close", (code: number) => {
       releaseLock(LAUNCH_GAME_LOCK);
       console.log("Game exited with code: " + code);

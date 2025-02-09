@@ -82,8 +82,9 @@ export function updatePlayTime(game: GOG.GameInfo, seconds: number){
   savePlaytime();
 }
 
-export function getPlaytime(game: GOG.GameInfo): number{
-  return playtime()[asSlug(game.name)] | 0;
+export function getPlaytime(game: GOG.GameInfo | string): number{
+  const tmp = playtime()[asSlug(typeof game === "string" ? game : game.name)];
+  return tmp === undefined? 0 : tmp;
 }
 
 export default function init(ipcMain: IpcMain){

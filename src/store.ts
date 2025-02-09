@@ -14,6 +14,7 @@ export default new Vuex.Store({
     offline: false,
     show_uninstalled: localStorage.getItem("show_uninstalled") !== "false",
     show_repacked_only: localStorage.getItem("show_repacked_only") === "true",
+    show_hidden_games: localStorage.getItem("show_hidden_games") === "true",
     auto_dlc: false
   },
   mutations: {
@@ -45,6 +46,10 @@ export default new Vuex.Store({
     set_show_repacked_only(state, show_repacked_only){
       state.show_repacked_only = show_repacked_only;
       localStorage.setItem("show_repacked_only", show_repacked_only);
+    },
+    set_show_hidden_games(state, show_hidden_games){
+      state.show_hidden_games = show_hidden_games;
+      localStorage.setItem("show_hidden_games", show_hidden_games);
     }
   },
   actions: {
@@ -71,6 +76,9 @@ export default new Vuex.Store({
     },
     set_show_repacked_only({ commit }, show_repacked_only: string){
       commit("set_show_repacked_only", show_repacked_only);
+    },
+    set_show_hidden_games({ commit }, show_hidden_games: string){
+      commit("set_show_hidden_games", show_hidden_games);
     }
   },
   getters: {
@@ -81,6 +89,7 @@ export default new Vuex.Store({
     offline: (state): boolean  => state.offline,
     showUninstalled: (state): boolean => state.show_uninstalled,
     showRepackedOnly: (state): boolean => state.show_repacked_only,
+    showHiddenGames: (state): boolean => state.show_hidden_games,
     autoDownloadDLC: (state): boolean => state.auto_dlc
   }
 });

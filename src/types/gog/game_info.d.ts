@@ -90,6 +90,8 @@ export namespace GOG {
 		version?: string
 		iter_id?: number
 		redist?: GameRedist[]
+		last_updated?: number
+		date_added?: number
 	}
 
 	export type GameInfo = {
@@ -108,11 +110,13 @@ export namespace GOG {
 		install_size?: number
 		remote?: RemoteGameData
 		current_version?: string
-		play_time?: number,
-		remote_name: string,
-		iter_id: number,
-		c_version?: string,
+		play_time?: number
+		last_played?: number
+		remote_name: string
+		iter_id: number
+		c_version?: string
 		is_installed: boolean
+		is_hidden: boolean
 	}
 
 	export type ImageResponse = {
