@@ -10,7 +10,7 @@ import {
   UN_INSTALL_LOCK
 } from "./tools/locks";
 import { BrowserWindow, ipcMain, IpcMain } from "electron";
-import { cleanupDownloaded, downloadDLC, downloadGame, downloadVersion } from "./download";
+import { cleanupDownloaded, downloadDLC, downloadGame, DownloadResult, downloadVersion } from "./download";
 import { notify, win } from "./index";
 import { syncGameSave, uploadGameSave } from "./cloud_saves";
 import { uninstallDLC, uninstallDLCSlug, uninstallGame } from "./uninstall";
@@ -79,21 +79,41 @@ async function awaitSaveSync(game: GOG.GameInfo, cancel_note = ""){
   return aborted;
 }
 
-export async function downloadAndInstallDLC(game: GOG.GameInfo, dlc_slug: string): Promise<string>{
+function downloadResultSuccess(dl_result : DownloadResult): boolean{
+  if(dl_result.status !== "success"){
+    releaseLock(ACTION_LOCK);
+    if(dl_result.status === "canceled"){
+      return false;
+    }
+    if(dl_result.status === "not_enough_space"){
+      notify({
+        title: "Game download failed",
+        text: "Not enough space on disk",
+        type: "error"
+      });
+      return false;
+    }
+    notify({
+      title: "Game download failed",
+      text: "Failed to connect to server",
+      type: "error"
+    });
+    return false;
+  }
+  return true;
+}
+
+export async function downloadAndInstallDLC(game: GOG.GameInfo, dlc_slug: string): Promise<"canceled" | "errored" | "success" | string>{
   let dl_files = [] as string[] | undefined;
   let hit_install = false;
   try{
     const dl_result = await downloadDLC(game, dlc_slug);
     console.log("dl_result", dl_result);
-    if(dl_result.status !== "success"){
+    if(!downloadResultSuccess(dl_result)){
+      insDlFinish(game);
       if(dl_result.status === "canceled"){
         return "canceled";
       }
-      notify({
-        title: "DLC download failed",
-        text: "Failed to connect to server",
-        type: "error"
-      });
       return "errored";
     }
     dl_files = dl_result.links;
@@ -164,17 +184,8 @@ export async function downloadAndReinstall(game: GOG.GameInfo){
     }
     const dl_result = await downloadGame(game);
     console.log("dl_result", dl_result);
-    if(dl_result.status !== "success"){
-      releaseLock(ACTION_LOCK);
-      if(dl_result.status === "canceled"){
-        return;
-      }
-      notify({
-        title: "Game download failed",
-        text: "Failed to connect to server",
-        type: "error"
-      });
-      releaseLock(ACTION_LOCK);
+    if(!downloadResultSuccess(dl_result)){
+      insDlFinish(game);
       return;
     }
     const dl_files = dl_result.links;
@@ -192,7 +203,7 @@ export async function downloadAndReinstall(game: GOG.GameInfo){
     triggerReload(game);
   }catch(e){
     insDlFinish(game);
-    console.log("Game install errored or canceled");
+    console.log("Game install errored or canceled", e);
   }
   releaseLock(ACTION_LOCK);
 }
@@ -205,17 +216,8 @@ export async function downloadAndInstall(game: GOG.GameInfo): Promise<boolean>{
   try{
     const dl_result = await downloadGame(game);
     console.log("dl_result", dl_result);
-    if(dl_result.status !== "success"){
-      if(dl_result.status === "canceled"){
-        releaseLock(ACTION_LOCK);
-        return false;
-      }
-      notify({
-        title: "Game download failed",
-        text: "Failed to connect to server",
-        type: "error"
-      });
-      releaseLock(ACTION_LOCK);
+    if(!downloadResultSuccess(dl_result)){
+      insDlFinish(game);
       return false;
     }
     const dl_files = dl_result.links;
@@ -228,7 +230,7 @@ export async function downloadAndInstall(game: GOG.GameInfo): Promise<boolean>{
     triggerReload(game);
   }catch(e){
     insDlFinish(game);
-    console.log("Game install errored or canceled");
+    console.log("Game install errored or canceled", e);
     releaseLock(ACTION_LOCK);
     return false;
   }
@@ -246,16 +248,8 @@ export async function installVersion(game: GOG.GameInfo, version_id: string, ver
     }
     const dl_result = await downloadVersion(game, version_id, version);
     console.log("dl_result", dl_result);
-    if(dl_result.status !== "success"){
-      releaseLock(ACTION_LOCK);
-      if(dl_result.status === "canceled"){
-        return;
-      }
-      notify({
-        title: "Game download failed",
-        text: "Failed to connect to server",
-        type: "error"
-      });
+    if(!downloadResultSuccess(dl_result)){
+      insDlFinish(game);
       return;
     }
     const dl_files = dl_result.links;
@@ -269,7 +263,7 @@ export async function installVersion(game: GOG.GameInfo, version_id: string, ver
     }
   }catch(e){
     insDlFinish(game);
-    console.log("Game install errored or canceled");
+    console.log("Game install errored or canceled", e);
   }
   releaseLock(ACTION_LOCK);
 }
@@ -294,20 +288,13 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
   ipcMain.on("download-game", async(e, game: GOG.GameInfo) => {
     try{
       const dl_result = await downloadGame(game);
-      if(dl_result.status !== "success"){
-        if(dl_result.status === "canceled"){
-          return false;
-        }
-        notify({
-          title: "Game download failed",
-          text: "Failed to connect to server",
-          type: "error"
-        });
-        return;
+      if(!downloadResultSuccess(dl_result)){
+        insDlFinish(game);
+        return false;
       }
     }catch(e){
       insDlFinish(game);
-      console.log("Game install errored or canceled");
+      console.log("Game install errored or canceled", e);
     }
   });
 
@@ -329,7 +316,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
       triggerReload(game);
     }catch(e){
       insDlFinish(game);
-      console.log("Game install errored or canceled");
+      console.log("Game install errored or canceled", e);
     }
     releaseLock(ACTION_LOCK);
   });
@@ -342,7 +329,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
       await downloadDLC(game, dlc_slug);
     }catch(e){
       insDlFinish(game);
-      console.log("Game install errored or canceled");
+      console.log("Game install errored or canceled", e);
     }
     releaseLock(ACTION_LOCK);
   });
@@ -360,7 +347,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
       await downloadVersion(game, version_id, version);
     }catch(e){
       insDlFinish(game);
-      console.log("Game install errored or canceled");
+      console.log("Game install errored or canceled", e);
     }
     releaseLock(ACTION_LOCK);
   });
@@ -380,7 +367,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
       triggerReload(game);
     }catch(e){
       insDlFinish(game);
-      console.log("Game install errored or canceled");
+      console.log("Game install errored or canceled", e);
     }
     releaseLock(ACTION_LOCK);
   });

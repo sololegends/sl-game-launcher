@@ -2,6 +2,7 @@
 
 import { acquireLock, DOWNLOAD, DOWNLOAD_SEQUENCE, LockAbortToken, releaseLock } from "../tools/locks";
 import { notify, win } from "..";
+import checkDiskSpace from "../tools/check-disk-space";
 import { dlcDataFromSlug } from "../game_loader_fns";
 import { download } from "../backplane";
 import { ensureDir } from "../tools/files";
@@ -12,7 +13,7 @@ import { GOG } from "@/types/gog/game_info";
 import { Stats } from "node-downloader-helper";
 
 export type DownloadResult = {
-  status: "success" | "backplane_error" | "canceled" | "token_failed" | "remote_failed" | "dlc_not_found" | "unknown",
+  status: "success" | "backplane_error" | "canceled" | "token_failed" | "remote_failed" | "dlc_not_found" | "not_enough_space" | "unknown",
   links?: string[]
 };
 
@@ -140,6 +141,11 @@ export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: str
 
 async function downloadPrep(game: GOG.GameInfo, dl_link_set: string[]): Promise<DownloadResult>{
   const token = await acquireLock(DOWNLOAD);
+  win()?.webContents.send("progress-banner-init", {
+    title: "Starting " + game.name + " download...",
+    indeterminate: true,
+    cancel_event: "nothing"
+  });
   if(!token){
     return new Promise<DownloadResult>((resolve, reject) => {
       releaseLock(DOWNLOAD);
@@ -154,6 +160,13 @@ async function downloadPrep(game: GOG.GameInfo, dl_link_set: string[]): Promise<
     });
   }
   const gog_path = getConfig("gog_path");
+  if(game.remote.install_size && game.remote.install_size * 2 > (await checkDiskSpace(gog_path)).free){
+    win()?.webContents.send("progress-banner-error", "Failed to download game: Not Enough Space");
+    return new Promise<DownloadResult>((resolve) => {
+      releaseLock(DOWNLOAD);
+      resolve({status: "not_enough_space"});
+    });
+  }
   const tmp_download = gog_path + "\\.temp\\";
   ensureDir(tmp_download);
   return downloadGamePromisify(game, dl_link_set, token)

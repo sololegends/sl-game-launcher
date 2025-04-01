@@ -105,6 +105,7 @@ export default defineComponent({
     bannerError(e: unknown, error: string){
       this.options.title = error;
       this.options.color = "red";
+      this.options.indeterminate = false;
       this.in_error = true;
       this.dl_eta = undefined;
     },

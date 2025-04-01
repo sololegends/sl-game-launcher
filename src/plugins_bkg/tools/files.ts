@@ -1,8 +1,8 @@
 
 import fs from "fs";
-import os from "os";
-import { GOG } from "@/types/gog/game_info";
 import { glob } from "glob";
+import { GOG } from "@/types/gog/game_info";
+import os from "os";
 
 export function ensureDir(dir: string){
   if(!fs.existsSync(dir)){
