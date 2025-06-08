@@ -29,7 +29,7 @@
     <ScrollablePanel :max_height="maxScrollable" @scroll="onScroll" v-else>
       <div class="games-container" id="game_flex" @mouseout="clearSelectedGame">
         <GogGame
-          v-for="val, i in sortedGames" :key="val.gameId + (val.webcache == 'remote'? '-remote' : '')" :game="val"
+          v-for="val, i in sortedGames" :key="val.gameId + '-' + val.root_dir" :game="val"
           class="flex"
           :ref="'game' + i"
           :running="val.name === active"

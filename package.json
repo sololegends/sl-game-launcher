@@ -20,7 +20,7 @@
     "postuninstall": "electron-builder install-app-deps",
     "ui": "vue ui",
     "exe": "vue-cli-service electron:serve",
-    "exe-build": "vue-cli-service electron:build",
+    "exe-build": "vue-cli-service --mode=development electron:build",
     "exe-build-ci": "vue-cli-service electron:build --linux --win --x64",
     "tsnode": "./node_modules/.bin/ts-node",
     "tools-build": "tsc tsconfig.repack.json"
@@ -52,7 +52,7 @@
     "vue-axios": "^3.2.2",
     "vue-observe-visibility": "^1.0.0",
     "vue-router": "^3.2.0",
-    "vuetify": "^2.6.3",
+    "vuetify": "^2.6.9",
     "vuex": "^3.6.2",
     "webdav": "^4.11.0"
   },

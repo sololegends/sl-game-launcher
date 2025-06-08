@@ -6,6 +6,9 @@ import { IpcMain } from "electron";
 import { win } from ".";
 
 function processParams(params: any[]){ // eslint-disable-line @typescript-eslint/no-explicit-any
+  if(params === undefined || params === null){
+    return undefined;
+  }
   for(const i in params){
     if(typeof params[i] === "object"){
       if(params[i].message && params[i].stack){
@@ -32,9 +35,9 @@ export default function init(ipcMain: IpcMain){
 
   const odebug = console.debug;
   console.debug = function(message: string, ...optionalParams: any[]){ // eslint-disable-line @typescript-eslint/no-explicit-any
-    processParams(optionalParams);
-    odebug.apply(console, [ message, ...(optionalParams ? optionalParams : []) ]);
-    const built_message = "\r\n[" + new Date().toISOString() + "] >> DEBUG >> " + message + " " + (optionalParams ? optionalParams : "");
+    const params = processParams(optionalParams);
+    odebug.apply(console, [ message, ...(params ? params : []) ]);
+    const built_message = "\r\n[" + new Date().toISOString() + "] >> DEBUG >> " + message + " " + (params ? params : "");
     output.write(built_message);
     if(do_event_logging){
       win()?.webContents.send("logging-event", built_message);
@@ -43,9 +46,9 @@ export default function init(ipcMain: IpcMain){
 
   const olog = console.log;
   console.log = function(message: string, ...optionalParams: any[]){ // eslint-disable-line @typescript-eslint/no-explicit-any
-    processParams(optionalParams);
-    olog.apply(console, [ message, ...(optionalParams ? optionalParams : []) ]);
-    const built_message = "\r\n[" + new Date().toISOString() + "] >> LOG   >> " + message + " " + (optionalParams ? optionalParams : "");
+    const params = processParams(optionalParams);
+    olog.apply(console, [ message, ...(params ? params : []) ]);
+    const built_message = "\r\n[" + new Date().toISOString() + "] >> LOG   >> " + message + " " + (params ? params : "");
     output.write(built_message);
     if(do_event_logging){
       win()?.webContents.send("logging-event", built_message);
@@ -54,9 +57,9 @@ export default function init(ipcMain: IpcMain){
 
   const owarn = console.warn;
   console.warn = function(message: string, ...optionalParams: any[]){ // eslint-disable-line @typescript-eslint/no-explicit-any
-    processParams(optionalParams);
-    owarn.apply(console, [ message, ...(optionalParams ? optionalParams : []) ]);
-    const built_message = "\r\n[" + new Date().toISOString() + "] >> WARN  >> " + message + " " + (optionalParams ? optionalParams : "");
+    const params = processParams(optionalParams);
+    owarn.apply(console, [ message, ...(params ? params : []) ]);
+    const built_message = "\r\n[" + new Date().toISOString() + "] >> WARN  >> " + message + " " + (params ? params : "");
     output.write(built_message);
     if(do_event_logging){
       win()?.webContents.send("logging-event", built_message);
@@ -65,9 +68,9 @@ export default function init(ipcMain: IpcMain){
 
   const oerror = console.error;
   console.error = function(message: string, ...optionalParams: any[]){ // eslint-disable-line @typescript-eslint/no-explicit-any
-    processParams(optionalParams);
-    oerror.apply(console, [ message, ...(optionalParams ? optionalParams : []) ]);
-    const built_message = "\r\n[" + new Date().toISOString() + "] >> ERROR >> " + message + " " + (optionalParams ? optionalParams : "");
+    const params = processParams(optionalParams);
+    oerror.apply(console, [ message, ...(params ? params : []) ]);
+    const built_message = "\r\n[" + new Date().toISOString() + "] >> ERROR >> " + message + " " + (params ? params : "");
     output.write(built_message);
     if(do_event_logging){
       win()?.webContents.send("logging-event", built_message);

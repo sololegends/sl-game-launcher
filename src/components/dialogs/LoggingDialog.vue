@@ -72,7 +72,7 @@ export default defineComponent({
     },
     receiveLog(e: unknown, entry: string){
       const atBottom = this.scrollable.atBottom;
-      this.text.push(entry.trim());
+      this.text.push(entry?.trim());
       // Scroll to bottom, if already there
       if(atBottom){
         this.scrollable.scrollTop = this.scrollable.scrollTopMax;
