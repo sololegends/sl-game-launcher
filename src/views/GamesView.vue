@@ -469,7 +469,7 @@ export default mixin(gamepad).extend({
       this.filterGames();
     },
     keyHandler(e: KeyboardEvent){
-      switch(e.key){
+      switch(e?.key){
       case "ArrowUp": case "ArrowDown": case "ArrowLeft": case "ArrowRight":
         this.disable_mouse = true;
         e.preventDefault();

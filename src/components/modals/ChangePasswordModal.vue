@@ -139,7 +139,7 @@ export default defineComponent({
       this.error_message = result;
     },
     enterCheck: function(e: KeyboardEvent){
-      if(e.key === "Enter"){
+      if(e?.key === "Enter"){
         this.submitPass();
       }
     },

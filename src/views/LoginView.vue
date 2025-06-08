@@ -74,7 +74,7 @@ export default defineComponent({
       this.error = undefined;
       this.field_error = false;
       // If enter pressed
-      if(e.key === "Enter"){
+      if(e?.key === "Enter"){
         // Attempt login
         this.login();
       }
