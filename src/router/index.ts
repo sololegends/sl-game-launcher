@@ -19,6 +19,11 @@ const routes: Array<RouteConfig> = [
     component: () => import("../views/LoadingSplash.vue")
   },
   {
+    path: "/locked",
+    name: "locked",
+    component: () => import("../views/SystemLockedMessage.vue")
+  },
+  {
     path: "/login",
     name: "login",
     component: () => import("../views/LoginView.vue")

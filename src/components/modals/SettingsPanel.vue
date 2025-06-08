@@ -130,6 +130,10 @@
 
         <v-list-item v-if="dev_mode">
           <LoggingDialog />
+          <v-spacer />
+          <v-btn class="warning" @click="openDevTools">
+            Dev Tools
+          </v-btn>
         </v-list-item>
 
         <v-list-item v-if="dev_mode">
@@ -295,6 +299,9 @@ export default defineComponent({
     }
   },
   methods: {
+    openDevTools(){
+      ipc.send("open-dev-tools");
+    },
     channelChange(){
       ipc.send("cfg-set", "update_channel", this.update_channel);
       ipc.send("release-channel-changed", this.update_channel);

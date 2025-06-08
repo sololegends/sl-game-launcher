@@ -27,6 +27,9 @@ export type AppOptions = {
   // Single Processes
   read_exe: string
 
+  // Locking
+  sys_locked: boolean
+
   // Catch all
   [key: string]: string | boolean | number
 }
@@ -35,7 +38,8 @@ export const cli_options = {
   fullscreen: false,
   maximize: false,
   data_folder: "gog-viewer",
-  skip_update: false
+  skip_update: false,
+  sys_locked: false
 } as AppOptions;
 
 if(argsv.length > 0){
@@ -175,6 +179,10 @@ async function createWindow(){
     win?.webContents.send("win-restore");
   });
 
+  ipcMain.on("open-dev-tools", () => {
+    win?.webContents.openDevTools();
+  });
+
   ipcMain.on("window-progress", (e, progress) => {
     win?.setProgressBar(progress);
   });
@@ -207,6 +215,40 @@ async function createWindow(){
   return win;
 }
 
+async function createSystemWindow(){
+  // Create the browser window.
+  const locked = new BrowserWindow({
+    width: 400,
+    height: 175,
+    frame: false,
+    backgroundColor: "#424242",
+    titleBarStyle: "hidden",
+    titleBarOverlay: false,
+    webPreferences: {
+      // Use pluginOptions.nodeIntegration, leave this alone
+      // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
+      nodeIntegration: (process.env
+        .ELECTRON_NODE_INTEGRATION as unknown) as boolean,
+      contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION
+    }
+  });
+  locked.center();
+  _win = locked;
+  // Load all the modules
+  load(ipcMain, locked);
+
+  if (process.env.WEBPACK_DEV_SERVER_URL){
+    // Load the url of the dev server if in development mode
+    console.log("loading: ", process.env.WEBPACK_DEV_SERVER_URL + "#/locked");
+    await locked.loadURL(process.env.WEBPACK_DEV_SERVER_URL + "#/locked");
+  } else {
+    createProtocol("app");
+    // Load the index.html when not in development
+    await locked.loadURL("app://./index.html#/locked");
+  }
+  return locked;
+}
+
 // Quit when all windows are closed.
 app.on("window-all-closed", () => {
   // On macOS it is common for applications and their menu bar
@@ -237,6 +279,13 @@ app.on("ready", async() => {
   // Load the config module
   logging(ipcMain);
   await initConfig(ipcMain);
+  if(cli_options.sys_locked === false
+      && (getConfig("sys_locked") === "true" || getConfig("sys_locked") === true)
+  ){
+    console.log("LOADING LOCKED SYSTEM");
+    createSystemWindow();
+    return;
+  }
   if(cli_options.skip_update || getConfig("offline")){
     createWindow();
     return;

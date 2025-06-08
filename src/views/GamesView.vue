@@ -503,12 +503,13 @@ export default mixin(gamepad).extend({
       const installed_only = is_filtered && this.filter.startsWith("installed:");
       const uninstalled_only = is_filtered && this.filter.startsWith("uninstalled:");
       const actual_filter = installed_only ? this.filter.substring(10) : (uninstalled_only ? this.filter?.substring(12) : this.filter);
-      let games = [...this.games];
+      let games = [];
       if(this.$store.getters.showUninstalled && !installed_only){
         games = [ ...this.games, ...this.remote_games ];
-      }
-      if(uninstalled_only){
+      } else if(uninstalled_only){
         games = [...this.remote_games];
+      } else {
+        games = [...this.games];
       }
       this.filtered_games = games.filter((game) => {
         // If not repacked and set to repacked only
