@@ -2,12 +2,17 @@
 import { app, BrowserWindow, ipcMain, protocol } from "electron";
 import initConfig, { APP_URL_HANDLER, getConfig, setAppDataDir, setConfig } from "./plugins_bkg/config";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
-import load, { notify } from "./plugins_bkg";
+import load, { loadCache, notify } from "./plugins_bkg";
 import { parsePE, ParsePEResponse} from "pe-exe-parser";
+import { PostScriptResult, processScript } from "./plugins_bkg/script";
+import CLI from "./plugins_bkg/tools/cli";
 import { createLoginWindow } from "./plugins_bkg/login";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import { createSplashWindow } from "./plugins_bkg/auto_update";
+import { getLocalGameData } from "./plugins_bkg/game_loader_fns";
+import { GOG } from "./types/gog/game_info";
 import logging from "./plugins_bkg/logging";
+import { scanAndInstallRedist } from "./plugins_bkg/as_admin/redist/redist";
 const isDevelopment = process.env.NODE_ENV !== "production";
 
 app.setAsDefaultProtocolClient(APP_URL_HANDLER);
@@ -15,6 +20,7 @@ const argsv = process.argv.slice(1);
 
 let _win = undefined as undefined | BrowserWindow;
 const got_lock = app.requestSingleInstanceLock(argsv);
+let NO_RUN = false;
 // Parse out the command line args
 export type AppOptions = {
   fullscreen: boolean
@@ -26,43 +32,33 @@ export type AppOptions = {
 
   // Single Processes
   read_exe: string
+  run_game_setup: string
+  undo: boolean
+  script_only: boolean
+  game_id_override: string
 
   // Locking
-  sys_locked: boolean
+  sys_locked_allow: boolean
 
   // Catch all
   [key: string]: string | boolean | number
 }
 
-export const cli_options = {
+export const cli_options_defaults = {
   fullscreen: false,
   maximize: false,
   data_folder: "gog-viewer",
   skip_update: false,
-  sys_locked: false
+  sys_locked_allow: false
 } as AppOptions;
 
-if(argsv.length > 0){
-  for(const part of argsv){
-    const key_val = part.split("=");
-    if(key_val.length === 1){
-      cli_options[key_val[0].replace("-", "_")] = true;
-      continue;
-    }
-    cli_options[key_val[0].replace("-", "_")] = key_val[1];
-  }
-}
-if(cli_options.read_exe){
-  parsePE(cli_options.read_exe, {}).then((result: ParsePEResponse) => {
-    console.log(result.metadata());
-    app.quit();
-  });
-}
-if(cli_options.version){
-  console.log("Version: v" + app.getVersion());
-  app.quit();
-}
-console.log("cli_options", cli_options);
+// Handle cli arguments
+export const cli_options = {
+  ...cli_options_defaults,
+  ...CLI.processCommands(process.argv.slice(1))
+};
+
+// Initial options setup
 const is_fullscreen = cli_options.fullscreen;
 const is_maximize = cli_options.maximize;
 if(cli_options.data_folder){
@@ -72,8 +68,46 @@ if(cli_options.data_folder){
 if(process.env.SL_LAUNCHER_APP_OFF){
   app.quit();
 }
-
-if (!got_lock){
+console.log("cli_options =", cli_options);
+// CLI/Startup options
+if(cli_options.read_exe){
+  NO_RUN = true;
+  parsePE(cli_options.read_exe, {}).then((result: ParsePEResponse) => {
+    console.log(result.metadata());
+    app.quit();
+  });
+} else if(cli_options.run_game_setup && !got_lock){
+  NO_RUN = true;
+  // When running a setup script for another window
+  // Load game data
+  getLocalGameData(cli_options.run_game_setup, false).then((game : GOG.GameInfo | undefined) => {
+    if(game === undefined){
+      console.log("GAME_NOT_FOUND");
+      app.exit(404);
+      return;
+    }
+    // Run the script
+    processScript(game, cli_options.undo, cli_options.game_id_override).then(async(script: PostScriptResult) =>{
+      if(!cli_options.game_id_override && !cli_options.script_only){
+        // Load config for backend modules
+        loadCache();
+        await initConfig(undefined);
+        scanAndInstallRedist(game).then((redist: boolean | undefined) =>{
+          console.log("SETUP_SCRIPT_DONE:", {script, redist});
+          app.exit(0);
+        });
+        return;
+      }
+      console.log("SETUP_SCRIPT_DONE:", {script});
+      app.exit(0);
+    });
+  });
+} else if(cli_options.version){
+  NO_RUN = true;
+  console.log("Version: " + app.getVersion());
+  app.exit(0);
+} else if (!got_lock){
+  NO_RUN = true;
   app.quit();
 } else {
   app.whenReady().then(() => {
@@ -101,14 +135,16 @@ if (!got_lock){
       }
     });
   });
+  // Scheme must be registered before the app is ready
+  protocol.registerSchemesAsPrivileged([
+    { scheme: "app", privileges: { secure: true, standard: true } }
+  ]);
 }
 
-// Scheme must be registered before the app is ready
-protocol.registerSchemesAsPrivileged([
-  { scheme: "app", privileges: { secure: true, standard: true } }
-]);
-
 function relaunch(){
+  if(NO_RUN){
+    return;
+  }
   console.log("relaunching...");
   app.relaunch();
   app.quit();
@@ -117,6 +153,9 @@ function relaunch(){
 }
 
 async function createWindow(){
+  if(NO_RUN){
+    return;
+  }
   // Create the browser window.
   const win = new BrowserWindow({
     width: 1000,
@@ -216,6 +255,9 @@ async function createWindow(){
 }
 
 async function createSystemWindow(){
+  if(NO_RUN){
+    return;
+  }
   // Create the browser window.
   const locked = new BrowserWindow({
     width: 400,
@@ -251,6 +293,9 @@ async function createSystemWindow(){
 
 // Quit when all windows are closed.
 app.on("window-all-closed", () => {
+  if(NO_RUN){
+    return;
+  }
   // On macOS it is common for applications and their menu bar
   // To stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== "darwin"){
@@ -259,6 +304,9 @@ app.on("window-all-closed", () => {
 });
 
 app.on("activate", () => {
+  if(NO_RUN){
+    return;
+  }
   // On macOS it's common to re-create a window in the app when the
   // Dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0){ createWindow(); }
@@ -268,6 +316,9 @@ app.on("activate", () => {
 // Initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on("ready", async() => {
+  if(NO_RUN){
+    return;
+  }
   if (isDevelopment && !process.env.IS_TEST){
     // Install Vue Devtools
     try {
@@ -279,7 +330,7 @@ app.on("ready", async() => {
   // Load the config module
   logging(ipcMain);
   await initConfig(ipcMain);
-  if(cli_options.sys_locked === false
+  if(cli_options.sys_locked_allow === false
       && (getConfig("sys_locked") === "true" || getConfig("sys_locked") === true)
   ){
     console.log("LOADING LOCKED SYSTEM");
@@ -318,7 +369,7 @@ ipcMain.on("quit", () => {
 ipcMain.on("relaunch", relaunch);
 
 // Exit cleanly on request from parent process in development mode.
-if (isDevelopment){
+if (isDevelopment && !NO_RUN){
   if (process.platform === "win32"){
     process.on("message", (data) => {
       if (data === "graceful-exit"){

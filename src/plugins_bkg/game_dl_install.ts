@@ -11,6 +11,8 @@ import {
 } from "./tools/locks";
 import { BrowserWindow, ipcMain, IpcMain } from "electron";
 import { cleanupDownloaded, downloadDLC, downloadGame, DownloadResult, downloadVersion } from "./download";
+import { installGame, processSetupSelfElevate } from "./install";
+import { needsElevation, processScript } from "./script";
 import { notify, win } from "./index";
 import { syncGameSave, uploadGameSave } from "./cloud_saves";
 import { uninstallDLC, uninstallDLCSlug, uninstallGame } from "./uninstall";
@@ -18,8 +20,6 @@ import { dlcDataFromSlug } from "./game_loader_fns";
 import { ensureRemote } from "./game_loader";
 import { getConfig } from "./config";
 import { GOG } from "@/types/gog/game_info";
-import { installGame } from "./install";
-import { processScript } from "./script";
 
 function insDlFinish(game?: GOG.GameInfo){
   win()?.webContents.send("game-dlins-end", game);
@@ -373,6 +373,18 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
   });
 
   ipcMain.on("rerun-ins-script", (e, game: GOG.GameInfo, game_id?: string) => {
-    processScript(game, false, game_id);
+    try{
+      if(needsElevation(game, game_id)){
+        processSetupSelfElevate(game, false, game_id, true);
+        return;
+      }
+      processScript(game, false, game_id);
+    }catch(e){
+      console.log("Error when running post script", JSON.stringify(e));
+      notify({
+        title: "Error while running post script",
+        type: "error"
+      });
+    }
   });
 }

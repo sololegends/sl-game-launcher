@@ -123,7 +123,7 @@ export async function getLocalGameData(game_dir: string, heavy = true): Promise<
         }
         l_info.webcache = game_dir + "\\webcache.zip";
         l_info.root_dir = game_dir;
-        if(heavy){
+        if(heavy === true){
           l_info.play_time = getPlaytime(l_info);
           l_info.last_played = getLastPlayed(l_info);
           l_info.is_hidden = getGameHidden(l_info);

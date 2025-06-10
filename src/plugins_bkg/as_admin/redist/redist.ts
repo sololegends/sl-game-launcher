@@ -60,6 +60,23 @@ async function isInstalledObj(redist: GOG.GameRedist){
   return await isInstalled(redist.name, redist.version);
 }
 
+export async function hasRedistToInstall(game: GOG.GameInfo){
+  // Use the remote defined with silent args, if possible
+  game.remote = await ensureRemote(game);
+  if(game.remote?.redist){
+    return game.remote.redist.length > 0;
+  }
+  // Fallback to installing, but with guis..
+  const redist_folder = game.root_dir + "/" + "__redist";
+  // Check if the redist folder even exists
+  if(!existsSync(redist_folder)){
+    return true;
+  }
+  // Scan the __redist folder ignoring ISI
+  const redist = readdirSync(redist_folder);
+  return redist.length > 0;
+}
+
 export async function scanAndInstallRedist(game: GOG.GameInfo){
   // Use the remote defined with silent args, if possible
   game.remote = await ensureRemote(game);
@@ -76,7 +93,7 @@ export async function scanAndInstallRedist(game: GOG.GameInfo){
     if(redist_set.length > 0){
       await installRedist(redist_set);
     }
-    return;
+    return true;
   }
   // Fallback to installing, but with guis..
   const redist_folder = game.root_dir + "/" + "__redist";

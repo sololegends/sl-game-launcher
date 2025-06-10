@@ -2,10 +2,9 @@
 
 import { constants, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
-import { ensureDir, mutatePath, mutateFile } from "../tools/files";
+import { ensureDir, mutateFile, mutatePath } from "../tools/files";
 import elevate from "../as_admin/elevate";
 import { GOG } from "@/types/gog/game_info";
-import os from "os";
 import Reg from "../as_admin/regedit/windows";
 import { Regedit } from "../as_admin/regedit/regedit";
 import { win } from "..";
@@ -21,7 +20,7 @@ type ActionResult = {
   result?: string
 }
 
-type PostScriptResult = {
+export type PostScriptResult = {
   error?: string
   stdout?: string
   stderr?: string
@@ -341,6 +340,28 @@ async function execAction(game: GOG.GameInfo, action: GOG.ScriptAction, undo: bo
   return {};
 }
 
+export function needsElevation(game: GOG.GameInfo, game_id_override?: string): boolean{
+  if(game.root_dir === undefined || game.root_dir === "remote" || !existsSync(game.root_dir)){
+    return false;
+  }
+
+  let script_file = game.root_dir + "/goggame-" + (game_id_override ? game_id_override : game.gameId) + ".script";
+  console.debug("Looking for script file: ", script_file);
+  if(!existsSync(script_file)){
+    script_file = game.root_dir + "/game-data-" + (game_id_override ? game_id_override : game.gameId) + ".script";
+  }
+  console.debug("Looking for secondary script file: ", script_file);
+  if(existsSync(script_file)){
+    const script = JSON.parse(readFileSync(script_file).toString()) as GOG.Script;
+    for(const action of script.actions){
+      if(action.name === "setRegistry"){
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 export async function processScript(game: GOG.GameInfo, undo = false, game_id_override?: string): Promise<PostScriptResult>{
   if(game.root_dir === undefined || game.root_dir === "remote" || !existsSync(game.root_dir)){
     return {};
@@ -348,16 +369,16 @@ export async function processScript(game: GOG.GameInfo, undo = false, game_id_ov
 
   // Check for script file
   let script_file = game.root_dir + "/goggame-" + (game_id_override ? game_id_override : game.gameId) + ".script";
-  console.log("Looking for script file: ", script_file);
+  console.debug("Looking for script file: ", script_file);
   if(!existsSync(script_file)){
     script_file = game.root_dir + "/game-data-" + (game_id_override ? game_id_override : game.gameId) + ".script";
   }
-  console.log("Looking for secondary script file: ", script_file);
+  console.debug("Looking for secondary script file: ", script_file);
   if(existsSync(script_file)){
     // Load the script
     try{
       const script = JSON.parse(readFileSync(script_file).toString()) as GOG.Script;
-      console.log("script file data: ", script);
+      console.debug("script file data: ", script);
       // If there are no actions
       if(!script.actions){
         return { };
@@ -376,7 +397,7 @@ export async function processScript(game: GOG.GameInfo, undo = false, game_id_ov
             }
             win()?.webContents.send("progress-banner-hide");
           }catch(e){
-            console.log("Failed to execute script action: ", action, e);
+            console.error("Failed to execute script action: ", action, e);
             win()?.webContents.send("progress-banner-hide");
             return { error: "Failed to execute script action: " + action.name };
           }
@@ -407,11 +428,11 @@ export async function processScript(game: GOG.GameInfo, undo = false, game_id_ov
           });
         }
       }catch(e){
-        console.log("Failed to execute script: ", e);
+        console.error("Failed to execute script: ", e);
         return { error: "Failed to execute script" };
       }
     }catch(e){
-      console.log("Failed to read script as json: ", e);
+      console.error("Failed to read script as json: ", e);
       return { error: "Failed to read script as json" };
     }
   }

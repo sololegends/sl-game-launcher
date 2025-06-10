@@ -4,15 +4,16 @@ import * as child from "child_process";
 import { acquireLock, LockAbortToken, releaseLock, UN_INSTALL_LOCK } from "../tools/locks";
 import { ensureDir, getFolderSize, normalizeFolder } from "../tools/files";
 import { game_folder_size, game_iter_id, game_name_file, game_version } from "../../json/files.json";
+import { hasRedistToInstall, scanAndInstallRedist } from "../as_admin/redist/redist";
+import { needsElevation, processScript } from "../script";
 import { notify, win } from "..";
 import zip, { ZipEntry } from "node-stream-zip";
+import elevate from "../as_admin/elevate";
 import filters from "../../js/filters";
 import fs from "fs";
 import { getConfig } from "../config";
 import { getLocalGameData } from "../game_loader";
 import { GOG } from "@/types/gog/game_info";
-import { processScript } from "../script";
-import { scanAndInstallRedist } from "../as_admin/redist/redist";
 import tk from "tree-kill";
 
 let active_ins = undefined as undefined | child.ChildProcess;
@@ -22,6 +23,12 @@ export type InstallResult = "success" | "canceled" | "extract_failed" | "install
 export type VersionInstallData = {
   version: string
   iter_id?: number
+}
+
+export type PostSetupResult = {
+  error?: string
+  stdout?: string
+  stderr?: string
 }
 
 export function sendInstallStart(game: GOG.GameInfo, indeterminate = true, dlc_data?: GOG.RemoteGameDLCBuilding){
@@ -67,6 +74,38 @@ export function cancelInstall(game: GOG.GameInfo){
   }
 }
 
+export async function processSetupSelfElevate(game: GOG.GameInfo, undo = false, game_id_override?: string,
+  script_only = false): Promise<PostSetupResult>{
+  const app_exe = getConfig("APP_EXE");
+  if(!app_exe.endsWith("SL Game Launcher.exe")){
+    console.log("Failed to get app_exe didn't match expected");
+    return {};
+  }
+  return new Promise<PostSetupResult>((resolve, reject) => {
+    elevate(
+      "\"" + app_exe + "\""
+        + " --run_game_setup \"" + game.root_dir + "\""
+        + (undo ? " --undo" : "")
+        + (game_id_override ? " --game_id_override \"" + game_id_override + "\"" : "")
+        + (script_only ? " --script_only" : ""),
+      function(error?: Error, stdout?: string | Buffer, stderr?: string | Buffer){
+        win()?.webContents.send("progress-banner-hide");
+        const obj = {
+          error: JSON.stringify(error),
+          stdout: stdout && stdout instanceof Buffer ? stdout.toString() : stdout,
+          stderr: stderr && stderr instanceof Buffer ? stderr.toString() : stderr
+        };
+        if(error){
+          console.error("Failed to run install script", obj.error, obj.stdout, obj.stderr);
+          reject(obj);
+          return;
+        }
+        console.log("Rn install script", obj.error, obj.stdout, obj.stderr);
+        resolve(obj);
+      });
+  });
+}
+
 async function zipPostInstall(game: GOG.GameInfo, dlc_data?: GOG.RemoteGameDLCBuilding){
   win()?.setProgressBar(2);
   const game_reloaded = await getLocalGameData(game.root_dir, false);
@@ -74,9 +113,15 @@ async function zipPostInstall(game: GOG.GameInfo, dlc_data?: GOG.RemoteGameDLCBu
   if(game_reloaded){
     // Execute script check and execution
     try{
-      await processScript(game_reloaded, false, dlc_data?.gameId);
-      if(!dlc_data){
-        await scanAndInstallRedist(game_reloaded);
+      // If ne need elevation
+      if(needsElevation(game_reloaded, dlc_data?.gameId)
+        || (!dlc_data && await hasRedistToInstall(game_reloaded))){
+        await processSetupSelfElevate(game_reloaded, false, dlc_data?.gameId);
+      } else {
+        await processScript(game_reloaded, false, dlc_data?.gameId);
+        if(!dlc_data){
+          await scanAndInstallRedist(game_reloaded);
+        }
       }
     }catch(e){
       console.log("Error when installing dependencies and running post script", JSON.stringify(e));

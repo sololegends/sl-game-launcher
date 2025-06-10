@@ -13,29 +13,29 @@ v1.x.x Todo:
   ✔ Custom info files for data when using the zip packaging @done(22-10-05 17:12)
   ✔ Support for regestry entries during install @done(22-12-12 21:42)
   ✔ Support for installing dependencies / required libraries @done(22-12-12 21:42)
-  ☐ Add rating locks / parental controls (local storage)
-  ☐ Re-work the backend to the REST API instead of relying on WebDAV (because SO SLOW)
+  ✘ Add rating locks / parental controls (local storage) @cancelled(25-06-08 18:40)
+    - Canceled because this should all be handled server side with the current structure
+  ✔ Re-work the backend to the REST API instead of relying on WebDAV (because SO SLOW) @done(23-06-16 8:12)
 
 v2.x.x Todo: 
   ☐ Linux support
-    ☐ Wine installation
+    ☐ Proton installation
     ☐ Adding as non-steam game
     ☐ Launching using steam + proton
   ✔ Add support for detecting and deploying game updates @done(22-12-12 21:42)
-  ☐ GamePad Support
+  ☐ Better GamePad Support
     ☐ Manage DLC
     ☐ Change Versions
-  ☐ Support regestry keys in save data saving (which is stupid games do that but here we are)
+  ☐ Support registry keys in save data saving (which is stupid games do that but here we are)
 
 v3.x.x Todo: 
 
-
 Mics:
   ☐ For GOG Games: Open Gog product page in context menu 
-  ☐ Sorting:
-    ☐ Alphabetic
-    ☐ By Latest played
-    ☐ By Ready to play (installed)
+  ✔ Sorting: @done(25-01-09 17:12)
+    ✔ Alphabetic @done(25-01-09 17:12)
+    ✔ By Latest played @done(25-01-09 17:12)
+    ✔ By Ready to play (installed) @done(25-01-09 17:12)
   ☐ Graphical download page 
   ☐ New layout with games list and details page ala-steam
   ☐ Add Steam games to the UI

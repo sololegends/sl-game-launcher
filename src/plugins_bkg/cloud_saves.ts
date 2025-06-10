@@ -4,10 +4,10 @@ import { compressFile, compressFolder, compressGlob, CompressProgress, decompres
 import { DownloaderHelper, ErrorStats, Stats } from "node-downloader-helper";
 import { Export, Import, KeyExists, needsAdmin } from "./as_admin/regedit/windows";
 import { getConfig, getOS, REMOTE_FILE_BASE } from "./config";
+import { globAsync, mutatePath } from "./tools/files";
 import { loadFromDataCache, saveToDataCache } from "./cache";
 import fs from "fs";
 import { Globals } from ".";
-import { globAsync, mutatePath } from "./tools/files";
 import { GOG } from "@/types/gog/game_info";
 import { Notify } from "@/types/notification/notify";
 import os from "os";

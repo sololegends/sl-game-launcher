@@ -1,9 +1,8 @@
-
+import { app, IpcMain } from "electron";
 import crypt from "./tools/crypt";
 import { ensureDir } from "./tools/files";
 import fs from "fs";
 import { GOG } from "@/types/gog/game_info";
-import { IpcMain } from "electron";
 import { isDev } from ".";
 import os from "os";
 
@@ -77,6 +76,9 @@ export function getOS(): GOG.GamePlatform{
 }
 
 export function getConfig(key: string){
+  if(key === "APP_EXE"){
+    return app.getPath("exe");
+  }
   const value = config[key];
   if(value !== undefined && typeof value === "string" && value.startsWith("$$ENC:")){
     const crypto_key = cryptoInit();
@@ -118,7 +120,7 @@ export default function init(ipcMain?: IpcMain){
     });
   }
 
-  return new Promise<Object>((resolve) => {
+  return new Promise<Record<string, unknown>>((resolve) => {
     // CONFIGS
     fs.stat(conf_file, (error) => {
       if(error){

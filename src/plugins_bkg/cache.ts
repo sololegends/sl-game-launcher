@@ -83,7 +83,7 @@ export function removeFromDataCache(name: string, folder?: string){
 }
 
 
-export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Globals){
+export default function init(ipcMain: IpcMain | undefined, win: BrowserWindow | undefined, globals: Globals){
 
   function getImageCacheSize(): number{
     return globals.getFolderSize(image_cache_dir);
@@ -99,7 +99,10 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
   globals.ensureDir(image_cache_dir);
   globals.ensureDir(data_cache_dir);
   l_globals = globals;
-
+  // Are we JUST loading cache no frontend?
+  if(ipcMain === undefined){
+    return;
+  }
   ipcMain.handle("cache-folder", () =>{
     return globals.app_dir;
   });

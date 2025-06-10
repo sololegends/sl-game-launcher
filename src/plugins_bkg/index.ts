@@ -94,6 +94,14 @@ export function offlineNotice(message: string){
     }
   });
 }
+
+export function loadCache(){
+  globals.notify = notify;
+  globals.app_dir = appDataDir();
+  globals.ensureDir(globals.app_dir);
+  z_cache(undefined, undefined, globals);
+}
+
 export default function init(ipcMain: IpcMain, win: BrowserWindow){
   globals.notify = notify;
   globals.app_dir = appDataDir();

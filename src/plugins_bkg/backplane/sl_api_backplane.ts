@@ -176,7 +176,7 @@ function createAPIInstance(){
   if(token !== undefined){
     return setupAuthDeniedHandler(axios.create({
       baseURL: BASE_URL,
-      headers:{
+      headers: {
         Authorization: token
       }
     }));
@@ -275,7 +275,7 @@ export default {
       }else{
         // If file size over 200MB, just stop here no reason to try and upload
         if(fs.statSync(local_file).size > 209715200){
-          return new Promise<boolean>((resolve) => {resolve(false)});
+          return new Promise<boolean>((resolve) => { resolve(false); });
         }
         form.append("save_file", fs.createReadStream(local_file), remote_file);
       }
