@@ -117,12 +117,16 @@ if(cli_options.read_exe){
     }else if(is_maximize){
       _win?.maximize();
     }
-    app.on("second-instance", (event, commandLine, workingDirectory, args) => {
+    app.on("second-instance", (event, argv) => {
       let url_data = undefined;
-      for(const ele of args as string[]){
+      console.log("second-instance:", argv);
+      for(const ele of argv as string[]){
         if(ele.startsWith(APP_URL_HANDLER)){
-          url_data = ele.substring(APP_URL_HANDLER.length + 3);
-          url_data = url_data.substring(0, url_data.lastIndexOf("/"));
+          url_data = ele.substring(ele.indexOf("//") + 2);
+          if(url_data.endsWith("/")){
+            url_data = url_data.substring(0, url_data.length - 1);
+          }
+          break;
         }
       }
       // Someone tried to run a second instance, we should focus our window.

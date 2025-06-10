@@ -467,7 +467,7 @@ export default defineComponent({
       });
     },
     async launchGame(e: MouseEvent){
-      if(e.ctrlKey){
+      if(e && e.ctrlKey){
         this.openGogPage();
         return;
       }
