@@ -1,5 +1,5 @@
 "use strict";
-import { app, BrowserWindow, ipcMain, protocol } from "electron";
+import { app, BrowserWindow, ipcMain, protocol, session } from "electron";
 import initConfig, { APP_URL_HANDLER, getConfig, setAppDataDir, setConfig } from "./plugins_bkg/config";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 import load, { loadCache, notify } from "./plugins_bkg";
@@ -331,6 +331,28 @@ app.on("ready", async() => {
       console.error("Vue Devtools failed to install:", e);
     }
   }
+  // Allow GOG Web Requests
+  const filter = {
+    urls: [
+      "https://api.gog.com/*",
+      "https://www.gog.com/*"
+    ]
+  };
+
+  session.defaultSession.webRequest.onHeadersReceived(
+    filter,
+    (details, callback) => {
+      if(details.responseHeaders){
+        for(const ele in details.responseHeaders){
+          if(ele.toLowerCase() === "access-control-allow-origin"){
+            details.responseHeaders[ele] = ["*"];
+          }
+        }
+      }
+      callback({ responseHeaders: details.responseHeaders });
+    }
+  );
+
   // Load the config module
   logging(ipcMain);
   await initConfig(ipcMain);
