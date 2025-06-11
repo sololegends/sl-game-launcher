@@ -1,5 +1,5 @@
 const ucase_exemption = [
-  "is", "in", "if", "up", "to", "of"
+  "is", "in", "if", "up", "to", "of", "an"
 ];
 
 function betterBytes(bytes: number, format = "B", precision = 1, raw = false, unit_cap: string | undefined = undefined){

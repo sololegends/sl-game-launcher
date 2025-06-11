@@ -14,7 +14,7 @@
         </v-list-item-avatar>
 
         <v-list-item-content>
-          <v-list-item-title>latest</v-list-item-title>
+          <v-list-item-title>latest ({{ gameVersion }})</v-list-item-title>
           <v-list-item-subtitle>{{gameSlug}}</v-list-item-subtitle>
         </v-list-item-content>
 
@@ -114,6 +114,9 @@ export default defineComponent({
     },
     gameSlug(): string | number{
       return filters.procKey(this.game_slug);
+    },
+    gameVersion(): string{
+      return this.game?.remote?.version === undefined ? "Unknown" : this.game.remote.version;
     }
   },
   methods: {
