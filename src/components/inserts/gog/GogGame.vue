@@ -210,6 +210,13 @@ export default defineComponent({
             click: this.syncSaveFiles,
             icon: "sync-alt"
           });
+          if(this.$store.getters.dev_mode){
+            items.push({
+              title: "Pack Save Files",
+              click: this.packSaveFiles,
+              icon: "file-archive"
+            });
+          }
         }
         if(this.game.remote?.iter_id){
           items.push({
@@ -319,6 +326,9 @@ export default defineComponent({
     },
     uploadSaveFiles(){
       ipc.send("upload-game-save", this.game);
+    },
+    packSaveFiles(){
+      ipc.send("pack-game-save", this.game);
     },
     syncSaveFiles(){
       ipc.send("sync-game-save", this.game);

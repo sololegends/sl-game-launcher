@@ -26,12 +26,12 @@ v2.x.x Todo:
   ☐ Better GamePad Support
     ☐ Manage DLC
     ☐ Change Versions
-  ☐ Support registry keys in save data saving (which is stupid games do that but here we are)
+  ✔ Support registry keys in save data saving (which is stupid games do that but here we are) @done(25-06-10 20:23)
 
 v3.x.x Todo: 
 
 Mics:
-  ☐ For GOG Games: Open Gog product page in context menu 
+  ✔ For GOG Games: Open Gog product page in context menu @done(25-06-10 19:14)
   ✔ Sorting: @done(25-01-09 17:12)
     ✔ Alphabetic @done(25-01-09 17:12)
     ✔ By Latest played @done(25-01-09 17:12)

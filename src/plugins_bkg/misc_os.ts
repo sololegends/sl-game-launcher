@@ -13,6 +13,20 @@ function openFolderCommand(){
   }
 }
 
+export function openFolder(path: string){
+  path = path.replaceAll("[&|;:$()]+", "");
+  const os = getOS();
+  switch(os){
+  case "windows": path = path.replaceAll("/", "\\"); break;
+  case "linux": path = path.replaceAll("\\", "/"); break;
+  default: break;
+  }
+  console.log("Opening path:", path);
+  if(fs.existsSync(path)){
+    child.exec(openFolderCommand() + " \"" + path + "\"");
+  }
+}
+
 export default function init(ipcMain: IpcMain){
 
   // Play task saving
@@ -39,17 +53,7 @@ export default function init(ipcMain: IpcMain){
 
 
   ipcMain.on("open-folder", (e, path: string) => {
-    path = path.replaceAll("[&|;:$()]+", "");
-    const os = getOS();
-    switch(os){
-    case "windows": path = path.replaceAll("/", "\\"); break;
-    case "linux": path = path.replaceAll("\\", "/"); break;
-    default: break;
-    }
-    console.log("Opening path:", path);
-    if(fs.existsSync(path)){
-      child.exec(openFolderCommand() + " \"" + path + "\"");
-    }
+    openFolder(path);
   });
 
 }

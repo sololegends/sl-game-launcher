@@ -10,6 +10,7 @@ import fs from "fs";
 import { Globals } from ".";
 import { GOG } from "@/types/gog/game_info";
 import { Notify } from "@/types/notification/notify";
+import { openFolder } from "./misc_os";
 import os from "os";
 import { saves as saves_bp } from "./backplane";
 
@@ -27,15 +28,6 @@ type Saves = {
 
 let SAVES = undefined as undefined | Saves;
 
-function slug(slug: string){
-  slug = slug.toLowerCase();
-  slug = slug.replaceAll(/[^a-z0-9_]/g, "_");
-  while(slug.includes("__")){
-    slug = slug.replaceAll("__", "_");
-  }
-  return slug;
-}
-
 function saves(): Saves{
   if(SAVES === undefined){
     const str = loadFromDataCache("saves.json", "$$internal$$");
@@ -49,13 +41,20 @@ function saves(): Saves{
 }
 
 export function updateSaveTime(game: GOG.GameInfo, time: Date){
-  saves()[slug(game.name)] = time.getTime();
+  saves()[game.gameId] = time.getTime();
   // Save the saves data
   saveToDataCache("saves.json", Buffer.from(JSON.stringify(SAVES, null, 2)), "$$internal$$");
 }
 
+export function hasSaveTime(game: GOG.GameInfo): boolean{
+  return saves()[game.gameId] !== undefined;
+}
+
 export function getSaveTime(game: GOG.GameInfo): number{
-  return saves()[slug(game.name)] | -1;
+  if(hasSaveTime(game)){
+    return saves()[game.gameId];
+  }
+  return -1;
 }
 
 export async function updateLocalSaveTime(save: string, date: Date){
@@ -135,16 +134,14 @@ async function saveGamesExists(game: GOG.GameInfo, saves: GOG.GameSave): Promise
       if(await KeyExists(saves[save].split(":", 2)[1], isReg64(saves[save]))){
         return true;
       }
-    }
-    if(isGlob(saves[save])){
+    } else if(isGlob(saves[save])){
       const files = await globAsync(saves[save]);
       for(const s in files){
         if(fs.existsSync(files[s])){
           return true;
         }
       }
-    }
-    if(fs.existsSync(saves[save])){
+    } else if(fs.existsSync(saves[save])){
       return true;
     }
   }
@@ -161,22 +158,20 @@ async function packGameSave(game: GOG.GameInfo, saves: GOG.GameSave): Promise<st
   let found = 0;
   for(const save in saves){
     if(isReg(saves[save])){
+      // Registry entry
       if(await KeyExists(saves[save].split(":", 2)[1], isReg64(saves[save]))){
         if(await Export(saves[save].split(":", 2)[1], save_tmp + save + ".reg", true, isReg64(saves[save]))){
-          await compressFile(save_tmp + save + ".reg", save_tmp + save + ".zip", (p: CompressProgress) =>{
-            win?.webContents.send("save-game-dl-progress", game.name, "Compressing save: " + save, p);
-          }, 6);
           found++;
         }
       }
-    }
-    if(isGlob(saves[save])){
+    } else if(isGlob(saves[save])){
+      // Includes a "*" for wildcard grabbing
       await compressGlob(saves[save], save_tmp + save + ".zip", (p: CompressProgress) =>{
         win?.webContents.send("save-game-dl-progress", game.name, "Compressing save: " + save, p);
       }, 6);
       found++;
-    }
-    if(fs.existsSync(saves[save])){
+    } else if(fs.existsSync(saves[save])){
+      // Direct file/folder definition
       if(fs.statSync(saves[save]).isDirectory()){
         await compressFolder(saves[save], save_tmp + save + ".zip", (p: CompressProgress) =>{
           win?.webContents.send("save-game-dl-progress", game.name, "Compressing save: " + save, p);
@@ -196,7 +191,9 @@ async function packGameSave(game: GOG.GameInfo, saves: GOG.GameSave): Promise<st
   // Update folder time
   for(const save in saves){
     try{
-      updateLocalSaveTime(saves[save], new Date());
+      if(!isReg(saves[save])){
+        updateLocalSaveTime(saves[save], new Date());
+      }
       updateSaveTime(game, new Date());
     }catch(e){
       console.log("Saves folder [" + save + "] not found");
@@ -227,10 +224,8 @@ async function unpackGameSave(game: GOG.GameInfo, saves: GOG.GameSave, save_pack
     if(fs.existsSync(save_tmp + save + ".zip")){
       let folder = saves[save];
       if(isReg(saves[save])){
-        await decompressFile(save_tmp + save + ".zip", save_tmp + save + ".reg", (p: CompressProgress) =>{
-          win?.webContents.send("save-game-dl-progress", game.name, "Unpacking save: " + save, p);
-        });
         await Import(save_tmp + save + ".reg", isReg64(saves[save]), needsAdmin(saves[save].split(":", 2)[1]));
+        continue;
       }
       if(isGlob(saves[save])){
         folder = saves[save].substring(0, saves[save].replace("\\", "/").lastIndexOf("/"));
@@ -273,15 +268,15 @@ export async function pushSaveToCloud(
   return result;
 }
 
-export async function uploadGameSave(game: GOG.GameInfo){
+export async function checkAndPackGameSave(game: GOG.GameInfo): Promise<string | undefined>{
   // Check if the cloud save location is specified
   const save_files = getSavesLocation(game);
   if(save_files === undefined){
-    return;
+    return undefined;
   }
   if(!await saveGamesExists(game, save_files)){
     console.log("Failed to find local game save folder!");
-    return;
+    return undefined;
   }
   win?.webContents.send("save-game-sync-start", game.name);
 
@@ -293,6 +288,14 @@ export async function uploadGameSave(game: GOG.GameInfo){
       type: "error",
       sticky: true
     });
+    return undefined;
+  }
+  return save_zip;
+}
+
+export async function uploadGameSave(game: GOG.GameInfo){
+  const save_zip = await checkAndPackGameSave(game);
+  if(save_zip === undefined){
     return;
   }
   if(fs.statSync(save_zip).size > 209715200){
@@ -404,6 +407,10 @@ async function newerInCloud(
   }
   // Check each folder for earliest date
   let oldest = -1;
+  console.log("getSaveTime(game)", getSaveTime(game));
+  if(hasSaveTime(game)){
+    oldest = getSaveTime(game);
+  }
   // Fall back to old method now
   for(const s in save_files){
     if(isGlob(save_files[s])){
@@ -514,5 +521,13 @@ export default function init(ipcMain: IpcMain, _win: BrowserWindow, _globals: Gl
   });
   ipcMain.on("upload-game-save", async(e, game: GOG.GameInfo) => {
     uploadGameSave(game);
+  });
+  ipcMain.on("pack-game-save", async(e, game: GOG.GameInfo) => {
+    const file = await checkAndPackGameSave(game);
+    if(file){
+      console.log(file);
+      openFolder(file.substring(0, file.lastIndexOf("\\")));
+    }
+    win?.webContents.send("save-game-stopped", game);
   });
 }
