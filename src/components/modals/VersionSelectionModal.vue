@@ -27,8 +27,8 @@
         </v-list-item-action>
       </v-list-item>
       <v-list-item
-        v-for="(item, index) in versions" :key="index"
-        @click="installVersion(index, item, $event)"
+        v-for="(index) of version_keys" :key="index"
+        @click="installVersion(index, versions[index], $event)"
         :class="'dlc-item' + (index === currentVersion?' present':'')"
       >
         <v-list-item-avatar>
@@ -47,8 +47,8 @@
         <v-list-item-action>
           <fa-icon
             v-if="index !== currentVersion"
-            :tip-title="item.present?'':'Switch to Version'"
-            :icon="item.present?'':'download'"
+            :tip-title="versions[index].present?'':'Switch to Version'"
+            :icon="versions[index].present?'':'download'"
             size="xl"
           />
         </v-list-item-action>
@@ -93,6 +93,7 @@ export default defineComponent({
   data(){
     return{
       versions: {} as Record<string, GOG.RemoteGameDLC>,
+      version_keys: {} as string[],
       game: {} as GOG.GameInfo | undefined,
       game_slug: "",
       latest_game_obj: {
@@ -135,6 +136,7 @@ export default defineComponent({
       this.$modal.hide(this.id);
     },
     closed(): void{
+      this.version_keys = [];
       this.versions = {};
       this.game = undefined;
       this.game_slug = "";
@@ -142,6 +144,9 @@ export default defineComponent({
     beforeOpen(e: VersionsParams){
       console.log(e.params);
       this.versions = e.params.versions;
+      this.version_keys = Object.keys(e.params.versions).sort((a: string, b: string) =>{
+        return b.localeCompare(a);
+      });
       this.game = e.params.game;
       this.game_slug = e.params.game_slug;
     },
