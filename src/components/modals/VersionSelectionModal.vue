@@ -46,7 +46,7 @@
 
         <v-list-item-action>
           <fa-icon
-            v-if="index !== currentVersion"
+            v-if="index !== currentVersion && can_install_uninstall"
             :tip-title="versions[index].present?'':'Switch to Version'"
             :icon="versions[index].present?'':'download'"
             size="xl"
@@ -69,7 +69,8 @@ interface VersionsParams extends BaseModalN.Params{
   params: {
     versions: Record<string, GOG.RemoteGameDLC>
     game: GOG.GameInfo
-    game_slug: string
+    game_slug: string,
+    can_install_uninstall: boolean
   }
 }
 
@@ -98,7 +99,8 @@ export default defineComponent({
       game_slug: "",
       latest_game_obj: {
 
-      } as GOG.RemoteGameDLC
+      } as GOG.RemoteGameDLC,
+      can_install_uninstall: true
     };
   },
   computed: {
@@ -122,6 +124,9 @@ export default defineComponent({
   },
   methods: {
     installVersion(version_id: string, version: GOG.RemoteGameDLC, e: MouseEvent){
+      if(!this.can_install_uninstall){
+        return;
+      }
       if(version_id === "latest"){
         ipc.send("reinstall-game", this.game);
         this.$modal.hide(this.id);
@@ -140,6 +145,7 @@ export default defineComponent({
       this.versions = {};
       this.game = undefined;
       this.game_slug = "";
+      this.can_install_uninstall = true;
     },
     beforeOpen(e: VersionsParams){
       console.log(e.params);
@@ -149,6 +155,7 @@ export default defineComponent({
       });
       this.game = e.params.game;
       this.game_slug = e.params.game_slug;
+      this.can_install_uninstall = e.params.can_install_uninstall;
     },
     procKey(item: string): string | number{
       item = item.replace(this.game_slug, "");

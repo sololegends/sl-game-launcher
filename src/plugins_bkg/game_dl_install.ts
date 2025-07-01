@@ -11,6 +11,7 @@ import {
 } from "./tools/locks";
 import { BrowserWindow, ipcMain, IpcMain } from "electron";
 import { cleanupDownloaded, downloadDLC, downloadGame, DownloadResult, downloadVersion } from "./download";
+import { getCLIArg, getConfig } from "./config";
 import { installGame, processSetupSelfElevate } from "./install";
 import { needsElevation, processScript } from "./script";
 import { notify, win } from "./index";
@@ -18,7 +19,6 @@ import { syncGameSave, uploadGameSave } from "./cloud_saves";
 import { uninstallDLC, uninstallDLCSlug, uninstallGame } from "./uninstall";
 import { dlcDataFromSlug } from "./game_loader_fns";
 import { ensureRemote } from "./game_loader";
-import { getConfig } from "./config";
 import { GOG } from "@/types/gog/game_info";
 
 function insDlFinish(game?: GOG.GameInfo){
@@ -93,6 +93,14 @@ function downloadResultSuccess(dl_result : DownloadResult): boolean{
       });
       return false;
     }
+    if(dl_result.status === "install_locked"){
+      notify({
+        title: "Game download failed",
+        text: "Downloads and installs have been locked by your system admin",
+        type: "warning"
+      });
+      return false;
+    }
     notify({
       title: "Game download failed",
       text: "Failed to connect to server",
@@ -103,7 +111,14 @@ function downloadResultSuccess(dl_result : DownloadResult): boolean{
   return true;
 }
 
+export function canInstallUninstall(): boolean{
+  console.log("getConfig(\"ins_locked\")",  getConfig("ins_locked"));
+  return getConfig("ins_locked") !== true || getCLIArg("ins_locked_allow") === true;
+}
+
 export async function downloadAndInstallDLC(game: GOG.GameInfo, dlc_slug: string): Promise<"canceled" | "errored" | "success" | string>{
+  if(!canInstallUninstall()){ return "errored"; }
+
   let dl_files = [] as string[] | undefined;
   let hit_install = false;
   try{
@@ -143,6 +158,7 @@ export async function downloadAndInstallDLC(game: GOG.GameInfo, dlc_slug: string
 }
 
 export async function downloadAndInstallAllDLC(game: GOG.GameInfo){
+  if(!canInstallUninstall()){ return false; }
   const token = await acquireLock(ACTION_LOCK, false);
   if(token === undefined){ return false; }
   await ensureRemote(game);
@@ -163,6 +179,8 @@ export async function downloadAndInstallAllDLC(game: GOG.GameInfo){
 }
 
 export async function downloadAndReinstall(game: GOG.GameInfo){
+  if(!canInstallUninstall()){ return; }
+
   const token = await acquireLock(ACTION_LOCK, false);
   if(token === undefined){ return; }
 
@@ -209,6 +227,8 @@ export async function downloadAndReinstall(game: GOG.GameInfo){
 }
 
 export async function downloadAndInstall(game: GOG.GameInfo): Promise<boolean>{
+  if(!canInstallUninstall()){ return false; }
+
   const token = await acquireLock(ACTION_LOCK, false);
   if(token === undefined){ return false; }
   // Update remote data, no cache
@@ -238,6 +258,7 @@ export async function downloadAndInstall(game: GOG.GameInfo): Promise<boolean>{
 }
 
 export async function installVersion(game: GOG.GameInfo, version_id: string, version: GOG.RemoteGameDLC): Promise<void>{
+  if(!canInstallUninstall()){ return; }
   const token = await acquireLock(ACTION_LOCK, false);
   if(token === undefined){ return; }
 
@@ -269,6 +290,10 @@ export async function installVersion(game: GOG.GameInfo, version_id: string, ver
 }
 
 export default function init(ipcMain: IpcMain, win: BrowserWindow){
+
+  ipcMain.handle("install-allowed", (): boolean =>{
+    return canInstallUninstall();
+  });
 
   // Init
   ipcMain.handle("install-game", async(e, game: GOG.GameInfo) => {
@@ -308,6 +333,8 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
 
   // Init
   ipcMain.on("uninstall-dlc", async(e, game: GOG.GameInfo, dlc: GOG.RemoteGameDLC) => {
+    if(!canInstallUninstall()){ return; }
+
     const token = await acquireLock(ACTION_LOCK, false);
     if(token === undefined){ return; }
 
@@ -323,6 +350,7 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
 
   // Init
   ipcMain.on("download-dlc", async(e, game: GOG.GameInfo, dlc_slug: string) => {
+    if(!canInstallUninstall()){ return; }
     const token = await acquireLock(ACTION_LOCK, false);
     if(token === undefined){ return; }
     try{
@@ -360,6 +388,8 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow){
   });
 
   ipcMain.on("uninstall-game", async(e, game: GOG.GameInfo) => {
+    if(!canInstallUninstall()){ return; }
+
     const token = await acquireLock(ACTION_LOCK, false);
     if(token === undefined){ return; }
     try{

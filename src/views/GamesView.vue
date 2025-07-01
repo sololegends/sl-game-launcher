@@ -36,6 +36,7 @@
           :active="active_game === i"
           :data-game="i"
           :game_pos="i"
+          :can_install_uninstall="can_install_uninstall"
           @remote="setNewRemote(val, $event)"
           @mouseover="gameMouseOver(i)"
         />
@@ -45,7 +46,7 @@
         />
       </div>
     </ScrollablePanel>
-    <DLCSelectionModal />
+    <DLCSelectionModal :title="can_install_uninstall ? 'Manage DLC' : 'View DLC'" />
     <VersionSelectionModal />
     <SaveSyncStatus />
     <LaunchOptionsModal ref="launch_option_modal" />
@@ -111,7 +112,8 @@ export default mixin(gamepad).extend({
       store_subscription: undefined as (() => void) | undefined,
       select_on_reload: undefined  as string | undefined,
       sort_order: "ALPHA" as SortOrder,
-      installed_first: true
+      installed_first: true,
+      can_install_uninstall: true
     };
   },
   computed: {
@@ -228,6 +230,10 @@ export default mixin(gamepad).extend({
         || mutation.type === "set_show_hidden_games"){
         this.filterGames();
       }
+    });
+
+    ipc.invoke("install-allowed").then((ins_allowed: boolean) => {
+      this.can_install_uninstall = ins_allowed;
     });
 
     ipc.invoke("cfg-get", "sort_order").then((sort_order) => {

@@ -21,7 +21,7 @@
           <v-list-item-subtitle>{{gameSlug}}</v-list-item-subtitle>
         </v-list-item-content>
 
-        <v-list-item-action v-if="game && game.is_installed">
+        <v-list-item-action v-if="game && game.is_installed && can_install_uninstall">
           <fa-icon
             :tip-title="item.present?'Uninstall DLC':'Install DLC'"
             :icon="item.present?'trash-alt':'download'"
@@ -53,6 +53,7 @@ interface DLCParams extends BaseModalN.Params{
     dlc: GOG.RemoteGameDLC[]
     game: GOG.GameInfo
     game_slug: string
+    can_install_uninstall: boolean
   }
 }
 
@@ -65,7 +66,7 @@ export default defineComponent({
     id: {
       type: String,
       required: false,
-      default: "dlv_viewer"
+      default: "dlc_viewer"
     },
     title: {
       type: String,
@@ -77,12 +78,13 @@ export default defineComponent({
     return{
       dlc: [] as GOG.RemoteGameDLC[],
       game: {} as GOG.GameInfo | undefined,
-      game_slug: ""
+      game_slug: "",
+      can_install_uninstall: true
     };
   },
   computed: {
     action(): BaseModalN.ActionItem[]{
-      if(this.game === undefined || !this.game.is_installed){
+      if(this.game === undefined || !this.game.is_installed || !this.can_install_uninstall){
         return [];
       }
       return [
@@ -105,6 +107,9 @@ export default defineComponent({
       ipc.send("rerun-ins-script", this.game, dlc_id);
     },
     downloadAll(){
+      if(!this.can_install_uninstall){
+        return;
+      }
       for(const i in this.dlc){
         if(!this.dlc[i].present){
           this.installDLC(this.dlc[i], undefined);
@@ -112,6 +117,9 @@ export default defineComponent({
       }
     },
     uninstallAll(){
+      if(!this.can_install_uninstall){
+        return;
+      }
       for(const i in this.dlc){
         if(this.dlc[i].present){
           this.installDLC(this.dlc[i], undefined);
@@ -119,6 +127,9 @@ export default defineComponent({
       }
     },
     installDLC(dlc: GOG.RemoteGameDLC, e?: MouseEvent){
+      if(!this.can_install_uninstall){
+        return;
+      }
       if(e?.ctrlKey){
         this.runSetupScript(dlc.gameId);
         return;
@@ -140,12 +151,14 @@ export default defineComponent({
       this.dlc = [];
       this.game = undefined;
       this.game_slug = "";
+      this.can_install_uninstall = true;
     },
     beforeOpen(e: DLCParams){
       console.log(e.params);
       this.dlc = e.params.dlc;
       this.game = e.params.game;
       this.game_slug = e.params.game_slug;
+      this.can_install_uninstall = e.params.can_install_uninstall;
     },
     procKey(item: string): string | number{
       item = item.replace(this.game_slug, "");

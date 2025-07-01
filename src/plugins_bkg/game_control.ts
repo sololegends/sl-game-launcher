@@ -3,12 +3,13 @@ import * as child from "child_process";
 import { acquireLock, LAUNCH_GAME_LOCK, releaseLock } from "./tools/locks";
 import { BrowserWindow, IpcMain } from "electron";
 import { syncGameSave, uploadGameSave } from "./cloud_saves";
+import { canInstallUninstall } from "./game_dl_install";
 import { checkForUpdates } from "./update_check";
 import { Globals } from ".";
 import { GOG } from "@/types/gog/game_info";
 import tk from "tree-kill";
-import { updatePlayTime } from "./play_time_tracker";
 import { updateLastPlayed } from "./recent_play_tracker";
+import { updatePlayTime } from "./play_time_tracker";
 
 // GAME CONTROL
 let running_game = undefined as undefined | GOG.RunningGame;
@@ -110,11 +111,13 @@ export default function init(ipcMain: IpcMain, win: BrowserWindow, globals: Glob
       win?.webContents.send("progress-banner-hide");
       return false;
     }
-    win?.webContents.send("save-game-sync-state", game.name, "Checking for Updates");
-    console.log("checking for updates");
-    await checkForUpdates(game, true, false);
-    win?.webContents.send("save-game-stopped", game);
-    win?.webContents.send("progress-banner-hide");
+    if(canInstallUninstall()){
+      win?.webContents.send("save-game-sync-state", game.name, "Checking for Updates");
+      console.log("checking for updates");
+      await checkForUpdates(game, true, false);
+      win?.webContents.send("save-game-stopped", game);
+      win?.webContents.send("progress-banner-hide");
+    }
     ipcMain.off(cancel_launch_evt, haltfn);
     if(lock.aborted()){
       releaseLock(LAUNCH_GAME_LOCK);

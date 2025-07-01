@@ -1,4 +1,5 @@
 import { app, IpcMain } from "electron";
+import { AppOptions } from "@/background";
 import crypt from "./tools/crypt";
 import { ensureDir } from "./tools/files";
 import fs from "fs";
@@ -32,6 +33,7 @@ export function appDataDir(): string{
 }
 
 let config = {} as Record<string, unknown>;
+let cli_args = {} as AppOptions;
 let crypto_key = undefined as undefined | string;
 const STATIC_KEY = "Illusion-Expulsion1-Calamari-Acre-Cedar!";
 
@@ -108,9 +110,20 @@ export function setConfig(key: string, value: unknown, encrypt?: boolean){
   setConfig0(key, value, getConfig("config_file"), encrypt);
 }
 
+export function setCLIArgs(cli: AppOptions){
+  cli_args = cli;
+}
+
+export function getCLIArg(arg: (keyof AppOptions)): boolean | string | number{
+  return cli_args[arg];
+}
+
+export function CLI(): AppOptions{
+  return {...cli_args};
+}
+
 export default function init(ipcMain?: IpcMain){
   const conf_file = app_data_dir + "config.json";
-
   if(ipcMain){
     ipcMain.handle("cfg-get", (e, key: string) => {
       return getConfig(key);

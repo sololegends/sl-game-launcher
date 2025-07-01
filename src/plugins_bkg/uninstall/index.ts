@@ -2,6 +2,7 @@
 import * as child from "child_process";
 import { acquireLock, LockAbortToken, releaseLock, UN_INSTALL_LOCK } from "../tools/locks";
 import { notify, win } from "..";
+import { canInstallUninstall } from "../game_dl_install";
 import { ensureRemote } from "../game_loader";
 import filters from "../../js/filters";
 import fs from "fs";
@@ -84,6 +85,8 @@ function performUninstall(game: GOG.GameInfo, uninstall: GOG.UninstallDef){
 }
 
 export async function uninstallDLC(game: GOG.GameInfo, dlc: GOG.RemoteGameDLC): Promise<GOG.GameInfo>{
+  if(!canInstallUninstall()){ return game; }
+
   await acquireLock(UN_INSTALL_LOCK, true);
   sendUninstallStart(game, "dlc: " + filters.procKey(dlc.slug));
   try{
@@ -152,6 +155,8 @@ export async function uninstallDLCSlug(game: GOG.GameInfo, dlc_slug: string): Pr
 
 
 async function uninstallGameZip(game: GOG.GameInfo, token: LockAbortToken): Promise<GOG.GameInfo>{
+  if(!canInstallUninstall()){ return game; }
+
   sendUninstallStart(game, "game: " + game.name);
   try{
     await processScriptReverse(game);
@@ -185,6 +190,8 @@ async function uninstallGameZip(game: GOG.GameInfo, token: LockAbortToken): Prom
 }
 
 async function uninstallGameExe(game: GOG.GameInfo, title: string, exe = "unins000.exe", token: LockAbortToken): Promise<GOG.GameInfo>{
+  if(!canInstallUninstall()){ return game; }
+
   return new Promise<GOG.GameInfo>((resolve, reject) => {
     win()?.setProgressBar(2);
     sendUninstallStart(game, title);
@@ -224,6 +231,8 @@ async function uninstallGameExe(game: GOG.GameInfo, title: string, exe = "unins0
 }
 
 export async function uninstallGame(game: GOG.GameInfo): Promise<GOG.GameInfo>{
+  if(!canInstallUninstall()){ return game; }
+
   const lock = await acquireLock(UN_INSTALL_LOCK, true);
   if(lock === undefined){
     return game;

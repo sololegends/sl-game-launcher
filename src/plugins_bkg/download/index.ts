@@ -2,6 +2,7 @@
 
 import { acquireLock, DOWNLOAD, DOWNLOAD_SEQUENCE, LockAbortToken, releaseLock } from "../tools/locks";
 import { notify, win } from "..";
+import { canInstallUninstall } from "../game_dl_install";
 import checkDiskSpace from "../tools/check-disk-space";
 import { dlcDataFromSlug } from "../game_loader_fns";
 import { download } from "../backplane";
@@ -13,7 +14,8 @@ import { GOG } from "@/types/gog/game_info";
 import { Stats } from "node-downloader-helper";
 
 export type DownloadResult = {
-  status: "success" | "backplane_error" | "canceled" | "token_failed" | "remote_failed" | "dlc_not_found" | "not_enough_space" | "unknown",
+  status: "success" | "backplane_error" | "canceled" | "token_failed" | "remote_failed"
+    | "dlc_not_found" | "not_enough_space" | "install_locked" | "unknown",
   links?: string[]
 };
 
@@ -42,6 +44,8 @@ export function cleanupDownloaded(dl_link_set: string[]){
 }
 
 export async function downloadGamePromisify(game: GOG.GameInfo, dl_link_set: string[], token: LockAbortToken): Promise<DownloadResult>{
+  if(!canInstallUninstall()){ return {status: "install_locked"}; }
+
   const promise_array = [] as Promise<DownloadResult>[];
   // General init
   const gog_path = getConfig("gog_path");
@@ -176,6 +180,7 @@ async function downloadPrep(game: GOG.GameInfo, dl_link_set: string[]): Promise<
 }
 
 export async function downloadGame(game: GOG.GameInfo): Promise<DownloadResult>{
+  if(!canInstallUninstall()){ return {status: "install_locked"}; }
   try{
     game.remote = await ensureRemote(game);
   }catch(e){
@@ -188,6 +193,7 @@ export async function downloadGame(game: GOG.GameInfo): Promise<DownloadResult>{
 }
 
 export async function downloadDLC(game: GOG.GameInfo, dlc_slug: string): Promise<DownloadResult>{
+  if(!canInstallUninstall()){ return {status: "install_locked"}; }
   try{
     game.remote = await ensureRemote(game);
   }catch(e){
@@ -208,6 +214,7 @@ export async function downloadDLC(game: GOG.GameInfo, dlc_slug: string): Promise
 }
 
 export async function downloadVersion(game: GOG.GameInfo, version_id: string, version: GOG.RemoteGameDLC): Promise<DownloadResult>{
+  if(!canInstallUninstall()){ return {status: "install_locked"}; }
   try{
     game.remote = await ensureRemote(game);
   }catch(e){

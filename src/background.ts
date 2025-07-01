@@ -39,6 +39,7 @@ export type AppOptions = {
 
   // Locking
   sys_locked_allow: boolean
+  ins_locked_allow: boolean
 
   // Catch all
   [key: string]: string | boolean | number
@@ -49,7 +50,8 @@ export const cli_options_defaults = {
   maximize: false,
   data_folder: "gog-viewer",
   skip_update: false,
-  sys_locked_allow: false
+  sys_locked_allow: false,
+  ins_locked_allow: false
 } as AppOptions;
 
 // Handle cli arguments

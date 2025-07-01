@@ -1,7 +1,7 @@
 <template>
   <v-card
     :class="'game-card' + (active?' active':'') " v-observe-visibility="visibilityChanged"
-    :title="isRemote?'Install Game':'Launch Game'"
+    :title="isRemote? (canInstallUninstall ? 'Install Game' : '') :'Launch Game'"
     @contextmenu.prevent="contextMenu"
     @mouseover="$emit('mouseover', $event)"
   >
@@ -15,18 +15,21 @@
     </div>
 
     <!-- Remote only stuffs -->
-    <div v-if="isRemote">
+    <div v-if="isRemote && canInstallUninstall">
       <div class="install-btn" tip-title="Download and Install" @click="downloadAndInstall">
         <v-progress-circular v-if="loading" indeterminate size="20"></v-progress-circular>
-        <fa-icon size="lg" icon="download" v-else />
+        <fa-icon v-else size="lg" icon="download" />
+      </div>
+    </div>
+    <div v-else-if="isRemote">
+      <div class="install-available-btn" tip-title="Available for install" @click="requestInstall">
+        <v-progress-circular v-if="loading" indeterminate size="20"></v-progress-circular>
+        <fa-icon v-else size="lg" icon="cloud" />
       </div>
     </div>
 
     <!-- Installed only stuffs -->
-    <div v-if="isRemote && game.play_time" class="left-padding">
-      <!-- Nothing here just visual -->
-    </div>
-    <div v-else-if="!isRemote">
+    <div v-if="!isRemote && canInstallUninstall">
       <div class="uninstall-btn" tip-title="Uninstall" @click="uninstall">
         <v-progress-circular v-if="loading" indeterminate size="20"></v-progress-circular>
         <fa-icon size="lg" icon="trash-alt" v-else />
@@ -43,13 +46,13 @@
       </span>
     </div>
 
-    <div :class="'playtime-note' + (updateAvailable? ' short-mode' : '')" v-if="game.play_time">
+    <div :class="'playtime-note' + playtimeClasses" v-if="game.play_time">
       <span tip-title="Play Time">
         {{formatTime(game.play_time)}}
       </span>
     </div>
 
-    <div v-if="!isRemote && updateAvailable">
+    <div v-if="!isRemote && updateAvailable && canInstallUninstall">
       <div class="package-btn" tip-title="Update Game" @click="executeUpdates">
         <v-progress-circular v-if="loading_update" indeterminate size="20"></v-progress-circular>
         <fa-icon v-else size="lg" icon="cloud" class="success--text" />
@@ -111,6 +114,11 @@ export default defineComponent({
     game_pos: {
       type: Number,
       required: true
+    },
+    can_install_uninstall: {
+      type: Boolean,
+      required: false,
+      default: true
     }
   },
   data(){
@@ -153,31 +161,54 @@ export default defineComponent({
     isRemote(): boolean{
       return this.game.webcache === "remote";
     },
+    canInstallUninstall(): boolean{
+      return this.can_install_uninstall === true;
+    },
     gameData(): GOG.GameInfo{
       return this.game;
     },
     gamePos(): number{
       return this.game_pos;
     },
+    playtimeClasses(): string{
+      if(this.isRemote && !this.canInstallUninstall){
+        return " pad-right";
+      }
+      if(!this.canInstallUninstall){
+        return " ";
+      }
+      // If installed and has an update
+      if(!this.isRemote && this.updateAvailable){
+        return " pad-left pad-right";
+      }
+      if(!this.isRemote){
+        return " pad-left";
+      }
+      return "";
+    },
     items(): ContextMenu.MenuItem[]{
       const items = [];
       if(this.isRemote){
-        items.push({
-          title: "Install",
-          click: this.downloadAndInstall,
-          icon: "hdd"
-        });
-        items.push({
-          title: "Download",
-          click: this.download,
-          icon: "download"
-        });
+        if(this.canInstallUninstall){
+          items.push({
+            title: "Install",
+            click: this.downloadAndInstall,
+            icon: "hdd"
+          });
+          items.push({
+            title: "Download",
+            click: this.download,
+            icon: "download"
+          });
+        }
       }else {
-        items.push({
-          title: "Uninstall",
-          click: this.uninstall,
-          icon: "trash-alt"
-        });
+        if(this.canInstallUninstall){
+          items.push({
+            title: "Uninstall",
+            click: this.uninstall,
+            icon: "trash-alt"
+          });
+        }
         if(this.getAllPlayTasks().length > 1){
           items.push({
             title: "Launch Config",
@@ -218,7 +249,7 @@ export default defineComponent({
             });
           }
         }
-        if(this.game.remote?.iter_id){
+        if(this.game.remote?.iter_id && this.canInstallUninstall){
           items.push({
             title: "Check for Updates",
             click: this.checkForUpdates,
@@ -271,11 +302,13 @@ export default defineComponent({
           click: this.runSetupScript,
           icon: "gears"
         });
-        items.push({
-          title: "Reinstall",
-          click: this.reinstallGame,
-          icon: "recycle"
-        });
+        if(this.canInstallUninstall){
+          items.push({
+            title: "Reinstall",
+            click: this.reinstallGame,
+            icon: "recycle"
+          });
+        }
       }
       if(this.fromGog()){
         items.push({
@@ -373,16 +406,18 @@ export default defineComponent({
         this.$modal.show("versions_viewer", {
           versions: this.game.remote.versions,
           game: this.game,
-          game_slug: this.game.remote.slug
+          game_slug: this.game.remote.slug,
+          can_install_uninstall: this.canInstallUninstall
         });
       }
     },
     showDLC(){
       if(this.game.remote){
-        this.$modal.show("dlv_viewer", {
+        this.$modal.show("dlc_viewer", {
           dlc: this.game.remote.dlc,
           game: this.game,
-          game_slug: this.game.remote.slug
+          game_slug: this.game.remote.slug,
+          can_install_uninstall: this.canInstallUninstall
         });
       }
     },
@@ -411,6 +446,10 @@ export default defineComponent({
     },
     runSetupScript(): void{
       ipc.send("rerun-ins-script", this.game);
+    },
+    async requestInstall(){
+      // NYI
+      return;
     },
     async downloadAndInstall(e?: MouseEvent){
       this.loading = true;
@@ -483,7 +522,9 @@ export default defineComponent({
       }
       // If not installed, install it
       if(this.isRemote){
-        this.downloadAndInstall();
+        if(this.canInstallUninstall){
+          this.downloadAndInstall();
+        }
         return;
       }
       // Do launch option check
@@ -604,7 +645,7 @@ export default defineComponent({
 		opacity: 0.75;
 	}
 
-  .install-btn, .uninstall-btn, .package-btn, .size-note, .playtime-note, .left-padding{
+  .install-btn, .uninstall-btn, .install-available-btn, .package-btn, .size-note, .playtime-note, .left-padding{
     width: 35px;
     height: 35px;
     display: flex;
@@ -646,11 +687,28 @@ export default defineComponent({
 		border-radius: 0px;
   }
   .playtime-note{
-    left: 35px;
+    left: 0px;
     top: 0px;
-    width: calc(100% - 35px);
+    width: 100%;
     height: 19px;
-    border-radius: 0px;
+		border-top-right-radius: 5px;
+		border-top-left-radius: 5px;
+		border-bottom-right-radius: 0px;
+		border-bottom-left-radius: 0px;
+  }
+  .playtime-note.pad-right{
+    width: calc(100% - 35px);
+    padding-left: 35px;
+		border-top-right-radius: 0px;
+  }
+  .playtime-note.pad-left{
+    left: 35px;
+    width: calc(100% - 35px);
+    padding-right: 35px;
+		border-top-left-radius: 0px;
+  }
+  .playtime-note.pad-left.pad-right{
+    width: calc(100% - 70px);
   }
   .version-note{
     font-size: 10px;
@@ -671,8 +729,5 @@ export default defineComponent({
     position: absolute;
     width:7px;
     height:7px;
-  }
-  .playtime-note.short-mode{
-    width: calc(100% - 70px);
   }
 </style>
