@@ -18,7 +18,7 @@ Over time it has evolved to support far more than the GOG games it was built for
 ## Features
 ---
 - Download, install and uninstall Games and DLC with the press of a button
-  - Supports installation scripts for setting registry entries
+  - Supports installation scripts for setting registry entries, moving files outside the game folder, and more
   - Supports installing redistributables for games silently, if not already installed
   - Downloads and installs show you a progress bar
 - Setup mod packs as DLC packages to automatically share and install mod sets
@@ -35,8 +35,23 @@ Over time it has evolved to support far more than the GOG games it was built for
   - Better support for managing DLC and saves coming later
 - Tracks playtime, and synchronizes that to cloud if cloud is configured
   - I like stats
+- Protocol handler (`slgame://GAME_ID`) to launch a game linked from anywhere
 - Search the game library with ease and speed
+- Hide games behind a settings panel toggle for those... special... games 
+- Sorting options
+  - Alphabetic
+  - Recently Played 
+  - Total Playtime
+  - Recently Added 
+  - Recently Updated 
 - If cloud is setup and you're offline, you can still play just fine!
+
+### Parental/System Controls
+*Right now there is nothing stopping a child from changing the config file or using the cli args, that will change*
+- Config option `sys_locked`
+  - Locks loading the Launcher unless run with the `--sys_locked_allow true` cli arg set
+- Config option `ins_locked`
+  - Locks installing and uninstalling games unless run with the `--ins_locked_allow true` cli arg set
 
 ## I want to host my own cloud repo, how?!?
 ---
