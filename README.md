@@ -145,16 +145,39 @@ There is a nice script in the `tools` directory called `repack` which handles th
 That's it! Now you should have a zip file in the output directory (defaults to `tools/game_repacked`) along with the icon extracted and the game data json with metadata and install instructions for the launcher. 
 
 ## Repack Options
-*All options are, well, optional*
+*Generated with `./repack help`*
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `output` | `string` | "game_repacked" | The output directory for extraction and repacking result |
-| `clear` | `flag` | unset | Flag to only cleanup the used directories. DLC folder, the Game EXE, and packing output |
-| `nopack` | `flag` | unset | Flag to skip the packing stage leaving just the extracted files |
-| `merge_data` | `flag` | unset | Flag to trigger merging of remote data with the new generated data. Will pull remote data or use data in cwd |
-| `merge_info` | `flag` | unset | Alias of `merge_data` because I kept forgetting how I wrote it so I made both work.. |
-| `zip_level` | `0-9` | 8 | Standard zip compression level for the final package |
+```
+Help:
+ example: repack $exe_file [$options]
+ - test_config: loads and prints the config
+ - test_backplane: loads and tests the backplane
+ - packdlc $options: Packs the given dlc for a game separate to the game
+    | -  output : [./game_repacked] Output folder for the operation
+    | -  zip_level : [7] Zip compressions level to use for packing
+    | -  nopack : [false] Set to skip the packing stage of the repack
+    | -  input : input folder for packaging
+    | -  gameid : GameId for the parent game
+    | -  dlcid : GamId for the DLC
+    | -  dlc_name : Name of th DLC
+    | -  zip_name : Name of the output zip file
+    | -  version : [auto_id] The DLC version, if unset it will try and figure it out (unlikely)
+    | -  iter_id : [auto_id] The DLC iteration id, if unset it will try and figure it out (unlikely)
+ - batch ($batch_json_file | 'auto') $root_path: Batch process elements in the batch_json
+    | Json must be a list of objects
+    | objects must have folder:string, exe:string, dlc:boolean, [output:string]
+    | batch json setting to auto, will scan the root folder for folders containing exes
+ - [exe_file] [$repack_options]: Process the given EXE as a game to repack
+    | -  output : [./dlc_repacked] Output folder for the operation
+    | -  zip_level : [7] Zip compressions level to use for packing
+    | -  nopack : [false] Set to skip the packing stage of the repack
+    | -  merge_data : [false] Merge game data with remote data
+    | -  merge_info : [false] Alias for merge_data
+    | -  clear : [false] Only clear the output directory, no processing
+    | -  nocleanup : [false] Skip the cleanup stage, will fully repack and leave unpacked files
+    | -  dlc : [none] Set the dlc path for the game packing, use 'default' or true for ./proc/dlc
+    | -  skippackgame : [false] Skips the packing of the game, but still generated all other files
+```
 
 
 # What's Coming up Later? 
