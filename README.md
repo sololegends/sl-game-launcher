@@ -68,11 +68,11 @@ You can use it for easy update publishing with CI pipelines, which is what I do.
 - To disabled update checking entire use the runtime flag `skip_update` 
 - To change the update feed without having to compile yourself, use `alt_feed=$update_endpoint`
 
-If you want to set your own update server you need to alter `vue.config.js#pluginOptions.builderOptions.publish.url`
+If you want to set your own update server permanently you need to alter `vue.config.js#pluginOptions.builderOptions.publish.url`
 
-### File Repository
+### WebDAV File Repository
 
-In theory and file repository that supports WebDAV should work, I use [Nextcloud](https://nextcloud.com/).  
+In theory, any file repository that supports WebDAV should work, I used [Nextcloud](https://nextcloud.com/).
 
 It all hinges on a specific file structure: 
 ```
@@ -94,6 +94,24 @@ $WebDAVFolder:
 
 The launcher, after loading local games it will list the directory configured as `$WebDAVFolder` reading the game_data.json and pulling the icon to a local/data cache. The directory is still listed every time, but the json and icons are always cache preferred on initial load.
 
+### API File Repository
+You can run a custom REST API backplane which can easily be a LOT faster than WebDAV but more complex to get up an running. 
+
+Set the config value `remote_api` to permanently alter the API the launcher will reach out to.
+
+See [`sl_api_backplane.ts`](src/plugins_bkg/backplane/sl_api_backplane.ts) for API definitions. API Docs incoming soon-ish.
+Anything `$API.get|put|post|delete` should be implemented fully. 
+
+### Totally Custom backplane
+If you really want you can roll your own;
+1. Implement the [`template_backplane.ts`](src/plugins_bkg/backplane/template_backplane.ts)
+2. Add your new backplane to the `BACK_PLANE` mapping within [the backplane index](src/plugins_bkg/backplane/index.ts). 
+3. (optional) Implement a settings option within [`SettingsPanel.vue`](src/components/modals/SettingsPanel.vue)
+4. finally, either:  
+   a. Set the default backplane (`use_bp`) within that same index  
+   b. Set the `backplane` config option
+   c. Launch the luncher and use the Settings panel to set the new backplane
+
 ## Development
 ---
 ## Project setup
@@ -111,7 +129,7 @@ After that, simply run `yarn` in the project root to pull the node_modules neede
 yarn exe
 ```
 
-### Minifies for Production and Builds EXE
+### Minifies for Production and Builds Installable EXE
 ```
 yarn exe-build
 ```
@@ -140,4 +158,4 @@ That's it! Now you should have a zip file in the output directory (defaults to `
 
 
 # What's Coming up Later? 
-See ./TODO for my current todo
+See [./TODO](TODO) for my current todo
